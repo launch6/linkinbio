@@ -1,5 +1,7 @@
+import ReferralCard from "./ReferralCard";
 import { useEffect, useState } from 'react';
-import { PLANS, DEFAULT_PLAN } from '@/lib/plans';
+import { PLANS, DEFAULT_PLAN } from '../../lib/plans';
+
 
 export default function Dashboard(){
   const [state,setState]=useState({loading:true,profile:null,error:null});
@@ -64,6 +66,7 @@ export default function Dashboard(){
     </div>
 
     <div className="alert">Current Plan: <strong>{PLANS[planKey].NAME}</strong>{profile.planExpiresAt?` • Expires: ${new Date(profile.planExpiresAt).toLocaleDateString()}`:''}</div>
+    <ReferralCard username={profile?.slug || "artist"} />
 
     <div className="row">
       <div style={{flex:'1 1 320px'}}>

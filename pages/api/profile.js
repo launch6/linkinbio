@@ -1,4 +1,4 @@
-import { getDb } from '@/lib/db';
+import { getDb } from '../../lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { PLANS, DEFAULT_PLAN } from '@/lib/plans';
 import { isAllowedImageUrl } from '@/lib/limits';
@@ -51,11 +51,24 @@ export default async function handler(req,res){
     const { editToken } = req.query;
     if(editToken){
       const payload=req.body||{}; delete payload._id; delete payload.editToken;
-      const vErr=validateProfilePayload(payload); if(vErr) return res.status(400).json({ error: vErr });
+      // Skip strict validation for partial updates (like Klaviyo changes)
+const vErr = validateProfilePayload(payload);
+if (vErr && !payload.klaviyo) return res.status(400).json({ error: vErr });
+
       payload.updatedAt=new Date();
-      const result=await col.findOneAndUpdate({editToken},{ $set: payload },{returnDocument:'after'});
-      if(!result.value) return res.status(404).json({ error:'Not found' });
-      return res.json({ ok:true });
+      console.log("DEBUG editToken from req:", editToken);
+      
+      const result = await col.findOneAndUpdate(
+  { editToken },
+  { $set: payload },
+  { returnDocument: 'after' }
+);
+
+const doc = result?.value ?? result; // handle both driver shapes
+if (!doc) return res.status(404).json({ error: 'Not found' });
+return res.json({ ok: true });
+
+
     }else{
       const { name, slug, description='', avatarUrl='' } = req.body||{};
       if(!name || !slug || !/^[a-z0-9-]{3,40}$/.test(slug)) return res.status(400).json({ error:'Missing name or invalid slug' });

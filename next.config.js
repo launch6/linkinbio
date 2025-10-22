@@ -1,2 +1,8 @@
 /** @type {import('next').NextConfig} */
-module.exports = { reactStrictMode: true, output: 'standalone' };
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+  // IMPORTANT: do NOT set `output: "export"` here.
+}
+
+module.exports = nextConfig

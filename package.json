@@ -3,12 +3,13 @@
   "version": "0.4.0",
   "private": true,
   "engines": {
-   "node": "22"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "mongodb": "6.8.0",

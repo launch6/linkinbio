@@ -17,33 +17,41 @@ async function getRawBody(req) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
+  // --- NEW: prove whether the env var is visible in this function ---
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!endpointSecret) {
+    console.error('MISSING_STRIPE_WEBHOOK_SECRET at runtime');
+    return res.status(500).json({ error: 'missing STRIPE_WEBHOOK_SECRET' });
+  } else {
+    console.log(
+      'STRIPE_WEBHOOK_SECRET present, starts with:',
+      endpointSecret.slice(0, 6) + '…'
+    );
+  }
+  // -----------------------------------------------------------------
+
   let event;
   try {
     const sig = req.headers['stripe-signature'];
     const rawBody = await getRawBody(req);
-    event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
   } catch (err) {
     console.error('⚠️  Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   try {
-    // For now, just log what arrives. We'll wire DB updates in the next step.
     console.log('✅ Stripe event received:', event.type, event.id);
-
     switch (event.type) {
       case 'checkout.session.completed':
-        // TODO: mark plan active, set planExpiresAt if Starter+ promo, etc.
         break;
       case 'invoice.paid':
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
-        // TODO: keep subscription state in sync
         break;
       default:
         break;
     }
-
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('Webhook handler error:', err);

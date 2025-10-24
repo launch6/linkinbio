@@ -49,12 +49,10 @@ export default function PricingPage() {
   const [error, setError] = useState("");
   const [banner, setBanner] = useState(null);
   const [hasCustomer, setHasCustomer] = useState(false);
-  const [catalog, setCatalog] = useState({}); // priceKey -> price data
-
-  // NEW: hold referral state (Starter+)
+  const [catalog, setCatalog] = useState({}); // priceKey -> price object
   const [refCode, setRefCode] = useState("");
 
-  // Read token + status; persist token; fallback to localStorage
+  // Read token + status + refCode from URL; persist; fallback to localStorage
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
@@ -65,7 +63,6 @@ export default function PricingPage() {
       if (status === "success") setBanner({ type: "success", text: "Payment successful." });
       if (status === "cancelled") setBanner({ type: "warn", text: "Checkout cancelled." });
 
-      // Referral: save if present
       if (urlRef) {
         setRefCode(urlRef);
         try {
@@ -73,8 +70,8 @@ export default function PricingPage() {
         } catch {}
       } else {
         try {
-          const lsRef = localStorage.getItem("refCode");
-          if (lsRef) setRefCode(lsRef);
+          const savedRef = localStorage.getItem("refCode");
+          if (savedRef) setRefCode(savedRef);
         } catch {}
       }
 
@@ -91,7 +88,7 @@ export default function PricingPage() {
     } catch {}
   }, []);
 
-  // Load live prices from Stripe (via our API)
+  // Load live prices (labels come from Stripe via our API)
   useEffect(() => {
     (async () => {
       try {
@@ -102,7 +99,7 @@ export default function PricingPage() {
     })();
   }, []);
 
-  // Probe: if portal can be created, enable "Manage billing"
+  // Probe for an existing customer to enable the billing portal button
   useEffect(() => {
     (async () => {
       if (!editToken) return;
@@ -119,8 +116,9 @@ export default function PricingPage() {
   }, [editToken]);
 
   const hasToken = useMemo(() => Boolean(editToken && String(editToken).trim()), [editToken]);
+  const showStarterPlus = Boolean(refCode);
 
-  async function startCheckout({ priceKey, supportsReferral }) {
+  async function startCheckout({ priceKey, supportsReferral, applyStarter6mo }) {
     setError("");
     if (!hasToken) {
       setError("Missing editToken. Paste it below and try again.");
@@ -132,9 +130,8 @@ export default function PricingPage() {
         editToken,
         ...(email ? { email } : {}),
         priceKey,
-        // pass refCode only for plans that support Starter+ (safe to pass always too,
-        // but this keeps intent obvious in logs)
         ...(refCode && supportsReferral ? { refCode } : {}),
+        ...(applyStarter6mo ? { applyStarter6mo: true } : {}),
       };
 
       const res = await fetch("/api/checkout/create", {
@@ -167,8 +164,6 @@ export default function PricingPage() {
       setError(e.message || "Could not open billing portal");
     }
   }
-
-  const showStarterPlus = Boolean(refCode);
 
   return (
     <div
@@ -291,19 +286,28 @@ export default function PricingPage() {
             <div style={{ display: "grid", gap: 10 }}>
               {plan.options.map((opt) => {
                 const price = catalog[opt.priceKey];
-                const label = fmtPrice(price)
-                  ? `${opt.label} — ${fmtPrice(price)}${
-                      price?.interval ? ` / ${price.interval}` : ""
-                    }`
-                  : `${opt.label}${price?.error ? " — (unavailable)" : ""}`;
+                const isStarterMonthly =
+                  plan.id === "starter" && opt.priceKey === "STRIPE_PRICE_STARTER_MONTHLY";
+
+                const base = fmtPrice(price);
+                const label =
+                  isStarterMonthly && showStarterPlus && base
+                    ? `Monthly — ${base} · 6 months free`
+                    : base
+                    ? `${opt.label} — ${base}${price?.interval ? ` / ${price.interval}` : ""}`
+                    : `${opt.label}${price?.error ? " — (unavailable)" : ""}`;
+
                 const disabled = creating === opt.priceKey || !hasToken || !!price?.error || !price;
 
                 const supportsReferral = Boolean(opt.supportsReferral);
+                const applyStarter6mo = Boolean(isStarterMonthly && showStarterPlus);
 
                 return (
                   <button
                     key={opt.label}
-                    onClick={() => startCheckout({ priceKey: opt.priceKey, supportsReferral })}
+                    onClick={() =>
+                      startCheckout({ priceKey: opt.priceKey, supportsReferral, applyStarter6mo })
+                    }
                     disabled={disabled}
                     style={{
                       padding: "10px 14px",
@@ -321,19 +325,6 @@ export default function PricingPage() {
                     title={price?.error ? price.error : undefined}
                   >
                     <span>{label}</span>
-                    {showStarterPlus && supportsReferral && (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          background: "#2e7d32",
-                          color: "#fff",
-                          padding: "2px 6px",
-                          borderRadius: 6,
-                        }}
-                      >
-                        +6 months
-                      </span>
-                    )}
                   </button>
                 );
               })}

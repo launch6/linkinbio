@@ -24,37 +24,43 @@ export default async function handler(req, res) {
             }
           })();
 
-    const { priceId, editToken, email } = body;
+    const { editToken, email, priceId, priceKey } = body;
 
-    // Require editToken so we can map the checkout -> profile in the webhook
     if (!editToken) {
       return res.status(400).json({ error: "Missing editToken" });
     }
 
-    // Fallback to Starter Monthly env var if priceId is not provided
-    const price = priceId || process.env.STRIPE_PRICE_STARTER_MONTHLY;
-    if (!price) {
+    // Allow client to send a server env key (e.g. "STRIPE_PRICE_PRO_MONTHLY")
+    let resolvedPrice = priceId;
+    if (!resolvedPrice && priceKey) {
+      const v = process.env[priceKey];
+      if (v) resolvedPrice = v;
+    }
+
+    // Fallback: Starter Monthly (must exist in env)
+    if (!resolvedPrice) resolvedPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
+
+    if (!resolvedPrice) {
       return res
         .status(400)
-        .json({ error: "Missing priceId and STRIPE_PRICE_STARTER_MONTHLY" });
+        .json({ error: "No price found. Set STRIPE_PRICE_STARTER_MONTHLY or pass priceId/priceKey." });
     }
 
     // ---- FORCE CANONICAL BASE (no preview aliases) ----
-    // Prefer BASE_URL; otherwise fall back to the known canonical domain.
     const canonicalFallback = "https://linkinbio-mark-barattos-projects.vercel.app";
     const baseRaw = (process.env.BASE_URL || canonicalFallback).trim();
-    const BASE = baseRaw.replace(/\/$/, ""); // strip trailing slash
+    const BASE = baseRaw.replace(/\/$/, "");
 
     const success_url = `${BASE}/pricing?editToken=${encodeURIComponent(
       editToken
     )}&status=success`;
     const cancel_url = `${BASE}/pricing?editToken=${encodeURIComponent(
       editToken
-    )}&status=cancel`;
+    )}&status=cancelled`;
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price, quantity: 1 }],
+      line_items: [{ price: resolvedPrice, quantity: 1 }],
       allow_promotion_codes: true,
 
       // Carry the profile token everywhere
@@ -62,7 +68,6 @@ export default async function handler(req, res) {
       metadata: { editToken },
       subscription_data: { metadata: { editToken } },
 
-      // Optional: prefill email
       ...(email ? { customer_email: email } : {}),
 
       success_url,

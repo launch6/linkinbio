@@ -1,24 +1,48 @@
 // pages/pricing.js
 import { useEffect, useMemo, useState } from "react";
 
-const TIERS = [
-  { id: "starter", label: "Starter", priceIdEnv: "STRIPE_PRICE_STARTER_MONTHLY", display: "$9.95 / month" },
-  // Add more tiers/prices as needed:
-  // { id: "pro", label: "Pro", priceIdEnv: "STRIPE_PRICE_PRO_MONTHLY", display: "$19 / month" },
-  // { id: "business", label: "Business", priceIdEnv: "STRIPE_PRICE_BUSINESS_MONTHLY", display: "$49 / month" },
+const PLANS = [
+  {
+    id: "starter",
+    label: "Starter",
+    options: [
+      { label: "Monthly", priceKey: "STRIPE_PRICE_STARTER_MONTHLY", note: "$9.95/mo" },
+      { label: "Lifetime", priceKey: "STRIPE_PRICE_STARTER_LIFETIME", note: "one-time", optional: true },
+    ],
+  },
+  {
+    id: "pro",
+    label: "Pro",
+    options: [
+      { label: "Monthly", priceKey: "STRIPE_PRICE_PRO_MONTHLY", note: "subscription" },
+      // If you later add lifetime IDs for Pro/Business, just add them here.
+    ],
+  },
+  {
+    id: "business",
+    label: "Business",
+    options: [
+      { label: "Monthly", priceKey: "STRIPE_PRICE_BUSINESS_MONTHLY", note: "subscription" },
+    ],
+  },
 ];
 
 export default function PricingPage() {
   const [editToken, setEditToken] = useState("");
   const [email, setEmail] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState("");
   const [error, setError] = useState("");
+  const [banner, setBanner] = useState(null);
+  const [hasCustomer, setHasCustomer] = useState(false); // toggles "Manage billing"
 
-  // 1) Pull token from URL on first load; 2) fallback to localStorage
+  // Read token + status from URL, persist token, then fall back to localStorage
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
       const fromUrl = url.searchParams.get("editToken");
+      const status = url.searchParams.get("status");
+      if (status === "success") setBanner({ type: "success", text: "Payment successful." });
+      if (status === "cancelled") setBanner({ type: "warn", text: "Checkout cancelled." });
       if (fromUrl) {
         localStorage.setItem("editToken", fromUrl);
         setEditToken(fromUrl);
@@ -27,58 +51,106 @@ export default function PricingPage() {
     } catch {}
     try {
       const fromStorage = localStorage.getItem("editToken") || "";
-      if (fromStorage) {
-        setEditToken(fromStorage);
-      }
+      if (fromStorage) setEditToken(fromStorage);
     } catch {}
   }, []);
 
-  // For a quick visual hint whether we’re missing it
-  const hasToken = useMemo(() => Boolean(editToken && String(editToken).trim().length > 0), [editToken]);
+  // Quick probe: if profile has a Stripe customer, show "Manage billing"
+  useEffect(() => {
+    // Lightweight HEAD ping to our portal endpoint — we don't reveal secrets,
+    // just check if the route would 400 (missing token) vs 404/200.
+    // We'll instead do a small metadata fetch via a helper endpoint later if needed.
+    (async () => {
+      if (!editToken) return;
+      try {
+        // Try to create a portal session; if it fails on "No Stripe customer", we know false.
+        const res = await fetch("/api/billing/create-portal-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ editToken }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.url) setHasCustomer(true);
+        // If no customer, ignore; we won't show the button.
+      } catch {
+        // ignore
+      }
+    })();
+  }, [editToken]);
 
-  async function startCheckout({ priceIdEnv }) {
+  const hasToken = useMemo(() => Boolean(editToken && String(editToken).trim()), [editToken]);
+
+  async function startCheckout({ priceKey }) {
     setError("");
     if (!hasToken) {
       setError("Missing editToken. Paste it below and try again.");
       return;
     }
-    setCreating(true);
+    setCreating(`${priceKey}`);
     try {
-      // NOTE: priceId is optional; the server will fallback to STRIPE_PRICE_STARTER_MONTHLY
       const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           editToken,
-          // You can optionally pass email so Stripe pre-fills it:
           ...(email ? { email } : {}),
-          // If you want to force a specific price, uncomment and set from env in your server:
-          // priceId: process.env[priceIdEnv]
+          priceKey, // server resolves env key to actual price
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data?.url) {
-        throw new Error(data?.error || "Failed to create checkout");
-      }
+      if (!res.ok || !data?.url) throw new Error(data?.error || "Failed to start checkout");
       window.location.href = data.url;
     } catch (e) {
       setError(e.message || "Something went wrong");
     } finally {
-      setCreating(false);
+      setCreating("");
+    }
+  }
+
+  async function openPortal() {
+    setError("");
+    try {
+      const res = await fetch("/api/billing/create-portal-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editToken }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.url) throw new Error(data?.error || "Could not open billing portal");
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e.message || "Could not open billing portal");
     }
   }
 
   return (
-    <div style={{ maxWidth: 680, margin: "40px auto", padding: "0 16px", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif" }}>
-      <h1 style={{ fontSize: 32, marginBottom: 8 }}>Choose your plan</h1>
+    <div style={{ maxWidth: 980, margin: "40px auto", padding: "0 16px", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif" }}>
+      <h1 style={{ fontSize: 32, marginBottom: 6 }}>Choose your plan</h1>
+      <p style={{ marginTop: 0, opacity: 0.8 }}>Pick a tier. You can upgrade/downgrade anytime.</p>
 
-      {!hasToken && (
-        <div style={{ background: "#fff3cd", color: "#664d03", padding: 12, borderRadius: 8, border: "1px solid #ffe69c", margin: "12px 0" }}>
-          <strong>Heads up:</strong> We need your <code>editToken</code> so we can apply the plan to the right profile.
+      {banner && (
+        <div
+          style={{
+            margin: "16px 0",
+            padding: 12,
+            borderRadius: 8,
+            border: "1px solid",
+            borderColor: banner.type === "success" ? "#b6e6bd" : "#ffe69c",
+            background: banner.type === "success" ? "#d1f7d6" : "#fff3cd",
+            color: banner.type === "success" ? "#0a5c22" : "#664d03",
+          }}
+        >
+          {banner.text}
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 12, margin: "12px 0" }}>
+      {!hasToken && (
+        <div style={{ background: "#fff3cd", color: "#664d03", padding: 12, borderRadius: 8, border: "1px solid #ffe69c", margin: "12px 0" }}>
+          <strong>Heads up:</strong> We need your <code>editToken</code> to attach the plan to the right profile.
+        </div>
+      )}
+
+      <div style={{ display: "grid", gap: 12, margin: "12px 0", gridTemplateColumns: "1fr 1fr", alignItems: "end" }}>
         <label style={{ display: "grid", gap: 6 }}>
           <span style={{ fontSize: 14, color: "#333" }}>Edit Token</span>
           <input
@@ -93,7 +165,7 @@ export default function PricingPage() {
         </label>
 
         <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 14, color: "#333" }}>Email (optional, pre-fills Stripe)</span>
+          <span style={{ fontSize: 14, color: "#333" }}>Email (optional)</span>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -109,36 +181,60 @@ export default function PricingPage() {
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
-        {TIERS.map((t) => (
-          <div key={t.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>{t.label}</div>
-                <div style={{ opacity: 0.75 }}>{t.display}</div>
-              </div>
-              <button
-                onClick={() => startCheckout({ priceIdEnv: t.priceIdEnv })}
-                disabled={creating}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: 10,
-                  border: "1px solid #ddd",
-                  cursor: creating ? "not-allowed" : "pointer",
-                  background: "#000",
-                  color: "#fff",
-                  fontWeight: 600,
-                }}
-              >
-                {creating ? "Starting…" : "Choose plan"}
-              </button>
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(3, 1fr)", marginTop: 16 }}>
+        {PLANS.map((plan) => (
+          <div key={plan.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 16 }}>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{plan.label}</div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {plan.options.map((opt) => (
+                <button
+                  key={opt.label}
+                  onClick={() => startCheckout({ priceKey: opt.priceKey })}
+                  disabled={creating === opt.priceKey || !hasToken}
+                  title={opt.optional ? "Optional — only if env var is set" : undefined}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    cursor: creating ? "not-allowed" : "pointer",
+                    background: "#000",
+                    color: "#fff",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <span>{opt.label}</span>
+                  <span style={{ opacity: 0.8, fontWeight: 500 }}>{opt.note}</span>
+                </button>
+              ))}
             </div>
           </div>
         ))}
       </div>
 
+      <div style={{ marginTop: 20, display: "flex", gap: 12, alignItems: "center" }}>
+        <button
+          onClick={openPortal}
+          disabled={!hasCustomer}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            border: "1px solid #ddd",
+            background: hasCustomer ? "#fff" : "#f4f4f4",
+            cursor: hasCustomer ? "pointer" : "not-allowed",
+            fontWeight: 600,
+          }}
+        >
+          Manage billing
+        </button>
+        {!hasCustomer && <span style={{ fontSize: 12, opacity: 0.7 }}>Becomes available after your first payment.</span>}
+      </div>
+
       <p style={{ marginTop: 16, fontSize: 12, opacity: 0.7 }}>
-        Tip: if you came from Checkout, the URL also includes <code>?editToken=...</code>. We automatically save that for next time.
+        Tip: we save <code>editToken</code> from the URL (and here) so you don’t need to paste it again.
       </p>
     </div>
   );

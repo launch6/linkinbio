@@ -1,27 +1,30 @@
 // pages/set-token.js
 import { useEffect } from "react";
+import { useRouter } from "next/router";
 
-export default function SetToken() {
+export default function SetTokenPage() {
+  const router = useRouter();
+
   useEffect(() => {
+    // Wait until the router has the query populated
+    if (!router.isReady) return;
+
+    const { editToken = "", to = "/pricing" } = router.query || {};
+
     try {
-      const url = new URL(window.location.href);
-      const editToken = url.searchParams.get("editToken") || "";
-      const to = url.searchParams.get("to") || "/pricing";
-
       if (editToken) {
-        try {
-          localStorage.setItem("editToken", editToken);
-        } catch {}
+        // Persist for the Pricing page and dashboard
+        localStorage.setItem("editToken", String(editToken));
       }
-
-      // Always redirect with the token in the URL too
-      const next = `${to}?editToken=${encodeURIComponent(editToken)}`;
-      window.location.replace(next);
     } catch {
-      // If something odd happens, just go to pricing
-      window.location.replace("/pricing");
+      // ignore storage errors
     }
-  }, []);
 
-  return null;
+    // Always redirect with the token in the URL as well
+    const next = `${to}?editToken=${encodeURIComponent(String(editToken || ""))}`;
+    router.replace(next);
+  }, [router.isReady, router.query, router]);
+
+  // Return a valid element so Next.js recognizes this as a page component
+  return <div style={{ display: "none" }}>setting token…</div>;
 }

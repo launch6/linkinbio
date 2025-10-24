@@ -2,31 +2,33 @@
 import { useEffect, useMemo, useState } from "react";
 
 const PLANS = [
-  {
-    id: "starter",
-    label: "Starter",
-    options: [
-      { label: "Monthly", priceKey: "STRIPE_PRICE_STARTER_MONTHLY", note: "$9.95/mo" },
-      { label: "Lifetime", priceKey: "STRIPE_PRICE_STARTER_LIFETIME", note: "one-time" },
-    ],
-  },
-  {
-    id: "pro",
-    label: "Pro",
-    options: [
-      { label: "Monthly", priceKey: "STRIPE_PRICE_PRO_MONTHLY", note: "subscription" },
-      { label: "Lifetime", priceKey: "STRIPE_PRICE_PRO_LIFETIME", note: "one-time" },
-    ],
-  },
-  {
-    id: "business",
-    label: "Business",
-    options: [
-      { label: "Monthly", priceKey: "STRIPE_PRICE_BUSINESS_MONTHLY", note: "subscription" },
-      { label: "Lifetime", priceKey: "STRIPE_PRICE_BUSINESS_LIFETIME", note: "one-time" },
-    ],
-  },
+  { id: "starter", label: "Starter", options: [
+    { label: "Monthly",  priceKey: "STRIPE_PRICE_STARTER_MONTHLY" },
+    { label: "Lifetime", priceKey: "STRIPE_PRICE_STARTER_LIFETIME" },
+  ]},
+  { id: "pro", label: "Pro", options: [
+    { label: "Monthly",  priceKey: "STRIPE_PRICE_PRO_MONTHLY" },
+    { label: "Lifetime", priceKey: "STRIPE_PRICE_PRO_LIFETIME" },
+  ]},
+  { id: "business", label: "Business", options: [
+    { label: "Monthly",  priceKey: "STRIPE_PRICE_BUSINESS_MONTHLY" },
+    { label: "Lifetime", priceKey: "STRIPE_PRICE_BUSINESS_LIFETIME" },
+  ]},
 ];
+
+function fmtPrice(p) {
+  if (!p || p.error) return null;
+  const amount = (p.unit_amount ?? 0) / 100;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: (p.currency || "usd").toUpperCase(),
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `$${amount.toFixed(2)}`;
+  }
+}
 
 export default function PricingPage() {
   const [editToken, setEditToken] = useState("");
@@ -35,8 +37,9 @@ export default function PricingPage() {
   const [error, setError] = useState("");
   const [banner, setBanner] = useState(null);
   const [hasCustomer, setHasCustomer] = useState(false);
+  const [catalog, setCatalog] = useState({}); // priceKey -> price data
 
-  // Read token + status from URL; persist token; fallback to localStorage
+  // Read token + status; persist token; fallback to localStorage
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
@@ -56,6 +59,17 @@ export default function PricingPage() {
     } catch {}
   }, []);
 
+  // Load live prices from Stripe (via our API)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/pricing/list");
+        const data = await res.json();
+        if (res.ok && data?.prices) setCatalog(data.prices);
+      } catch {}
+    })();
+  }, []);
+
   // Probe: if portal can be created, enable "Manage billing"
   useEffect(() => {
     (async () => {
@@ -68,9 +82,7 @@ export default function PricingPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data?.url) setHasCustomer(true);
-      } catch {
-        /* ignore */
-      }
+      } catch {}
     })();
   }, [editToken]);
 
@@ -87,11 +99,7 @@ export default function PricingPage() {
       const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          editToken,
-          ...(email ? { email } : {}),
-          priceKey, // server resolves env var -> price id
-        }),
+        body: JSON.stringify({ editToken, ...(email ? { email } : {}), priceKey }),
       });
       const data = await res.json();
       if (!res.ok || !data?.url) throw new Error(data?.error || "Failed to start checkout");
@@ -152,9 +160,7 @@ export default function PricingPage() {
           <input
             value={editToken}
             onChange={(e) => setEditToken(e.target.value)}
-            onBlur={() => {
-              try { if (editToken) localStorage.setItem("editToken", editToken); } catch {}
-            }}
+            onBlur={() => { try { if (editToken) localStorage.setItem("editToken", editToken); } catch {} }}
             placeholder="paste your editToken"
             style={{ padding: 10, borderRadius: 8, border: "1px solid #ccc" }}
           />
@@ -182,29 +188,36 @@ export default function PricingPage() {
           <div key={plan.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 16 }}>
             <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{plan.label}</div>
             <div style={{ display: "grid", gap: 10 }}>
-              {plan.options.map((opt) => (
-                <button
-                  key={opt.label}
-                  onClick={() => startCheckout({ priceKey: opt.priceKey })}
-                  disabled={creating === opt.priceKey || !hasToken}
-                  style={{
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    cursor: creating ? "not-allowed" : "pointer",
-                    background: "#000",
-                    color: "#fff",
-                    fontWeight: 600,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                  }}
-                >
-                  <span>{opt.label}</span>
-                  <span style={{ opacity: 0.8, fontWeight: 500 }}>{opt.note}</span>
-                </button>
-              ))}
+              {plan.options.map((opt) => {
+                const price = catalog[opt.priceKey];
+                const label = fmtPrice(price)
+                  ? `${opt.label} — ${fmtPrice(price)}${price?.interval ? ` / ${price.interval}` : ""}`
+                  : `${opt.label}${price?.error ? " — (unavailable)" : ""}`;
+                const disabled = creating === opt.priceKey || !hasToken || !!price?.error || !price;
+                return (
+                  <button
+                    key={opt.label}
+                    onClick={() => startCheckout({ priceKey: opt.priceKey })}
+                    disabled={disabled}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid #ddd",
+                      cursor: disabled ? "not-allowed" : "pointer",
+                      background: disabled ? "#e9ecef" : "#000",
+                      color: disabled ? "#6c757d" : "#fff",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                    }}
+                    title={price?.error ? price.error : undefined}
+                  >
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}

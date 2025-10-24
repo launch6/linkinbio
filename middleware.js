@@ -1,24 +1,56 @@
 // middleware.js
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
+/**
+ * Allow-list middleware:
+ * - Always allow API routes
+ * - Always allow webhook + health endpoints
+ * - Allow pricing and our set-token helper
+ * - Everything else continues normally
+ */
 export function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // Allow these routes to pass straight through (no auth/bot checks)
+  // 1) Always allow API
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // 2) Explicit allow-list (add more paths here as needed)
+  const allowed = new Set([
+    "/",
+    "/pricing",
+    "/set-token",
+    "/dashboard", // dashboard root
+  ]);
+
+  // allow /dashboard/<editToken>
+  if (pathname.startsWith("/dashboard")) {
+    return NextResponse.next();
+  }
+
+  // allow explicit paths
+  if (allowed.has(pathname)) {
+    return NextResponse.next();
+  }
+
+  // 3) Webhook/health (in case you referenced without /api/)
   if (
-    pathname.startsWith('/api/stripe-webhook') ||
-    pathname.startsWith('/api/klaviyo-capture') ||
-    pathname.startsWith('/api/ping') ||
-    pathname === '/favicon.ico'
+    pathname === "/api/stripe-webhook" ||
+    pathname === "/api/klaviyo-capture" ||
+    pathname === "/api/ping"
   ) {
     return NextResponse.next();
   }
 
-  // Everything else: just continue (you can add logic later)
+  // Default: continue (don’t rewrite or block)
   return NextResponse.next();
 }
 
-// Limit where middleware runs (avoid static assets/_next)
+/**
+ * Match all routes so we can allow-list what we need.
+ * (You can narrow this if you prefer.)
+ */
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ["/:path*"],
 };

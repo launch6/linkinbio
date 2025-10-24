@@ -12,18 +12,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Expecting JSON body like: { priceId, editToken, email }
-    const { priceId, editToken, email } = (req.body && typeof req.body === "object")
-      ? req.body
-      : (() => { try { return JSON.parse(req.body || "{}"); } catch { return {}; } })();
+    // Accept JSON or raw stringified body
+    const body =
+      req.body && typeof req.body === "object"
+        ? req.body
+        : (() => {
+            try {
+              return JSON.parse(req.body || "{}");
+            } catch {
+              return {};
+            }
+          })();
 
-    // Fallback to your Starter Monthly env if priceId not provided
-    const price = priceId || process.env.STRIPE_PRICE_STARTER_MONTHLY;
-    if (!price) {
-      return res.status(400).json({ error: "Missing priceId and STRIPE_PRICE_STARTER_MONTHLY" });
+    const { priceId, editToken, email } = body;
+
+    // Require editToken so we can map the checkout -> profile in the webhook
+    if (!editToken) {
+      return res.status(400).json({ error: "Missing editToken" });
     }
 
-    // Build a base URL that never points at localhost in prod
+    // Fallback to Starter Monthly env var if priceId is not provided
+    const price = priceId || process.env.STRIPE_PRICE_STARTER_MONTHLY;
+    if (!price) {
+      return res
+        .status(400)
+        .json({ error: "Missing priceId and STRIPE_PRICE_STARTER_MONTHLY" });
+    }
+
+    // Build base URL (never localhost in prod)
     const envBase = (process.env.BASE_URL || "").trim();
     const proto = req.headers["x-forwarded-proto"] || "https";
     const host = req.headers.host;
@@ -36,12 +52,19 @@ export default async function handler(req, res) {
       mode: "subscription",
       line_items: [{ price, quantity: 1 }],
       allow_promotion_codes: true,
-      // Always create/attach a Customer so we get stable IDs back on webhooks
-      customer_creation: "always",
-      // Attach your profile reference so the webhook can update the right user later
-      client_reference_id: editToken || null, // pass your profile/edit token from the dashboard
-      // Optional: prefill email if you have it
+
+      // Always get stable Customer IDs
+
+      // 👇 Carry the profile token everywhere
+      client_reference_id: editToken,
+      metadata: { editToken },
+      subscription_data: {
+        metadata: { editToken },
+      },
+
+      // Optional: prefill email
       ...(email ? { customer_email: email } : {}),
+
       success_url,
       cancel_url,
     });

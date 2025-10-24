@@ -7,7 +7,7 @@ const PLANS = [
     label: "Starter",
     options: [
       { label: "Monthly", priceKey: "STRIPE_PRICE_STARTER_MONTHLY", note: "$9.95/mo" },
-      { label: "Lifetime", priceKey: "STRIPE_PRICE_STARTER_LIFETIME", note: "one-time", optional: true },
+      { label: "Lifetime", priceKey: "STRIPE_PRICE_STARTER_LIFETIME", note: "one-time" },
     ],
   },
   {
@@ -15,7 +15,7 @@ const PLANS = [
     label: "Pro",
     options: [
       { label: "Monthly", priceKey: "STRIPE_PRICE_PRO_MONTHLY", note: "subscription" },
-      // If you later add lifetime IDs for Pro/Business, just add them here.
+      { label: "Lifetime", priceKey: "STRIPE_PRICE_PRO_LIFETIME", note: "one-time" },
     ],
   },
   {
@@ -23,6 +23,7 @@ const PLANS = [
     label: "Business",
     options: [
       { label: "Monthly", priceKey: "STRIPE_PRICE_BUSINESS_MONTHLY", note: "subscription" },
+      { label: "Lifetime", priceKey: "STRIPE_PRICE_BUSINESS_LIFETIME", note: "one-time" },
     ],
   },
 ];
@@ -33,9 +34,9 @@ export default function PricingPage() {
   const [creating, setCreating] = useState("");
   const [error, setError] = useState("");
   const [banner, setBanner] = useState(null);
-  const [hasCustomer, setHasCustomer] = useState(false); // toggles "Manage billing"
+  const [hasCustomer, setHasCustomer] = useState(false);
 
-  // Read token + status from URL, persist token, then fall back to localStorage
+  // Read token + status from URL; persist token; fallback to localStorage
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
@@ -55,15 +56,11 @@ export default function PricingPage() {
     } catch {}
   }, []);
 
-  // Quick probe: if profile has a Stripe customer, show "Manage billing"
+  // Probe: if portal can be created, enable "Manage billing"
   useEffect(() => {
-    // Lightweight HEAD ping to our portal endpoint — we don't reveal secrets,
-    // just check if the route would 400 (missing token) vs 404/200.
-    // We'll instead do a small metadata fetch via a helper endpoint later if needed.
     (async () => {
       if (!editToken) return;
       try {
-        // Try to create a portal session; if it fails on "No Stripe customer", we know false.
         const res = await fetch("/api/billing/create-portal-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -71,9 +68,8 @@ export default function PricingPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data?.url) setHasCustomer(true);
-        // If no customer, ignore; we won't show the button.
       } catch {
-        // ignore
+        /* ignore */
       }
     })();
   }, [editToken]);
@@ -86,7 +82,7 @@ export default function PricingPage() {
       setError("Missing editToken. Paste it below and try again.");
       return;
     }
-    setCreating(`${priceKey}`);
+    setCreating(priceKey);
     try {
       const res = await fetch("/api/checkout/create", {
         method: "POST",
@@ -94,7 +90,7 @@ export default function PricingPage() {
         body: JSON.stringify({
           editToken,
           ...(email ? { email } : {}),
-          priceKey, // server resolves env key to actual price
+          priceKey, // server resolves env var -> price id
         }),
       });
       const data = await res.json();
@@ -191,7 +187,6 @@ export default function PricingPage() {
                   key={opt.label}
                   onClick={() => startCheckout({ priceKey: opt.priceKey })}
                   disabled={creating === opt.priceKey || !hasToken}
-                  title={opt.optional ? "Optional — only if env var is set" : undefined}
                   style={{
                     padding: "10px 14px",
                     borderRadius: 10,

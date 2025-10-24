@@ -12,7 +12,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Accept JSON or raw stringified body
     const body =
       req.body && typeof req.body === "object"
         ? req.body
@@ -30,23 +29,31 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing editToken" });
     }
 
-    // Allow client to send a server env key (e.g. "STRIPE_PRICE_PRO_MONTHLY")
-    let resolvedPrice = priceId;
-    if (!resolvedPrice && priceKey) {
-      const v = process.env[priceKey];
-      if (v) resolvedPrice = v;
+    // Resolve the Stripe Price to use
+    let resolvedPrice = null;
+
+    if (priceId) {
+      resolvedPrice = priceId; // explicit override
+    } else if (priceKey) {
+      const envVal = process.env[priceKey];
+      if (!envVal) {
+        return res
+          .status(400)
+          .json({ error: `Missing env var for priceKey "${priceKey}"` });
+      }
+      resolvedPrice = envVal;
+    } else {
+      // Fallback for legacy callers
+      resolvedPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
+      if (!resolvedPrice) {
+        return res.status(400).json({
+          error:
+            "No price provided. Set STRIPE_PRICE_STARTER_MONTHLY or pass priceId/priceKey.",
+        });
+      }
     }
 
-    // Fallback: Starter Monthly (must exist in env)
-    if (!resolvedPrice) resolvedPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
-
-    if (!resolvedPrice) {
-      return res
-        .status(400)
-        .json({ error: "No price found. Set STRIPE_PRICE_STARTER_MONTHLY or pass priceId/priceKey." });
-    }
-
-    // ---- FORCE CANONICAL BASE (no preview aliases) ----
+    // Use canonical BASE_URL (avoid preview/alias surprises)
     const canonicalFallback = "https://linkinbio-mark-barattos-projects.vercel.app";
     const baseRaw = (process.env.BASE_URL || canonicalFallback).trim();
     const BASE = baseRaw.replace(/\/$/, "");
@@ -63,7 +70,7 @@ export default async function handler(req, res) {
       line_items: [{ price: resolvedPrice, quantity: 1 }],
       allow_promotion_codes: true,
 
-      // Carry the profile token everywhere
+      // Carry profile token through
       client_reference_id: editToken,
       metadata: { editToken },
       subscription_data: { metadata: { editToken } },

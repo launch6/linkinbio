@@ -2,18 +2,30 @@
 import { useEffect, useMemo, useState } from "react";
 
 const PLANS = [
-  { id: "starter", label: "Starter", options: [
-    { label: "Monthly",  priceKey: "STRIPE_PRICE_STARTER_MONTHLY" },
-    { label: "Lifetime", priceKey: "STRIPE_PRICE_STARTER_LIFETIME" },
-  ]},
-  { id: "pro", label: "Pro", options: [
-    { label: "Monthly",  priceKey: "STRIPE_PRICE_PRO_MONTHLY" },
-    { label: "Lifetime", priceKey: "STRIPE_PRICE_PRO_LIFETIME" },
-  ]},
-  { id: "business", label: "Business", options: [
-    { label: "Monthly",  priceKey: "STRIPE_PRICE_BUSINESS_MONTHLY" },
-    { label: "Lifetime", priceKey: "STRIPE_PRICE_BUSINESS_LIFETIME" },
-  ]},
+  {
+    id: "starter",
+    label: "Starter",
+    options: [
+      { label: "Monthly", priceKey: "STRIPE_PRICE_STARTER_MONTHLY", supportsReferral: true },
+      { label: "Lifetime", priceKey: "STRIPE_PRICE_STARTER_LIFETIME" },
+    ],
+  },
+  {
+    id: "pro",
+    label: "Pro",
+    options: [
+      { label: "Monthly", priceKey: "STRIPE_PRICE_PRO_MONTHLY" },
+      { label: "Lifetime", priceKey: "STRIPE_PRICE_PRO_LIFETIME" },
+    ],
+  },
+  {
+    id: "business",
+    label: "Business",
+    options: [
+      { label: "Monthly", priceKey: "STRIPE_PRICE_BUSINESS_MONTHLY" },
+      { label: "Lifetime", priceKey: "STRIPE_PRICE_BUSINESS_LIFETIME" },
+    ],
+  },
 ];
 
 function fmtPrice(p) {
@@ -39,20 +51,40 @@ export default function PricingPage() {
   const [hasCustomer, setHasCustomer] = useState(false);
   const [catalog, setCatalog] = useState({}); // priceKey -> price data
 
+  // NEW: hold referral state (Starter+)
+  const [refCode, setRefCode] = useState("");
+
   // Read token + status; persist token; fallback to localStorage
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
       const fromUrl = url.searchParams.get("editToken");
       const status = url.searchParams.get("status");
+      const urlRef = url.searchParams.get("refCode");
+
       if (status === "success") setBanner({ type: "success", text: "Payment successful." });
       if (status === "cancelled") setBanner({ type: "warn", text: "Checkout cancelled." });
+
+      // Referral: save if present
+      if (urlRef) {
+        setRefCode(urlRef);
+        try {
+          localStorage.setItem("refCode", urlRef);
+        } catch {}
+      } else {
+        try {
+          const lsRef = localStorage.getItem("refCode");
+          if (lsRef) setRefCode(lsRef);
+        } catch {}
+      }
+
       if (fromUrl) {
         localStorage.setItem("editToken", fromUrl);
         setEditToken(fromUrl);
         return;
       }
     } catch {}
+
     try {
       const fromStorage = localStorage.getItem("editToken") || "";
       if (fromStorage) setEditToken(fromStorage);
@@ -88,7 +120,7 @@ export default function PricingPage() {
 
   const hasToken = useMemo(() => Boolean(editToken && String(editToken).trim()), [editToken]);
 
-  async function startCheckout({ priceKey }) {
+  async function startCheckout({ priceKey, supportsReferral }) {
     setError("");
     if (!hasToken) {
       setError("Missing editToken. Paste it below and try again.");
@@ -96,10 +128,19 @@ export default function PricingPage() {
     }
     setCreating(priceKey);
     try {
+      const body = {
+        editToken,
+        ...(email ? { email } : {}),
+        priceKey,
+        // pass refCode only for plans that support Starter+ (safe to pass always too,
+        // but this keeps intent obvious in logs)
+        ...(refCode && supportsReferral ? { refCode } : {}),
+      };
+
       const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ editToken, ...(email ? { email } : {}), priceKey }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok || !data?.url) throw new Error(data?.error || "Failed to start checkout");
@@ -127,8 +168,17 @@ export default function PricingPage() {
     }
   }
 
+  const showStarterPlus = Boolean(refCode);
+
   return (
-    <div style={{ maxWidth: 980, margin: "40px auto", padding: "0 16px", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif" }}>
+    <div
+      style={{
+        maxWidth: 980,
+        margin: "40px auto",
+        padding: "0 16px",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+      }}
+    >
       <h1 style={{ fontSize: 32, marginBottom: 6 }}>Choose your plan</h1>
       <p style={{ marginTop: 0, opacity: 0.8 }}>Pick a tier. You can upgrade/downgrade anytime.</p>
 
@@ -149,18 +199,58 @@ export default function PricingPage() {
       )}
 
       {!hasToken && (
-        <div style={{ background: "#fff3cd", color: "#664d03", padding: 12, borderRadius: 8, border: "1px solid #ffe69c", margin: "12px 0" }}>
-          <strong>Heads up:</strong> We need your <code>editToken</code> to attach the plan to the right profile.
+        <div
+          style={{
+            background: "#fff3cd",
+            color: "#664d03",
+            padding: 12,
+            borderRadius: 8,
+            border: "1px solid #ffe69c",
+            margin: "12px 0",
+          }}
+        >
+          <strong>Heads up:</strong> We need your <code>editToken</code> to attach the plan to the
+          right profile.
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 12, margin: "12px 0", gridTemplateColumns: "1fr 1fr", alignItems: "end" }}>
+      {showStarterPlus && (
+        <div
+          style={{
+            margin: "12px 0",
+            padding: 12,
+            borderRadius: 8,
+            border: "1px dashed #2e7d32",
+            background: "#edf7ed",
+            color: "#1b5e20",
+            fontSize: 14,
+          }}
+        >
+          <strong>Starter+ referral applied:</strong> both you and your friend get{" "}
+          <strong>6 months free</strong> on Starter (card required to activate). Lifetime and
+          non-Starter plans won’t apply the referral.
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "grid",
+          gap: 12,
+          margin: "12px 0",
+          gridTemplateColumns: "1fr 1fr",
+          alignItems: "end",
+        }}
+      >
         <label style={{ display: "grid", gap: 6 }}>
           <span style={{ fontSize: 14, color: "#333" }}>Edit Token</span>
           <input
             value={editToken}
             onChange={(e) => setEditToken(e.target.value)}
-            onBlur={() => { try { if (editToken) localStorage.setItem("editToken", editToken); } catch {} }}
+            onBlur={() => {
+              try {
+                if (editToken) localStorage.setItem("editToken", editToken);
+              } catch {}
+            }}
             placeholder="paste your editToken"
             style={{ padding: 10, borderRadius: 8, border: "1px solid #ccc" }}
           />
@@ -178,12 +268,23 @@ export default function PricingPage() {
       </div>
 
       {error && (
-        <div style={{ background: "#f8d7da", color: "#842029", padding: 12, borderRadius: 8, border: "1px solid #f5c2c7", margin: "12px 0" }}>
+        <div
+          style={{
+            background: "#f8d7da",
+            color: "#842029",
+            padding: 12,
+            borderRadius: 8,
+            border: "1px solid #f5c2c7",
+            margin: "12px 0",
+          }}
+        >
           {error}
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(3, 1fr)", marginTop: 16 }}>
+      <div
+        style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(3, 1fr)", marginTop: 16 }}
+      >
         {PLANS.map((plan) => (
           <div key={plan.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 16 }}>
             <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{plan.label}</div>
@@ -191,13 +292,18 @@ export default function PricingPage() {
               {plan.options.map((opt) => {
                 const price = catalog[opt.priceKey];
                 const label = fmtPrice(price)
-                  ? `${opt.label} — ${fmtPrice(price)}${price?.interval ? ` / ${price.interval}` : ""}`
+                  ? `${opt.label} — ${fmtPrice(price)}${
+                      price?.interval ? ` / ${price.interval}` : ""
+                    }`
                   : `${opt.label}${price?.error ? " — (unavailable)" : ""}`;
                 const disabled = creating === opt.priceKey || !hasToken || !!price?.error || !price;
+
+                const supportsReferral = Boolean(opt.supportsReferral);
+
                 return (
                   <button
                     key={opt.label}
-                    onClick={() => startCheckout({ priceKey: opt.priceKey })}
+                    onClick={() => startCheckout({ priceKey: opt.priceKey, supportsReferral })}
                     disabled={disabled}
                     style={{
                       padding: "10px 14px",
@@ -215,6 +321,19 @@ export default function PricingPage() {
                     title={price?.error ? price.error : undefined}
                   >
                     <span>{label}</span>
+                    {showStarterPlus && supportsReferral && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          background: "#2e7d32",
+                          color: "#fff",
+                          padding: "2px 6px",
+                          borderRadius: 6,
+                        }}
+                      >
+                        +6 months
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -238,11 +357,16 @@ export default function PricingPage() {
         >
           Manage billing
         </button>
-        {!hasCustomer && <span style={{ fontSize: 12, opacity: 0.7 }}>Becomes available after your first payment.</span>}
+        {!hasCustomer && (
+          <span style={{ fontSize: 12, opacity: 0.7 }}>
+            Becomes available after your first payment.
+          </span>
+        )}
       </div>
 
       <p style={{ marginTop: 16, fontSize: 12, opacity: 0.7 }}>
-        Tip: we save <code>editToken</code> from the URL (and here) so you don’t need to paste it again.
+        Tip: we save <code>editToken</code> and any <code>refCode</code> from the URL so you don’t
+        need to paste them again.
       </p>
     </div>
   );

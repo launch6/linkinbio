@@ -39,28 +39,28 @@ export default async function handler(req, res) {
         .json({ error: "Missing priceId and STRIPE_PRICE_STARTER_MONTHLY" });
     }
 
-    // Build base URL (never localhost in prod)
-    const envBase = (process.env.BASE_URL || "").trim();
-    const proto = req.headers["x-forwarded-proto"] || "https";
-    const host = req.headers.host;
-    const baseUrl = envBase || `${proto}://${host}`;
+    // ---- FORCE CANONICAL BASE (no preview aliases) ----
+    // Prefer BASE_URL; otherwise fall back to the known canonical domain.
+    const canonicalFallback = "https://linkinbio-mark-barattos-projects.vercel.app";
+    const baseRaw = (process.env.BASE_URL || canonicalFallback).trim();
+    const BASE = baseRaw.replace(/\/$/, ""); // strip trailing slash
 
-    const success_url = `${baseUrl}/pricing?status=success`;
-    const cancel_url = `${baseUrl}/pricing?status=cancelled`;
+    const success_url = `${BASE}/pricing?editToken=${encodeURIComponent(
+      editToken
+    )}&status=success`;
+    const cancel_url = `${BASE}/pricing?editToken=${encodeURIComponent(
+      editToken
+    )}&status=cancel`;
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price, quantity: 1 }],
       allow_promotion_codes: true,
 
-      // Always get stable Customer IDs
-
-      // 👇 Carry the profile token everywhere
+      // Carry the profile token everywhere
       client_reference_id: editToken,
       metadata: { editToken },
-      subscription_data: {
-        metadata: { editToken },
-      },
+      subscription_data: { metadata: { editToken } },
 
       // Optional: prefill email
       ...(email ? { customer_email: email } : {}),

@@ -1,13 +1,14 @@
 // pages/api/stripe-webhook.js
 import Stripe from "stripe";
-import { getDb } from "../../lib/mongo"; // NOTE: path is ../../lib/mongo from /pages/api/*
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+import { getDb } from "../../lib/mongo";
 
 export const config = {
-  api: { bodyParser: false }, // raw body required for signature verification
+  api: { bodyParser: false }, // raw body required for Stripe signature verification
 };
 
-// collect the raw request body (Node/Edge-compatible)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+
+// helper: read raw body
 async function getRawBody(req) {
   const chunks = [];
   for await (const chunk of req) {
@@ -16,11 +17,31 @@ async function getRawBody(req) {
   return Buffer.concat(chunks);
 }
 
+// helper: map a Stripe price.id -> internal plan name
+function priceIdToPlan(priceId) {
+  if (!priceId) return null;
+
+  // Map your known prices from env vars
+  const MAP = [
+    { id: process.env.STRIPE_PRICE_STARTER_MONTHLY, plan: "starter" },
+    { id: process.env.STRIPE_PRICE_STARTER_LIFETIME, plan: "starter_lifetime" },
+    { id: process.env.STRIPE_PRICE_PRO_MONTHLY, plan: "pro" },
+    { id: process.env.STRIPE_PRICE_BUSINESS_MONTHLY, plan: "business" },
+  ];
+
+  for (const m of MAP) {
+    if (m.id && m.id === priceId) return m.plan;
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+    res.setHeader("Allow", "POST");
+    return res.status(405).end("Method Not Allowed");
   }
 
+  // 1) Verify signature
   let event;
   try {
     const rawBody = await getRawBody(req);
@@ -37,24 +58,23 @@ export default async function handler(req, res) {
 
   try {
     const db = await getDb();
-    const col = db.collection("subscriptions");
+    const subs = db.collection("subscriptions");
+    const profiles = db.collection("profiles");
 
     switch (event.type) {
       case "checkout.session.completed": {
         const s = event.data.object;
-        // Only care about subscription checkouts
+
+        // Store basic subscription event
         if (s.mode === "subscription") {
-          await col.updateOne(
+          await subs.updateOne(
             { subscriptionId: s.subscription || null },
             {
               $set: {
                 subscriptionId: s.subscription || null,
                 customerId: s.customer || null,
-                email:
-                  s.customer_details?.email ??
-                  s.customer_email ??
-                  null,
-                status: "active", // session completed
+                email: s.customer_details?.email ?? s.customer_email ?? null,
+                status: "active",
                 paymentStatus: s.payment_status,
                 cancelAtPeriodEnd: false,
                 updatedAt: new Date(),
@@ -65,6 +85,50 @@ export default async function handler(req, res) {
             { upsert: true }
           );
         }
+
+        // Expand line_items to find the exact price that was purchased
+        let priceId = null;
+        try {
+          const sessionFull = await stripe.checkout.sessions.retrieve(s.id, {
+            expand: ["line_items.data.price"],
+          });
+          const li = sessionFull?.line_items?.data?.[0];
+          priceId = li?.price?.id ?? null;
+        } catch (e) {
+          console.error("Failed to expand line_items:", e?.message || e);
+        }
+
+        const plan = priceIdToPlan(priceId) || "starter"; // default to starter if unknown
+        const editToken = s.client_reference_id || null;
+
+        // If we have a profile reference, update the profile's plan immediately
+        if (editToken) {
+          const profileUpdate = {
+            plan,
+            // If you later support trials/lifetime via metadata, set planExpiresAt here
+            updatedAt: new Date(),
+            // Store a small snapshot of Stripe linkage if helpful:
+            stripe: {
+              customerId: s.customer || null,
+              subscriptionId: s.subscription || null,
+              priceId: priceId || null,
+              lastEvent: "checkout.session.completed",
+            },
+          };
+
+          const r = await profiles.updateOne(
+            { editToken: String(editToken) },
+            { $set: profileUpdate },
+            { upsert: false } // do not create profiles here; only update existing
+          );
+
+          if (r.matchedCount === 0) {
+            console.warn("No profile matched editToken from client_reference_id:", editToken);
+          }
+        } else {
+          console.warn("No client_reference_id on checkout.session.completed; cannot map to profile.");
+        }
+
         break;
       }
 
@@ -72,7 +136,7 @@ export default async function handler(req, res) {
         const sub = event.data.object;
         const item = sub.items?.data?.[0];
 
-        await col.updateOne(
+        await subs.updateOne(
           { subscriptionId: sub.id },
           {
             $set: {
@@ -95,12 +159,31 @@ export default async function handler(req, res) {
           },
           { upsert: true }
         );
+
+        // Optional: keep profile.plan in sync from subscription updated
+        try {
+          const plan = priceIdToPlan(item?.price?.id);
+          if (plan) {
+            await profiles.updateMany(
+              { "stripe.subscriptionId": sub.id },
+              {
+                $set: {
+                  plan,
+                  updatedAt: new Date(),
+                },
+              }
+            );
+          }
+        } catch (e) {
+          console.error("profile sync on subscription.updated failed:", e?.message || e);
+        }
+
         break;
       }
 
       case "invoice.paid": {
         const inv = event.data.object;
-        await col.updateOne(
+        await subs.updateOne(
           { subscriptionId: inv.subscription || null },
           {
             $set: {
@@ -119,7 +202,8 @@ export default async function handler(req, res) {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object;
-        await col.updateOne(
+
+        await subs.updateOne(
           { subscriptionId: sub.id },
           {
             $set: {
@@ -132,11 +216,27 @@ export default async function handler(req, res) {
             },
           }
         );
+
+        // Downgrade linked profile(s)
+        try {
+          await profiles.updateMany(
+            { "stripe.subscriptionId": sub.id },
+            {
+              $set: {
+                plan: "free",
+                updatedAt: new Date(),
+              },
+            }
+          );
+        } catch (e) {
+          console.error("profile downgrade on subscription.deleted failed:", e?.message || e);
+        }
+
         break;
       }
 
       default:
-        // Not critical to store—acknowledge quickly
+        // Acknowledge quickly for unhandled event types
         break;
     }
 

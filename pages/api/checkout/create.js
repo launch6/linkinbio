@@ -12,29 +12,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Body can arrive as object or raw JSON string depending on caller
     const body =
       req.body && typeof req.body === "object"
         ? req.body
         : (() => {
-            try {
-              return JSON.parse(req.body || "{}");
-            } catch {
-              return {};
-            }
+            try { return JSON.parse(req.body || "{}"); } catch { return {}; }
           })();
 
-    // Incoming fields from client
     const {
-      priceKey,           // e.g. "STRIPE_PRICE_STARTER_MONTHLY" (preferred)
-      priceId,            // e.g. "price_..." (allowed)
-      editToken,          // creator profile attachment
-      email,              // optional
-      refCode,            // any non-empty means referral/Starter+ banner
-      applyStarter6mo,    // true when UI intends 6mo free on Starter Monthly
+      priceKey,        // e.g. "STRIPE_PRICE_STARTER_MONTHLY"
+      priceId,         // e.g. "price_..."
+      editToken,
+      email,
+      refCode,
+      applyStarter6mo, // true when Starter+ 6 months free should apply
     } = body;
 
-    // Resolve which Stripe Price to use
+    // Resolve Stripe Price ID
     const resolvedPriceId =
       (priceKey && process.env[priceKey]) || priceId || process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
@@ -42,22 +36,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing price ID (env or payload)." });
     }
 
-    // Determine subscription vs one-time by looking at the env key or actual priceId
+    // Treat Starter Monthly as a subscription
     const isSubscription =
       (priceKey && /_MONTHLY$/.test(priceKey)) ||
-      (!!resolvedPriceId && !/_LIFETIME$/.test(priceKey || ""));
-
-    // Build discounts ONLY for Starter Monthly + referral path
-    const isStarterMonthly =
       resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
-    let computedDiscounts = undefined;
+    const isStarterMonthly = resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
+    // Compute discounts (use promotion_code first, then coupon fallback)
+    let computedDiscounts;
     if (isSubscription && isStarterMonthly && refCode && applyStarter6mo) {
-      // Prefer promotion_code API ID
-      const promo6m = process.env.STRIPE_PROMO_CODE_ID;
-      const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;
-
+      const promo6m = process.env.STRIPE_PROMO_CODE_ID;       // should start with "promo_"
+      const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;  // optional fallback "coupon_"
       if (promo6m && /^promo_/.test(promo6m)) {
         computedDiscounts = [{ promotion_code: promo6m }];
       } else if (coupon6m && /^coupon_/.test(coupon6m)) {
@@ -65,7 +55,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Prepare success/cancel URLs
     const baseUrl =
       process.env.BASE_URL ||
       `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
@@ -73,7 +62,7 @@ export default async function handler(req, res) {
     const success_url = `${baseUrl}/pricing?success=1`;
     const cancel_url = `${baseUrl}/pricing?canceled=1`;
 
-    // Log EVERYTHING we care about (shows up in Vercel Function logs)
+    // Debug log (visible in Vercel Functions)
     console.log("checkout:create params", {
       priceKey,
       resolvedPriceId,
@@ -103,31 +92,22 @@ export default async function handler(req, res) {
       },
     };
 
-    // For subscriptions, attach discounts via subscription_data.discounts
-    if (isSubscription && computedDiscounts) {
-      sessionParams.subscription_data = { discounts: computedDiscounts };
-    } else if (computedDiscounts) {
-      // Safety: if Stripe accepts top-level discounts for your mode, attach here too
+    // ✅ Attach discounts at the top level for Checkout
+    if (computedDiscounts) {
       sessionParams.discounts = computedDiscounts;
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    console.log("checkout:session created", {
-      id: session.id,
-      url: session.url,
-      total_details: session.total_details || null,
-      discounts_applied:
-        (session.discounts && session.discounts.length) ||
-        (session.subscription && "see invoice/line_items"),
-    });
-
+    console.log("checkout:session created", { id: session.id, url: session.url });
     return res.status(200).json({ id: session.id, url: session.url });
   } catch (err) {
     console.error("checkout:create ERROR", {
       message: err?.message,
       type: err?.type,
-      raw: err?.raw,
+      code: err?.code,
+      param: err?.param,
+      raw_type: err?.rawType,
     });
     return res.status(500).json({ error: "Internal error creating Checkout Session." });
   }

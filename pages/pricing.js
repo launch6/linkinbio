@@ -2,6 +2,16 @@
 import { useEffect, useMemo, useState } from "react";
 
 const PLANS = [
+  // FREE (informational only; no checkout)
+  {
+    id: "free",
+    label: "Free",
+    options: [],
+    note:
+      "Create your page, add links, collect emails, and try products with basic limits. You’re on Free until you upgrade.",
+  },
+
+  // Paid tiers
   {
     id: "starter",
     label: "Starter",
@@ -168,7 +178,7 @@ export default function PricingPage() {
   return (
     <div
       style={{
-        maxWidth: 980,
+        maxWidth: 1080,
         margin: "40px auto",
         padding: "0 16px",
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
@@ -278,57 +288,71 @@ export default function PricingPage() {
       )}
 
       <div
-        style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(3, 1fr)", marginTop: 16 }}
+        style={{
+          display: "grid",
+          gap: 16,
+          gridTemplateColumns: "repeat(4, 1fr)",
+          marginTop: 16,
+        }}
       >
         {PLANS.map((plan) => (
           <div key={plan.id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 16 }}>
             <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{plan.label}</div>
-            <div style={{ display: "grid", gap: 10 }}>
-              {plan.options.map((opt) => {
-                const price = catalog[opt.priceKey];
-                const isStarterMonthly =
-                  plan.id === "starter" && opt.priceKey === "STRIPE_PRICE_STARTER_MONTHLY";
 
-                const base = fmtPrice(price);
-                const label =
-                  isStarterMonthly && showStarterPlus && base
-                    ? `Monthly — ${base} · 6 months free`
-                    : base
-                    ? `${opt.label} — ${base}${price?.interval ? ` / ${price.interval}` : ""}`
-                    : `${opt.label}${price?.error ? " — (unavailable)" : ""}`;
+            {/* FREE: show note only */}
+            {plan.id === "free" ? (
+              <div style={{ fontSize: 14, opacity: 0.85, lineHeight: 1.5 }}>
+                {plan.note || "Start for free. Upgrade anytime."}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {plan.options.map((opt) => {
+                  const price = catalog[opt.priceKey];
+                  const isStarterMonthly =
+                    plan.id === "starter" && opt.priceKey === "STRIPE_PRICE_STARTER_MONTHLY";
 
-                const disabled = creating === opt.priceKey || !hasToken || !!price?.error || !price;
+                  const base = fmtPrice(price);
+                  const label =
+                    isStarterMonthly && showStarterPlus && base
+                      ? `Monthly — ${base} · 6 months free`
+                      : base
+                      ? `${opt.label} — ${base}${price?.interval ? ` / ${price.interval}` : ""}`
+                      : `${opt.label}${price?.error ? " — (unavailable)" : ""}`;
 
-                const supportsReferral = Boolean(opt.supportsReferral);
-                const applyStarter6mo = Boolean(isStarterMonthly && showStarterPlus);
+                  const disabled =
+                    creating === opt.priceKey || !hasToken || !!price?.error || !price;
 
-                return (
-                  <button
-                    key={opt.label}
-                    onClick={() =>
-                      startCheckout({ priceKey: opt.priceKey, supportsReferral, applyStarter6mo })
-                    }
-                    disabled={disabled}
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: 10,
-                      border: "1px solid #ddd",
-                      cursor: disabled ? "not-allowed" : "pointer",
-                      background: disabled ? "#e9ecef" : "#000",
-                      color: disabled ? "#6c757d" : "#fff",
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 12,
-                    }}
-                    title={price?.error ? price.error : undefined}
-                  >
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
-            </div>
+                  const supportsReferral = Boolean(opt.supportsReferral);
+                  const applyStarter6mo = Boolean(isStarterMonthly && showStarterPlus);
+
+                  return (
+                    <button
+                      key={opt.label}
+                      onClick={() =>
+                        startCheckout({ priceKey: opt.priceKey, supportsReferral, applyStarter6mo })
+                      }
+                      disabled={disabled}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1px solid #ddd",
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        background: disabled ? "#e9ecef" : "#000",
+                        color: disabled ? "#6c757d" : "#fff",
+                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                      title={price?.error ? price.error : undefined}
+                    >
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
       </div>

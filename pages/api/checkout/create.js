@@ -12,6 +12,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Body can arrive as object or raw JSON string depending on caller
     const body =
       req.body && typeof req.body === "object"
         ? req.body
@@ -23,67 +24,111 @@ export default async function handler(req, res) {
             }
           })();
 
-    const { editToken, email, priceId, priceKey } = body;
+    // Incoming fields from client
+    const {
+      priceKey,           // e.g. "STRIPE_PRICE_STARTER_MONTHLY" (preferred)
+      priceId,            // e.g. "price_..." (allowed)
+      editToken,          // creator profile attachment
+      email,              // optional
+      refCode,            // any non-empty means referral/Starter+ banner
+      applyStarter6mo,    // true when UI intends 6mo free on Starter Monthly
+    } = body;
 
-    if (!editToken) {
-      return res.status(400).json({ error: "Missing editToken" });
+    // Resolve which Stripe Price to use
+    const resolvedPriceId =
+      (priceKey && process.env[priceKey]) || priceId || process.env.STRIPE_PRICE_STARTER_MONTHLY;
+
+    if (!resolvedPriceId) {
+      return res.status(400).json({ error: "Missing price ID (env or payload)." });
     }
 
-    // Resolve the Stripe Price to use
-    let resolvedPrice = null;
+    // Determine subscription vs one-time by looking at the env key or actual priceId
+    const isSubscription =
+      (priceKey && /_MONTHLY$/.test(priceKey)) ||
+      (!!resolvedPriceId && !/_LIFETIME$/.test(priceKey || ""));
 
-    if (priceId) {
-      resolvedPrice = priceId; // explicit override
-    } else if (priceKey) {
-      const envVal = process.env[priceKey];
-      if (!envVal) {
-        return res
-          .status(400)
-          .json({ error: `Missing env var for priceKey "${priceKey}"` });
-      }
-      resolvedPrice = envVal;
-    } else {
-      // Fallback for legacy callers
-      resolvedPrice = process.env.STRIPE_PRICE_STARTER_MONTHLY;
-      if (!resolvedPrice) {
-        return res.status(400).json({
-          error:
-            "No price provided. Set STRIPE_PRICE_STARTER_MONTHLY or pass priceId/priceKey.",
-        });
+    // Build discounts ONLY for Starter Monthly + referral path
+    const isStarterMonthly =
+      resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
+
+    let computedDiscounts = undefined;
+
+    if (isSubscription && isStarterMonthly && refCode && applyStarter6mo) {
+      // Prefer promotion_code API ID
+      const promo6m = process.env.STRIPE_PROMO_CODE_ID;
+      const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;
+
+      if (promo6m && /^promo_/.test(promo6m)) {
+        computedDiscounts = [{ promotion_code: promo6m }];
+      } else if (coupon6m && /^coupon_/.test(coupon6m)) {
+        computedDiscounts = [{ coupon: coupon6m }];
       }
     }
 
-    // Use canonical BASE_URL (avoid preview/alias surprises)
-    const canonicalFallback = "https://linkinbio-mark-barattos-projects.vercel.app";
-    const baseRaw = (process.env.BASE_URL || canonicalFallback).trim();
-    const BASE = baseRaw.replace(/\/$/, "");
+    // Prepare success/cancel URLs
+    const baseUrl =
+      process.env.BASE_URL ||
+      `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
 
-    const success_url = `${BASE}/pricing?editToken=${encodeURIComponent(
-      editToken
-    )}&status=success`;
-    const cancel_url = `${BASE}/pricing?editToken=${encodeURIComponent(
-      editToken
-    )}&status=cancelled`;
+    const success_url = `${baseUrl}/pricing?success=1`;
+    const cancel_url = `${baseUrl}/pricing?canceled=1`;
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price: resolvedPrice, quantity: 1 }],
-      allow_promotion_codes: true,
-
-      // Carry profile token through
-      client_reference_id: editToken,
-      metadata: { editToken },
-      subscription_data: { metadata: { editToken } },
-
-      ...(email ? { customer_email: email } : {}),
-
-      success_url,
-      cancel_url,
+    // Log EVERYTHING we care about (shows up in Vercel Function logs)
+    console.log("checkout:create params", {
+      priceKey,
+      resolvedPriceId,
+      isSubscription,
+      isStarterMonthly,
+      hasRefCode: !!refCode,
+      applyStarter6mo: !!applyStarter6mo,
+      promoStartsWithPromo: process.env.STRIPE_PROMO_CODE_ID
+        ? process.env.STRIPE_PROMO_CODE_ID.startsWith("promo_")
+        : null,
+      couponStartsWithCoupon: process.env.STRIPE_COUPON_STARTER_6M
+        ? process.env.STRIPE_COUPON_STARTER_6M.startsWith("coupon_")
+        : null,
+      usingDiscounts: !!computedDiscounts,
     });
 
-    return res.status(200).json({ url: session.url });
+    const sessionParams = {
+      mode: isSubscription ? "subscription" : "payment",
+      success_url,
+      cancel_url,
+      customer_email: email || undefined,
+      line_items: [{ price: resolvedPriceId, quantity: 1 }],
+      metadata: {
+        editToken: editToken || "",
+        refCode: refCode || "",
+        priceKey: priceKey || "",
+      },
+    };
+
+    // For subscriptions, attach discounts via subscription_data.discounts
+    if (isSubscription && computedDiscounts) {
+      sessionParams.subscription_data = { discounts: computedDiscounts };
+    } else if (computedDiscounts) {
+      // Safety: if Stripe accepts top-level discounts for your mode, attach here too
+      sessionParams.discounts = computedDiscounts;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+
+    console.log("checkout:session created", {
+      id: session.id,
+      url: session.url,
+      total_details: session.total_details || null,
+      discounts_applied:
+        (session.discounts && session.discounts.length) ||
+        (session.subscription && "see invoice/line_items"),
+    });
+
+    return res.status(200).json({ id: session.id, url: session.url });
   } catch (err) {
-    console.error("checkout create error", err);
-    return res.status(500).json({ error: "Failed to create checkout session" });
+    console.error("checkout:create ERROR", {
+      message: err?.message,
+      type: err?.type,
+      raw: err?.raw,
+    });
+    return res.status(500).json({ error: "Internal error creating Checkout Session." });
   }
 }

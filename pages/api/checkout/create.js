@@ -43,15 +43,16 @@ export default async function handler(req, res) {
 
     const isStarterMonthly = resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
-    // Compute discounts (use promotion_code first, then coupon fallback)
+    // Compute discounts – prefer COUPON to avoid showing a human code in Checkout UI
     let computedDiscounts;
     if (isSubscription && isStarterMonthly && refCode && applyStarter6mo) {
-      const promo6m = process.env.STRIPE_PROMO_CODE_ID;       // should start with "promo_"
-      const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;  // optional fallback "coupon_"
-      if (promo6m && /^promo_/.test(promo6m)) {
-        computedDiscounts = [{ promotion_code: promo6m }];
-      } else if (coupon6m && /^coupon_/.test(coupon6m)) {
+      const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;   // <- use this to hide the code
+      const promo6m  = process.env.STRIPE_PROMO_CODE_ID;       // fallback only if no coupon is set
+
+      if (coupon6m && /^coupon_/.test(coupon6m)) {
         computedDiscounts = [{ coupon: coupon6m }];
+      } else if (promo6m && /^promo_/.test(promo6m)) {
+        computedDiscounts = [{ promotion_code: promo6m }];
       }
     }
 
@@ -60,9 +61,8 @@ export default async function handler(req, res) {
       `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
 
     const success_url = `${baseUrl}/pricing?success=1`;
-    const cancel_url = `${baseUrl}/pricing?canceled=1`;
+    const cancel_url  = `${baseUrl}/pricing?canceled=1`;
 
-    // Debug log (visible in Vercel Functions)
     console.log("checkout:create params", {
       priceKey,
       resolvedPriceId,
@@ -70,13 +70,8 @@ export default async function handler(req, res) {
       isStarterMonthly,
       hasRefCode: !!refCode,
       applyStarter6mo: !!applyStarter6mo,
-      promoStartsWithPromo: process.env.STRIPE_PROMO_CODE_ID
-        ? process.env.STRIPE_PROMO_CODE_ID.startsWith("promo_")
-        : null,
-      couponStartsWithCoupon: process.env.STRIPE_COUPON_STARTER_6M
-        ? process.env.STRIPE_COUPON_STARTER_6M.startsWith("coupon_")
-        : null,
-      usingDiscounts: !!computedDiscounts,
+      usingCoupon: !!(process.env.STRIPE_COUPON_STARTER_6M && /^coupon_/.test(process.env.STRIPE_COUPON_STARTER_6M)),
+      usingPromoFallback: !process.env.STRIPE_COUPON_STARTER_6M && !!(process.env.STRIPE_PROMO_CODE_ID && /^promo_/.test(process.env.STRIPE_PROMO_CODE_ID)),
     });
 
     const sessionParams = {
@@ -92,7 +87,7 @@ export default async function handler(req, res) {
       },
     };
 
-    // ✅ Attach discounts at the top level for Checkout
+    // Attach discounts at the top level for Checkout
     if (computedDiscounts) {
       sessionParams.discounts = computedDiscounts;
     }

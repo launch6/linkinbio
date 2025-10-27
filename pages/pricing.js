@@ -1,36 +1,38 @@
 // pages/pricing.js
-import { useEffect, useMemo, useState } from "react";
-
-function useQuery() {
-  const [q, setQ] = useState({});
-  useEffect(() => {
-    const u = new URL(window.location.href);
-    const obj = Object.fromEntries(u.searchParams.entries());
-    setQ(obj);
-    // persist for future visits
-    if (obj.editToken) localStorage.setItem("editToken", obj.editToken);
-    if (obj.refCode) localStorage.setItem("refCode", obj.refCode);
-  }, []);
-  return q;
-}
+import { useEffect, useState } from "react";
 
 export default function PricingPage() {
-  const q = useQuery();
+  // Client state (avoid touching window/localStorage during SSR)
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-
-  const editToken = useMemo(
-    () => q.editToken || localStorage.getItem("editToken") || "",
-    [q.editToken]
-  );
-  const refCode = useMemo(
-    () => q.refCode || localStorage.getItem("refCode") || "",
-    [q.refCode]
-  );
-
   const [prices, setPrices] = useState(null);
 
+  // Stored params
+  const [editToken, setEditToken] = useState("");
+  const [refCode, setRefCode] = useState("");
+
+  // Read URL + localStorage on client only
+  useEffect(() => {
+    try {
+      const isBrowser = typeof window !== "undefined";
+      if (!isBrowser) return;
+
+      const u = new URL(window.location.href);
+      const params = Object.fromEntries(u.searchParams.entries());
+
+      const savedEdit = params.editToken || window.localStorage.getItem("editToken") || "";
+      const savedRef  = params.refCode   || window.localStorage.getItem("refCode")   || "";
+
+      setEditToken(savedEdit);
+      setRefCode(savedRef);
+
+      if (params.editToken) window.localStorage.setItem("editToken", params.editToken);
+      if (params.refCode)   window.localStorage.setItem("refCode", params.refCode);
+    } catch (_) {}
+  }, []);
+
+  // Load display prices
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -42,9 +44,7 @@ export default function PricingPage() {
         console.error(e);
       }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
   async function gotoCheckout(priceKey) {
@@ -58,7 +58,7 @@ export default function PricingPage() {
           editToken,
           email: email || undefined,
           refCode,
-          // tell API to try 6-month free when Starter Monthly + referral
+          // auto-apply 6mo free when Starter Monthly + referral path
           applyStarter6mo: !!refCode,
         }),
       });
@@ -83,8 +83,9 @@ export default function PricingPage() {
       });
       const j = await r.json();
       if (!r.ok || !j?.ok) throw new Error(j?.error || "Could not start Free profile.");
-      // persist any new token returned
-      if (j.editToken) localStorage.setItem("editToken", j.editToken);
+      if (typeof window !== "undefined" && j.editToken) {
+        window.localStorage.setItem("editToken", j.editToken);
+      }
       window.location.href = j.redirect || `/editor?editToken=${encodeURIComponent(j.editToken || editToken)}`;
     } catch (e) {
       console.error(e);
@@ -96,10 +97,10 @@ export default function PricingPage() {
 
   const starterMonthlyLabel = prices?.STARTER_MONTHLY || "$9.95 / month";
   const starterLifetimeLabel = prices?.STARTER_LIFETIME || "$89.95";
-  const proMonthlyLabel = prices?.PRO_MONTHLY || "$19.95 / month";
-  const proLifetimeLabel = prices?.PRO_LIFETIME || "$199.95";
-  const bizMonthlyLabel = prices?.BUSINESS_MONTHLY || "$29.95 / month";
-  const bizLifetimeLabel = prices?.BUSINESS_LIFETIME || "$299.95";
+  const proMonthlyLabel      = prices?.PRO_MONTHLY      || "$19.95 / month";
+  const proLifetimeLabel     = prices?.PRO_LIFETIME     || "$199.95";
+  const bizMonthlyLabel      = prices?.BUSINESS_MONTHLY || "$29.95 / month";
+  const bizLifetimeLabel     = prices?.BUSINESS_LIFETIME|| "$299.95";
 
   const starterTag = refCode ? " · 6 months free" : "";
 
@@ -122,7 +123,7 @@ export default function PricingPage() {
             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-4 py-3 outline-none"
             placeholder="Edit Token"
             value={editToken}
-            onChange={(e) => localStorage.setItem("editToken", e.target.value)}
+            onChange={(e) => setEditToken(e.target.value)}
             readOnly
           />
           <input
@@ -223,7 +224,6 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Manage billing hint */}
         <div className="mt-8 text-neutral-500 text-sm">
           Manage billing becomes available after your first payment.
         </div>

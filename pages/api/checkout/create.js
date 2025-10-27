@@ -43,13 +43,13 @@ export default async function handler(req, res) {
 
     const isStarterMonthly = resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
-    // Compute discounts – prefer COUPON to avoid showing a human code in Checkout UI
+    // Compute discounts – prefer COUPON to avoid showing a human promo code on Checkout
     let computedDiscounts;
     if (isSubscription && isStarterMonthly && refCode && applyStarter6mo) {
-      const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;   // <- use this to hide the code
-      const promo6m  = process.env.STRIPE_PROMO_CODE_ID;       // fallback only if no coupon is set
+      const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;   // can be custom like "6M_FREE"
+      const promo6m  = process.env.STRIPE_PROMO_CODE_ID;       // fallback if no coupon configured
 
-      if (coupon6m && /^coupon_/.test(coupon6m)) {
+      if (coupon6m && String(coupon6m).trim().length > 0) {
         computedDiscounts = [{ coupon: coupon6m }];
       } else if (promo6m && /^promo_/.test(promo6m)) {
         computedDiscounts = [{ promotion_code: promo6m }];
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
       isStarterMonthly,
       hasRefCode: !!refCode,
       applyStarter6mo: !!applyStarter6mo,
-      usingCoupon: !!(process.env.STRIPE_COUPON_STARTER_6M && /^coupon_/.test(process.env.STRIPE_COUPON_STARTER_6M)),
+      usingCoupon: !!(process.env.STRIPE_COUPON_STARTER_6M && String(process.env.STRIPE_COUPON_STARTER_6M).trim()),
       usingPromoFallback: !process.env.STRIPE_COUPON_STARTER_6M && !!(process.env.STRIPE_PROMO_CODE_ID && /^promo_/.test(process.env.STRIPE_PROMO_CODE_ID)),
     });
 

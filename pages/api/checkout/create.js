@@ -24,8 +24,9 @@ export default async function handler(req, res) {
       priceId,         // e.g. "price_..."
       editToken,
       email,
-      refCode,
-      applyStarter6mo, // true when Starter+ 6 months free should apply
+      refCode,         // string or ""
+      applyStarter6mo, // boolean
+      applyReferral3m, // boolean
     } = body;
 
     // Resolve Stripe Price ID
@@ -36,23 +37,35 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing price ID (env or payload)." });
     }
 
-    // Treat Starter Monthly as a subscription
+    // Mode
     const isSubscription =
       (priceKey && /_MONTHLY$/.test(priceKey)) ||
       resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
     const isStarterMonthly = resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
-    // Compute discounts – prefer COUPON to avoid showing a human promo code on Checkout
+    // Compute discounts
     let computedDiscounts;
-    if (isSubscription && isStarterMonthly && refCode && applyStarter6mo) {
-      const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;   // can be custom like "6M_FREE"
-      const promo6m  = process.env.STRIPE_PROMO_CODE_ID;       // fallback if no coupon configured
-
-      if (coupon6m && String(coupon6m).trim().length > 0) {
-        computedDiscounts = [{ coupon: coupon6m }];
-      } else if (promo6m && /^promo_/.test(promo6m)) {
-        computedDiscounts = [{ promotion_code: promo6m }];
+    if (isSubscription && isStarterMonthly && refCode) {
+      // 6-month (Starter+) path
+      if (applyStarter6mo) {
+        const coupon6m = process.env.STRIPE_COUPON_STARTER_6M;
+        const promo6m  = process.env.STRIPE_PROMO_CODE_ID;
+        if (coupon6m && String(coupon6m).trim().length > 0) {
+          computedDiscounts = [{ coupon: coupon6m }];
+        } else if (promo6m && /^promo_/.test(promo6m)) {
+          computedDiscounts = [{ promotion_code: promo6m }];
+        }
+      }
+      // 3-month peer referral
+      else if (applyReferral3m) {
+        const coupon3m = process.env.STRIPE_COUPON_REFERRAL_3M;
+        const promo3m  = process.env.STRIPE_PROMO_REFERRAL_3M;
+        if (coupon3m && String(coupon3m).trim().length > 0) {
+          computedDiscounts = [{ coupon: coupon3m }];
+        } else if (promo3m && /^promo_/.test(promo3m)) {
+          computedDiscounts = [{ promotion_code: promo3m }];
+        }
       }
     }
 
@@ -68,10 +81,11 @@ export default async function handler(req, res) {
       resolvedPriceId,
       isSubscription,
       isStarterMonthly,
-      hasRefCode: !!refCode,
+      refCode,
       applyStarter6mo: !!applyStarter6mo,
-      usingCoupon: !!(process.env.STRIPE_COUPON_STARTER_6M && String(process.env.STRIPE_COUPON_STARTER_6M).trim()),
-      usingPromoFallback: !process.env.STRIPE_COUPON_STARTER_6M && !!(process.env.STRIPE_PROMO_CODE_ID && /^promo_/.test(process.env.STRIPE_PROMO_CODE_ID)),
+      applyReferral3m: !!applyReferral3m,
+      usingCoupon6m: !!process.env.STRIPE_COUPON_STARTER_6M,
+      usingCoupon3m: !!process.env.STRIPE_COUPON_REFERRAL_3M,
     });
 
     const sessionParams = {
@@ -87,14 +101,11 @@ export default async function handler(req, res) {
       },
     };
 
-    // Attach discounts at the top level for Checkout
     if (computedDiscounts) {
-      sessionParams.discounts = computedDiscounts;
+      sessionParams.discounts = computedDiscounts; // Checkout accepts top-level for subs
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
-
-    console.log("checkout:session created", { id: session.id, url: session.url });
     return res.status(200).json({ id: session.id, url: session.url });
   } catch (err) {
     console.error("checkout:create ERROR", {

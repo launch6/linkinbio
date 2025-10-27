@@ -2,37 +2,25 @@
 import { useEffect, useState } from "react";
 
 export default function PricingPage() {
-  // Client state (avoid touching window/localStorage during SSR)
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [prices, setPrices] = useState(null);
-
-  // Stored params
   const [editToken, setEditToken] = useState("");
   const [refCode, setRefCode] = useState("");
 
-  // Read URL + localStorage on client only
   useEffect(() => {
-    try {
-      const isBrowser = typeof window !== "undefined";
-      if (!isBrowser) return;
-
-      const u = new URL(window.location.href);
-      const params = Object.fromEntries(u.searchParams.entries());
-
-      const savedEdit = params.editToken || window.localStorage.getItem("editToken") || "";
-      const savedRef  = params.refCode   || window.localStorage.getItem("refCode")   || "";
-
-      setEditToken(savedEdit);
-      setRefCode(savedRef);
-
-      if (params.editToken) window.localStorage.setItem("editToken", params.editToken);
-      if (params.refCode)   window.localStorage.setItem("refCode", params.refCode);
-    } catch (_) {}
+    if (typeof window === "undefined") return;
+    const u = new URL(window.location.href);
+    const params = Object.fromEntries(u.searchParams.entries());
+    const savedEdit = params.editToken || window.localStorage.getItem("editToken") || "";
+    const savedRef  = params.refCode   || window.localStorage.getItem("refCode")   || "";
+    setEditToken(savedEdit);
+    setRefCode(savedRef);
+    if (params.editToken) window.localStorage.setItem("editToken", params.editToken);
+    if (params.refCode)   window.localStorage.setItem("refCode", params.refCode);
   }, []);
 
-  // Load display prices
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -40,12 +28,13 @@ export default function PricingPage() {
         const r = await fetch("/api/pricing/list");
         const json = await r.json();
         if (alive) setPrices(json);
-      } catch (e) {
-        console.error(e);
-      }
+      } catch {}
     })();
     return () => { alive = false; };
   }, []);
+
+  const isStarterPlus = refCode && refCode.toLowerCase() === "starterplus";
+  const bannerMonths = isStarterPlus ? 6 : (refCode ? 3 : 0);
 
   async function gotoCheckout(priceKey) {
     setBusy(true); setError("");
@@ -58,15 +47,14 @@ export default function PricingPage() {
           editToken,
           email: email || undefined,
           refCode,
-          // auto-apply 6mo free when Starter Monthly + referral path
-          applyStarter6mo: !!refCode,
+          applyStarter6mo: !!refCode && isStarterPlus,
+          applyReferral3m: !!refCode && !isStarterPlus,
         }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error || "Internal error creating Checkout Session.");
       window.location.href = j.url;
     } catch (e) {
-      console.error(e);
       setError(e.message || "Internal error creating Checkout Session.");
     } finally {
       setBusy(false);
@@ -88,7 +76,6 @@ export default function PricingPage() {
       }
       window.location.href = j.redirect || `/editor?editToken=${encodeURIComponent(j.editToken || editToken)}`;
     } catch (e) {
-      console.error(e);
       setError(e.message || "Could not start Free profile.");
     } finally {
       setBusy(false);
@@ -102,7 +89,7 @@ export default function PricingPage() {
   const bizMonthlyLabel      = prices?.BUSINESS_MONTHLY || "$29.95 / month";
   const bizLifetimeLabel     = prices?.BUSINESS_LIFETIME|| "$299.95";
 
-  const starterTag = refCode ? " · 6 months free" : "";
+  const starterTag = bannerMonths ? ` · ${bannerMonths} months free` : "";
 
   return (
     <div className="min-h-screen text-white bg-neutral-950">
@@ -110,14 +97,14 @@ export default function PricingPage() {
         <h1 className="text-4xl font-bold mb-2">Choose your plan</h1>
         <p className="text-neutral-400 mb-6">Pick a tier. You can upgrade/downgrade anytime.</p>
 
-        {refCode ? (
+        {bannerMonths ? (
           <div className="mb-6 rounded-xl border border-green-600/40 bg-green-900/20 text-green-200 p-4">
-            <b>Starter+ referral applied:</b> both you and your friend get <b>6 months free</b> on Starter
+            <b>{isStarterPlus ? "Starter+ referral applied" : "Referral applied"}:</b>{" "}
+            both you and your friend get <b>{bannerMonths} months free</b> on Starter
             (card required to activate). Lifetime and non-Starter plans won’t apply the referral.
           </div>
         ) : null}
 
-        {/* Controls */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
           <input
             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-4 py-3 outline-none"
@@ -140,7 +127,6 @@ export default function PricingPage() {
           </div>
         ) : null}
 
-        {/* Cards */}
         <div className="grid md:grid-cols-3 gap-6">
           {/* Free */}
           <div className="rounded-2xl border border-neutral-800 p-6">
@@ -201,7 +187,6 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Business row */}
         <div className="grid md:grid-cols-3 gap-6 mt-6">
           <div className="md:col-start-3 rounded-2xl border border-neutral-800 p-6">
             <div className="text-2xl font-semibold mb-2">Business</div>

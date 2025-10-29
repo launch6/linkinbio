@@ -1,248 +1,219 @@
 // pages/api/stripe-webhook.js
 import Stripe from "stripe";
-import { getDb } from "../../lib/mongo";
+import { MongoClient } from "mongodb";
 
 export const config = {
-  api: { bodyParser: false }, // raw body required for Stripe signature verification
+  api: { bodyParser: false }, // Stripe requires the raw body to verify signatures
 };
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+// ---------- Stripe + DB ----------
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2024-06-20",
+});
 
-// helper: read raw body
-async function getRawBody(req) {
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks);
+const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB = process.env.MONGODB_DB || "linkinbio";
+let cachedClient = null;
+
+async function getClient() {
+  if (cachedClient) return cachedClient;
+  if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
+  const client = new MongoClient(MONGODB_URI);
+  await client.connect();
+  cachedClient = client;
+  return client;
 }
 
-// helper: map a Stripe price.id -> internal plan name
-function priceIdToPlan(priceId) {
-  if (!priceId) return null;
+// ---------- Helpers ----------
+async function readRawBody(req) {
+  return await new Promise((resolve, reject) => {
+    try {
+      const chunks = [];
+      req.on("data", (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
+      req.on("end", () => resolve(Buffer.concat(chunks)));
+      req.on("error", reject);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
-  // Map your known prices from env vars
-  const MAP = [
-    { id: process.env.STRIPE_PRICE_STARTER_MONTHLY, plan: "starter" },
-    { id: process.env.STRIPE_PRICE_STARTER_LIFETIME, plan: "starter_lifetime" },
-    { id: process.env.STRIPE_PRICE_PRO_MONTHLY, plan: "pro" },
-    { id: process.env.STRIPE_PRICE_BUSINESS_MONTHLY, plan: "business" },
+function envPriceToPlan(priceId) {
+  if (!priceId) return { plan: "free", cadence: null };
+  const map = [
+    { env: "STRIPE_PRICE_STARTER_MONTHLY", plan: "starter", cadence: "monthly" },
+    { env: "STRIPE_PRICE_STARTER_LIFETIME", plan: "starter", cadence: "lifetime" },
+    { env: "STRIPE_PRICE_PRO_MONTHLY", plan: "pro", cadence: "monthly" },
+    { env: "STRIPE_PRICE_PRO_LIFETIME", plan: "pro", cadence: "lifetime" },
+    { env: "STRIPE_PRICE_BUSINESS_MONTHLY", plan: "business", cadence: "monthly" },
+    { env: "STRIPE_PRICE_BUSINESS_LIFETIME", plan: "business", cadence: "lifetime" },
   ];
-
-  for (const m of MAP) {
-    if (m.id && m.id === priceId) return m.plan;
+  for (const row of map) {
+    if (process.env[row.env] && process.env[row.env] === priceId) {
+      return { plan: row.plan, cadence: row.cadence };
+    }
   }
-  return null;
+  // Fallback: assume starter monthly if unknown (but store priceId)
+  return { plan: "starter", cadence: "monthly" };
 }
 
+async function upsertFromCheckoutSession(session) {
+  const client = await getClient();
+  const db = client.db(MONGODB_DB);
+
+  // Metadata we set when creating Checkout Session
+  const editToken = session?.metadata?.editToken || null;
+  const refCode = session?.metadata?.refCode || null;
+
+  // Subscription sessions have subscription + customer + line_items
+  const customerId = session?.customer || null;
+  const subscriptionId = session?.subscription || null;
+
+  // Stripe may not expand line items; grab the price from the session if present
+  // We stored the chosen price in line_items[0].price on creation
+  let priceId = null;
+  try {
+    const line = session?.line_items?.data?.[0];
+    priceId = line?.price?.id || null;
+  } catch {
+    // ignore
+  }
+  // Fallback: some sessions include display_items/after_expansion; or we keep price in metadata.priceKey
+  priceId = priceId || session?.metadata?.priceId || null;
+
+  // Determine plan from price
+  const planInfo = envPriceToPlan(priceId);
+
+  const update = {
+    $set: {
+      updatedAt: new Date(),
+      "stripe.customerId": customerId || null,
+      "stripe.subscriptionId": subscriptionId || null,
+      "stripe.priceId": priceId || null,
+      "stripe.lastEvent": "checkout.session.completed",
+      refCode: refCode || null,
+      plan: planInfo.plan,
+    },
+  };
+
+  // Optional: if lifetime, you can null subscriptionId
+  if (planInfo.cadence === "lifetime") {
+    update.$set["stripe.subscriptionId"] = null;
+  }
+
+  const query = editToken ? { editToken } : { "stripe.customerId": customerId };
+  await db.collection("profiles").updateOne(query, update, { upsert: true });
+}
+
+async function updateFromSubscriptionCreated(sub) {
+  const client = await getClient();
+  const db = client.db(MONGODB_DB);
+
+  const customerId = sub?.customer || null;
+  const subscriptionId = sub?.id || null;
+  const priceId = sub?.items?.data?.[0]?.price?.id || null;
+
+  const planInfo = envPriceToPlan(priceId);
+
+  await db.collection("profiles").updateOne(
+    { "stripe.customerId": customerId },
+    {
+      $set: {
+        updatedAt: new Date(),
+        "stripe.subscriptionId": subscriptionId,
+        "stripe.priceId": priceId,
+        "stripe.lastEvent": "customer.subscription.created",
+        plan: planInfo.plan,
+      },
+    }
+  );
+}
+
+async function markInvoicePaid(inv) {
+  const client = await getClient();
+  const db = client.db(MONGODB_DB);
+
+  const customerId = inv?.customer || null;
+  const priceId = inv?.lines?.data?.[0]?.price?.id || null;
+  const planInfo = envPriceToPlan(priceId);
+
+  await db.collection("profiles").updateOne(
+    { "stripe.customerId": customerId },
+    {
+      $set: {
+        updatedAt: new Date(),
+        "stripe.lastEvent": "invoice.paid",
+        "stripe.priceId": priceId || null,
+        plan: planInfo.plan,
+      },
+    }
+  );
+}
+
+// ---------- Webhook handler ----------
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).end("Method Not Allowed");
-  }
-
-  // 1) Verify signature
-  let event;
   try {
-    const rawBody = await getRawBody(req);
-    const signature = req.headers["stripe-signature"];
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    console.error("⚠️  Signature verification failed:", err.message);
-    return res.status(400).json({ error: `Webhook Error: ${err.message}` });
-  }
+    const sig = req.headers["stripe-signature"];
+    if (!sig) {
+      return res.status(400).json({ error: "Missing Stripe signature header" });
+    }
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error("WEBHOOK ERROR: Missing STRIPE_WEBHOOK_SECRET env");
+      return res.status(500).json({ error: "Server misconfigured" });
+    }
 
-  try {
-    const db = await getDb();
-    const subs = db.collection("subscriptions");
-    const profiles = db.collection("profiles");
+    const rawBody = await readRawBody(req);
+    let event;
 
-    switch (event.type) {
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+      console.error("WEBHOOK VERIFY FAIL", { message: err?.message });
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // If you want line items in session, request expansion in your checkout create call
+    // and Stripe will include them in event.data.object.line_items
+    const type = event.type;
+    const obj = event.data.object;
+
+    switch (type) {
       case "checkout.session.completed": {
-        const s = event.data.object;
-
-        // Store basic subscription event
-        if (s.mode === "subscription") {
-          await subs.updateOne(
-            { subscriptionId: s.subscription || null },
-            {
-              $set: {
-                subscriptionId: s.subscription || null,
-                customerId: s.customer || null,
-                email: s.customer_details?.email ?? s.customer_email ?? null,
-                status: "active",
-                paymentStatus: s.payment_status,
-                cancelAtPeriodEnd: false,
-                updatedAt: new Date(),
-                createdAt: new Date(),
-                source: "checkout.session.completed",
-              },
-            },
-            { upsert: true }
-          );
-        }
-
-        // Expand line_items to find the exact price that was purchased
-        let priceId = null;
         try {
-          const sessionFull = await stripe.checkout.sessions.retrieve(s.id, {
-            expand: ["line_items.data.price"],
-          });
-          const li = sessionFull?.line_items?.data?.[0];
-          priceId = li?.price?.id ?? null;
+          await upsertFromCheckoutSession(obj);
         } catch (e) {
-          console.error("Failed to expand line_items:", e?.message || e);
+          console.error("checkout.session.completed handler error", { message: e?.message });
+          return res.status(500).json({ error: "Failed to persist checkout session" });
         }
-
-        const plan = priceIdToPlan(priceId) || "starter"; // default to starter if unknown
-        const editToken = s.client_reference_id || null;
-
-        // If we have a profile reference, update the profile's plan immediately
-        if (editToken) {
-          const profileUpdate = {
-            plan,
-            // If you later support trials/lifetime via metadata, set planExpiresAt here
-            updatedAt: new Date(),
-            // Store a small snapshot of Stripe linkage if helpful:
-            stripe: {
-              customerId: s.customer || null,
-              subscriptionId: s.subscription || null,
-              priceId: priceId || null,
-              lastEvent: "checkout.session.completed",
-            },
-          };
-
-          const r = await profiles.updateOne(
-            { editToken: String(editToken) },
-            { $set: profileUpdate },
-            { upsert: false } // do not create profiles here; only update existing
-          );
-
-          if (r.matchedCount === 0) {
-            console.warn("No profile matched editToken from client_reference_id:", editToken);
-          }
-        } else {
-          console.warn("No client_reference_id on checkout.session.completed; cannot map to profile.");
-        }
-
         break;
       }
-
-      case "customer.subscription.updated": {
-        const sub = event.data.object;
-        const item = sub.items?.data?.[0];
-
-        await subs.updateOne(
-          { subscriptionId: sub.id },
-          {
-            $set: {
-              subscriptionId: sub.id,
-              customerId: sub.customer || null,
-              status: sub.status, // active, past_due, canceled, etc.
-              priceId: item?.price?.id ?? null,
-              productId: item?.price?.product ?? null,
-              currentPeriodStart: sub.current_period_start
-                ? new Date(sub.current_period_start * 1000)
-                : null,
-              currentPeriodEnd: sub.current_period_end
-                ? new Date(sub.current_period_end * 1000)
-                : null,
-              cancelAtPeriodEnd: !!sub.cancel_at_period_end,
-              updatedAt: new Date(),
-              source: "customer.subscription.updated",
-            },
-            $setOnInsert: { createdAt: new Date() },
-          },
-          { upsert: true }
-        );
-
-        // Optional: keep profile.plan in sync from subscription updated
+      case "customer.subscription.created": {
         try {
-          const plan = priceIdToPlan(item?.price?.id);
-          if (plan) {
-            await profiles.updateMany(
-              { "stripe.subscriptionId": sub.id },
-              {
-                $set: {
-                  plan,
-                  updatedAt: new Date(),
-                },
-              }
-            );
-          }
+          await updateFromSubscriptionCreated(obj);
         } catch (e) {
-          console.error("profile sync on subscription.updated failed:", e?.message || e);
+          console.error("subscription.created handler error", { message: e?.message });
+          return res.status(500).json({ error: "Failed to persist subscription" });
         }
-
         break;
       }
-
       case "invoice.paid": {
-        const inv = event.data.object;
-        await subs.updateOne(
-          { subscriptionId: inv.subscription || null },
-          {
-            $set: {
-              lastInvoiceId: inv.id,
-              lastInvoicePaidAt: inv.status_transitions?.paid_at
-                ? new Date(inv.status_transitions.paid_at * 1000)
-                : new Date(),
-              updatedAt: new Date(),
-              source: "invoice.paid",
-            },
-          },
-          { upsert: true }
-        );
-        break;
-      }
-
-      case "customer.subscription.deleted": {
-        const sub = event.data.object;
-
-        await subs.updateOne(
-          { subscriptionId: sub.id },
-          {
-            $set: {
-              status: "canceled",
-              canceledAt: sub.canceled_at
-                ? new Date(sub.canceled_at * 1000)
-                : new Date(),
-              updatedAt: new Date(),
-              source: "customer.subscription.deleted",
-            },
-          }
-        );
-
-        // Downgrade linked profile(s)
         try {
-          await profiles.updateMany(
-            { "stripe.subscriptionId": sub.id },
-            {
-              $set: {
-                plan: "free",
-                updatedAt: new Date(),
-              },
-            }
-          );
+          await markInvoicePaid(obj);
         } catch (e) {
-          console.error("profile downgrade on subscription.deleted failed:", e?.message || e);
+          console.error("invoice.paid handler error", { message: e?.message });
+          return res.status(500).json({ error: "Failed to persist invoice" });
         }
-
         break;
       }
-
       default:
-        // Acknowledge quickly for unhandled event types
+        // No-op for other events; log and 200
+        console.log("Unhandled Stripe event:", type);
         break;
     }
 
     return res.status(200).json({ received: true });
   } catch (err) {
-    console.error("Webhook handler error:", err);
-    return res.status(500).json({ error: "handler failed" });
+    console.error("stripe-webhook UNCAUGHT", { message: err?.message, stack: err?.stack });
+    return res.status(500).json({ error: "Internal webhook error" });
   }
 }

@@ -22,14 +22,13 @@ export default async function handler(req, res) {
       success_url: `${baseUrl}/pricing?success=1`,
       cancel_url: `${baseUrl}/pricing?canceled=1`,
       customer_email: email || undefined,
-      // ✅ keep manual "Add coupon" box visible for future promos
-      allow_promotion_codes: true,
       line_items: [{ price: priceId, quantity: 1 }],
       metadata: {
         editToken: editToken || "",
         refCode: refCode || "",
       },
     };
+    
 
     if (discounts && discounts.length) {
       // IMPORTANT: use top-level discounts with Checkout

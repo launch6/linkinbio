@@ -11,14 +11,21 @@ export default async function handler(req, res) {
     return res.status(405).end("Method Not Allowed");
   }
 
-  // Small helper: build a Checkout Session with given discounts
-  async function createSession({ priceId, email, editToken, refCode, discounts }) {
+  // Small helper: build a Checkout Session with given mode + discounts
+  async function createSession({
+    priceId,
+    email,
+    editToken,
+    refCode,
+    discounts,
+    isSubscription,
+  }) {
     const baseUrl =
       process.env.BASE_URL ||
       `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
 
     const params = {
-      mode: "subscription", // we only hit this endpoint for monthly from our UI
+      mode: isSubscription ? "subscription" : "payment",
       success_url: `${baseUrl}/pricing?success=1`,
       cancel_url: `${baseUrl}/pricing?canceled=1`,
       customer_email: email || undefined,
@@ -29,7 +36,8 @@ export default async function handler(req, res) {
       },
     };
 
-    if (discounts && discounts.length) {
+    // Only attach discounts for subscriptions; ignore for one-time lifetime
+    if (isSubscription && discounts && discounts.length) {
       // IMPORTANT: use top-level discounts with Checkout
       params.discounts = discounts;
     }
@@ -47,7 +55,7 @@ export default async function handler(req, res) {
           })();
 
     const {
-      priceKey,         // e.g. "STRIPE_PRICE_STARTER_MONTHLY"
+      priceKey,         // e.g. "STRIPE_PRICE_STARTER_MONTHLY" or "STRIPE_PRICE_STARTER_LIFETIME"
       priceId,          // e.g. "price_..."
       editToken,
       email,
@@ -66,24 +74,31 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing price ID (env or payload)." });
     }
 
-    // We only ever call this for monthly from our UI; still keep a guard:
-    const isStarterMonthly = resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
+    // Determine subscription vs one-time
+    const looksMonthlyFromKey = !!priceKey && /_MONTHLY$/.test(priceKey);
+    const isMonthlyByMatch =
+      resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY ||
+      resolvedPriceId === process.env.STRIPE_PRICE_PRO_MONTHLY ||
+      resolvedPriceId === process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
 
-    // Figure out which discount we intend
-    //  - Prefer 6M if starterplus flag present
-    //  - Else use 3M if friend flag present
-    let intended = null; // "6m-coupon" | "6m-promo" | "3m-coupon" | "3m-promo" | null
+    const isSubscription = looksMonthlyFromKey || isMonthlyByMatch;
+
+    // Guard for referral logic: only for Starter Monthly subscriptions
+    const isStarterMonthly =
+      isSubscription && (resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY);
 
     // Values from env
     const COUPON_6M = process.env.STRIPE_COUPON_STARTER_6M;     // e.g. 6M_FREE
     const PROMO_6M  = process.env.STRIPE_PROMO_CODE_ID;         // promo_...
-    const COUPON_3M = process.env.STRIPE_COUPON_REFERRAL_3M;    // e.g. STRIPE_PR0M0_REFERRAL_3M0  (exactly as in Stripe)
+    const COUPON_3M = process.env.STRIPE_COUPON_REFERRAL_3M;    // e.g. STRIPE_PR0M0_REFERRAL_3M0
     const PROMO_3M  = process.env.STRIPE_PROMO_REFERRAL_3M;     // promo_...
 
-    let firstDiscounts = undefined;   // first attempt
-    let retryDiscounts = undefined;   // fallback attempt (only when coupon not found)
+    // Build intended discounts (subscriptions only, and only for Starter Monthly)
+    let intended = null; // "6m-coupon" | "6m-promo" | "3m-coupon" | "3m-promo" | null
+    let firstDiscounts = undefined;   // primary attempt
+    let retryDiscounts = undefined;   // fallback (only when coupon missing)
 
-    if (isStarterMonthly && refCode) {
+    if (isSubscription && isStarterMonthly && refCode) {
       if (applyStarter6mo && COUPON_6M) {
         intended = "6m-coupon";
         firstDiscounts = [{ coupon: COUPON_6M }];
@@ -104,6 +119,7 @@ export default async function handler(req, res) {
     console.log("checkout:create BEGIN", {
       priceKey,
       resolvedPriceId,
+      isSubscription,
       isStarterMonthly,
       refCode,
       applyStarter6mo: !!applyStarter6mo,
@@ -119,7 +135,21 @@ export default async function handler(req, res) {
       retryDiscounts,
     });
 
-    // First attempt (coupon if available; otherwise promo; otherwise none)
+    // If it's a LIFETIME (one-time) price, skip discounts and create a payment session
+    if (!isSubscription) {
+      const session = await createSession({
+        priceId: resolvedPriceId,
+        email,
+        editToken,
+        refCode,
+        discounts: undefined,
+        isSubscription: false,
+      });
+      console.log("checkout:create SUCCESS:lifetime", { id: session.id, url: session.url });
+      return res.status(200).json({ id: session.id, url: session.url });
+    }
+
+    // SUBSCRIPTION path (monthly)
     try {
       const session = await createSession({
         priceId: resolvedPriceId,
@@ -127,6 +157,7 @@ export default async function handler(req, res) {
         editToken,
         refCode,
         discounts: firstDiscounts,
+        isSubscription: true,
       });
 
       console.log("checkout:create SUCCESS:first", { id: session.id, url: session.url });
@@ -145,7 +176,6 @@ export default async function handler(req, res) {
         message: e?.message,
       });
 
-      // If coupon was missing, and we have a promo fallback, retry with promotion_code
       if (isMissingCoupon && retryDiscounts) {
         try {
           const session = await createSession({
@@ -154,6 +184,7 @@ export default async function handler(req, res) {
             editToken,
             refCode,
             discounts: retryDiscounts,
+            isSubscription: true,
           });
           console.log("checkout:create SUCCESS:retry-promo", { id: session.id, url: session.url });
           return res.status(200).json({ id: session.id, url: session.url });

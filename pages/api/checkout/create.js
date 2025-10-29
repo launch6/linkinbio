@@ -2,59 +2,8 @@
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  // Keep the API version you’ve been using unless you intend to upgrade deliberately.
   apiVersion: "2024-06-20",
 });
-
-/* ----------------------------- Helpers ----------------------------- */
-
-function safeStr(v, max = 500) {
-  return typeof v === "string" ? v.slice(0, max) : "";
-}
-
-function isDiscountError(e) {
-  // Retry-worthy discount errors
-  const codes = [
-    "resource_missing",            // coupon/promo not found
-    "promotion_code_ineligible",   // promo exists but not applicable
-    "coupon_expired",
-    "coupon_not_applicable",
-    "parameter_invalid_empty",
-  ];
-  return e?.type === "StripeInvalidRequestError" && codes.includes(e?.code);
-}
-
-function validDiscountShape(d) {
-  return !!d && (typeof d.coupon === "string" || typeof d.promotion_code === "string");
-}
-
-async function createSession({ req, priceId, email, editToken, refCode, discounts }) {
-  const baseUrl =
-    process.env.BASE_URL ||
-    `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
-
-  const params = {
-    mode: "subscription", // this endpoint is used for monthly flows
-    success_url: `${baseUrl}/pricing?success=1`,
-    cancel_url: `${baseUrl}/pricing?canceled=1`,
-    customer_email: email || undefined,
-    allow_promotion_codes: true, // keep the "Add coupon" input visible
-    line_items: [{ price: priceId, quantity: 1 }],
-    metadata: {
-      editToken: safeStr(editToken),
-      refCode: safeStr(refCode),
-    },
-  };
-
-  if (Array.isArray(discounts) && discounts.length && discounts.every(validDiscountShape)) {
-    // Use top-level discounts for Checkout Sessions (works for subscriptions)
-    params.discounts = discounts;
-  }
-
-  return stripe.checkout.sessions.create(params);
-}
-
-/* ------------------------------ Route ------------------------------ */
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -62,17 +11,39 @@ export default async function handler(req, res) {
     return res.status(405).end("Method Not Allowed");
   }
 
+  // Small helper: build a Checkout Session with given discounts
+  async function createSession({ priceId, email, editToken, refCode, discounts }) {
+    const baseUrl =
+      process.env.BASE_URL ||
+      `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
+
+    const params = {
+      mode: "subscription", // we only hit this endpoint for monthly from our UI
+      success_url: `${baseUrl}/pricing?success=1`,
+      cancel_url: `${baseUrl}/pricing?canceled=1`,
+      customer_email: email || undefined,
+      line_items: [{ price: priceId, quantity: 1 }],
+      metadata: {
+        editToken: editToken || "",
+        refCode: refCode || "",
+      },
+    };
+
+    if (discounts && discounts.length) {
+      // IMPORTANT: use top-level discounts with Checkout
+      params.discounts = discounts;
+    }
+
+    return stripe.checkout.sessions.create(params);
+  }
+
   try {
-    // Parse body safely (supports already-parsed object or raw JSON)
+    // Parse body safely (supports raw JSON or already-parsed)
     const body =
       req.body && typeof req.body === "object"
         ? req.body
         : (() => {
-            try {
-              return JSON.parse(req.body || "{}");
-            } catch {
-              return {};
-            }
+            try { return JSON.parse(req.body || "{}"); } catch { return {}; }
           })();
 
     const {
@@ -80,12 +51,12 @@ export default async function handler(req, res) {
       priceId,          // e.g. "price_..."
       editToken,
       email,
-      refCode,          // any non-empty string enables referral flow
-      applyStarter6mo,  // boolean (starterplus path)
-      applyReferral3m,  // boolean (friend path)
+      refCode,          // non-empty => referral flow
+      applyStarter6mo,  // boolean (starterplus)
+      applyReferral3m,  // boolean (friend)
     } = body;
 
-    // Resolve Stripe Price
+    // Resolve price (prefer env key)
     const resolvedPriceId =
       (priceKey && process.env[priceKey]) ||
       priceId ||
@@ -95,116 +66,119 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing price ID (env or payload)." });
     }
 
-    // Treat as Starter Monthly only when matching the configured monthly price id
+    // We only ever call this for monthly from our UI; still keep a guard:
     const isStarterMonthly = resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
-    // If both flags somehow come in, prefer the Starter+ (6m) path
-    const want6m = !!applyStarter6mo;
-    const want3m = !!applyReferral3m && !want6m;
+    // Figure out which discount we intend
+    //  - Prefer 6M if starterplus flag present
+    //  - Else use 3M if friend flag present
+    let intended = null; // "6m-coupon" | "6m-promo" | "3m-coupon" | "3m-promo" | null
 
-    // Env values
-    const COUPON_6M = process.env.STRIPE_COUPON_STARTER_6M;     // e.g., "6M_FREE"
-    const PROMO_6M  = process.env.STRIPE_PROMO_CODE_ID;         // e.g., "promo_…"
-    const COUPON_3M = process.env.STRIPE_COUPON_REFERRAL_3M;    // e.g., "STRIPE_PR0M0_REFERRAL_3M0"
-    const PROMO_3M  = process.env.STRIPE_PROMO_REFERRAL_3M;     // e.g., "promo_…"
+    // Values from env
+    const COUPON_6M = process.env.STRIPE_COUPON_STARTER_6M;     // e.g. 6M_FREE
+    const PROMO_6M  = process.env.STRIPE_PROMO_CODE_ID;         // promo_...
+    const COUPON_3M = process.env.STRIPE_COUPON_REFERRAL_3M;    // e.g. STRIPE_PR0M0_REFERRAL_3M0  (exactly as in Stripe)
+    const PROMO_3M  = process.env.STRIPE_PROMO_REFERRAL_3M;     // promo_...
 
-    // Build attempts in order of preference: COUPON (hidden) -> PROMO (shows chip)
-    const discountAttempts = [];
+    let firstDiscounts = undefined;   // first attempt
+    let retryDiscounts = undefined;   // fallback attempt (only when coupon not found)
+
     if (isStarterMonthly && refCode) {
-      if (want6m) {
-        if (COUPON_6M) discountAttempts.push([{ coupon: COUPON_6M }]);
-        if (PROMO_6M && /^promo_/.test(PROMO_6M)) discountAttempts.push([{ promotion_code: PROMO_6M }]);
-      } else if (want3m) {
-        if (COUPON_3M) discountAttempts.push([{ coupon: COUPON_3M }]);
-        if (PROMO_3M && /^promo_/.test(PROMO_3M)) discountAttempts.push([{ promotion_code: PROMO_3M }]);
+      if (applyStarter6mo && COUPON_6M) {
+        intended = "6m-coupon";
+        firstDiscounts = [{ coupon: COUPON_6M }];
+        if (PROMO_6M && /^promo_/.test(PROMO_6M)) retryDiscounts = [{ promotion_code: PROMO_6M }];
+      } else if (applyReferral3m && COUPON_3M) {
+        intended = "3m-coupon";
+        firstDiscounts = [{ coupon: COUPON_3M }];
+        if (PROMO_3M && /^promo_/.test(PROMO_3M)) retryDiscounts = [{ promotion_code: PROMO_3M }];
+      } else if (applyStarter6mo && PROMO_6M && /^promo_/.test(PROMO_6M)) {
+        intended = "6m-promo";
+        firstDiscounts = [{ promotion_code: PROMO_6M }];
+      } else if (applyReferral3m && PROMO_3M && /^promo_/.test(PROMO_3M)) {
+        intended = "3m-promo";
+        firstDiscounts = [{ promotion_code: PROMO_3M }];
       }
     }
 
-    // If no discounts planned (no ref/flags), still create a plain session
-    if (!discountAttempts.length) {
-      const session = await createSession({
-        req,
-        priceId: resolvedPriceId,
-        email,
-        editToken,
-        refCode,
-        discounts: undefined,
-      });
-      console.log("checkout:create SUCCESS (no-discount)", { id: session.id });
-      return res.status(200).json({ id: session.id, url: session.url });
-    }
+    console.log("checkout:create BEGIN", {
+      priceKey,
+      resolvedPriceId,
+      isStarterMonthly,
+      refCode,
+      applyStarter6mo: !!applyStarter6mo,
+      applyReferral3m: !!applyReferral3m,
+      env: {
+        STRIPE_COUPON_STARTER_6M: COUPON_6M || null,
+        STRIPE_PROMO_CODE_ID: PROMO_6M || null,
+        STRIPE_COUPON_REFERRAL_3M: COUPON_3M || null,
+        STRIPE_PROMO_REFERRAL_3M: PROMO_3M || null,
+      },
+      intended,
+      firstDiscounts,
+      retryDiscounts,
+    });
 
-    // Try each discount path; only retry on discount-related errors
-    for (const discounts of discountAttempts) {
-      try {
-        const session = await createSession({
-          req,
-          priceId: resolvedPriceId,
-          email,
-          editToken,
-          refCode,
-          discounts,
-        });
-        console.log("checkout:create SUCCESS", {
-          id: session.id,
-          used: discounts?.[0]?.coupon ? "coupon" : "promotion_code",
-        });
-        return res.status(200).json({ id: session.id, url: session.url });
-      } catch (e) {
-        if (!isDiscountError(e)) {
-          // Non-discount problem → surface it to client so we can see details
-          console.error("checkout:create NON-DISCOUNT FATAL", {
-            type: e?.type,
-            code: e?.code,
-            param: e?.param,
-            message: e?.message,
-            stack: e?.stack?.split("\n").slice(0, 5).join("\n"),
-          });
-          return res.status(400).json({
-            error: "Invalid request – cannot create session",
-            details: e?.message || "Unknown Stripe error",
-          });
-        }
-        console.warn("checkout:create DISCOUNT FAILED – trying next", {
-          discounts,
-          type: e?.type,
-          code: e?.code,
-          param: e?.param,
-          message: e?.message,
-        });
-        // continue to next attempt
-      }
-    }
-
-    // If every discount attempt failed, fall back to a plain session (user can add a code manually)
+    // First attempt (coupon if available; otherwise promo; otherwise none)
     try {
       const session = await createSession({
-        req,
         priceId: resolvedPriceId,
         email,
         editToken,
         refCode,
-        discounts: undefined,
+        discounts: firstDiscounts,
       });
-      console.log("checkout:create SUCCESS (fallback no-discount)", { id: session.id });
+
+      console.log("checkout:create SUCCESS:first", { id: session.id, url: session.url });
       return res.status(200).json({ id: session.id, url: session.url });
     } catch (e) {
-      console.error("checkout:create FINAL FAIL", {
+      const isMissingCoupon =
+        e?.type === "StripeInvalidRequestError" &&
+        e?.code === "resource_missing" &&
+        typeof e?.message === "string" &&
+        /No such coupon/i.test(e.message);
+
+      console.warn("checkout:create FIRST ATTEMPT FAILED", {
         type: e?.type,
         code: e?.code,
         param: e?.param,
         message: e?.message,
-        stack: e?.stack?.split("\n").slice(0, 5).join("\n"),
       });
+
+      // If coupon was missing, and we have a promo fallback, retry with promotion_code
+      if (isMissingCoupon && retryDiscounts) {
+        try {
+          const session = await createSession({
+            priceId: resolvedPriceId,
+            email,
+            editToken,
+            refCode,
+            discounts: retryDiscounts,
+          });
+          console.log("checkout:create SUCCESS:retry-promo", { id: session.id, url: session.url });
+          return res.status(200).json({ id: session.id, url: session.url });
+        } catch (e2) {
+          console.error("checkout:create RETRY FAILED", {
+            type: e2?.type,
+            code: e2?.code,
+            param: e2?.param,
+            message: e2?.message,
+          });
+          return res.status(500).json({ error: "Internal error creating Checkout Session." });
+        }
+      }
+
+      // No special retry path -> bubble generic error
       return res.status(500).json({ error: "Internal error creating Checkout Session." });
     }
   } catch (err) {
-    // Truly unexpected (bad JSON, missing envs, etc.)
-    console.error("checkout:create UNCAUGHT EXCEPTION", {
+    console.error("checkout:create UNCAUGHT", {
       message: err?.message,
-      name: err?.name,
-      stack: err?.stack?.split("\n").slice(0, 5).join("\n"),
+      type: err?.type,
+      code: err?.code,
+      param: err?.param,
+      raw_type: err?.rawType,
     });
-    return res.status(500).json({ error: "Unexpected server error – check logs" });
+    return res.status(500).json({ error: "Internal error creating Checkout Session." });
   }
 }

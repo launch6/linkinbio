@@ -1,65 +1,62 @@
 // pages/pricing.js
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 export default function PricingPage() {
-  // form + ui state
+  // UI state
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-
-  // data from server
   const [prices, setPrices] = useState(null);
 
   // persisted context
   const [editToken, setEditToken] = useState("");
   const [refCode, setRefCode] = useState("");
 
-  // ---- read querystring (client-only) and persist to localStorage
+  // Read query params ONLY on client, then persist
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const u = new URL(window.location.href);
-    const params = Object.fromEntries(u.searchParams.entries());
+    const q = Object.fromEntries(u.searchParams.entries());
 
     const savedEdit =
-      params.editToken || window.localStorage.getItem("editToken") || "";
+      q.editToken || window.localStorage.getItem("editToken") || "";
     const savedRef =
-      params.refCode || window.localStorage.getItem("refCode") || "";
+      q.refCode || window.localStorage.getItem("refCode") || "";
 
     setEditToken(savedEdit);
     setRefCode(savedRef);
 
-    if (params.editToken) window.localStorage.setItem("editToken", params.editToken);
-    if (params.refCode) window.localStorage.setItem("refCode", params.refCode);
-
-    if (params.success) setNotice("Success! Your checkout session was created.");
-    if (params.canceled) setNotice("Checkout canceled. You can resume anytime.");
+    if (q.editToken) window.localStorage.setItem("editToken", q.editToken);
+    if (q.refCode) window.localStorage.setItem("refCode", q.refCode);
   }, []);
 
-  // ---- fetch price labels (client-only)
+  // Load formatted price labels
   useEffect(() => {
-    let alive = true;
+    let on = true;
     (async () => {
       try {
         const r = await fetch("/api/pricing/list");
-        const json = await r.json();
-        if (alive) setPrices(json);
+        const j = await r.json();
+        if (on) setPrices(j);
       } catch {
-        /* non-fatal */
+        /* ignore */
       }
     })();
     return () => {
-      alive = false;
+      on = false;
     };
   }, []);
 
-  // Starter+ = 6 months; any other non-empty refCode = 3 months
-  const isStarterPlus = !!refCode && refCode.toLowerCase() === "starterplus";
-  const bannerMonths = refCode ? (isStarterPlus ? 6 : 3) : 0;
-  const starterTag = bannerMonths ? ` · ${bannerMonths} months free` : "";
+  // Referral logic
+  const isStarterPlus = useMemo(
+    () => !!refCode && refCode.toLowerCase() === "starterplus",
+    [refCode]
+  );
+  const bannerMonths = useMemo(
+    () => (isStarterPlus ? 6 : refCode ? 3 : 0),
+    [isStarterPlus, refCode]
+  );
 
-  // ---- actions
   async function gotoCheckout(priceKey) {
     setBusy(true);
     setError("");
@@ -71,13 +68,15 @@ export default function PricingPage() {
           priceKey,
           editToken,
           email: email || undefined,
-          refCode, // keep referral context
-          applyStarter6mo: !!refCode && isStarterPlus,
-          applyReferral3m: !!refCode && !isStarterPlus,
+          refCode,                       // triggers referral logic server-side
+          applyStarter6mo: isStarterPlus, // 6M path
+          applyReferral3m: !!refCode && !isStarterPlus, // 3M path
         }),
       });
       const j = await r.json();
-      if (!r.ok) throw new Error(j?.error || "Internal error creating Checkout Session.");
+      if (!r.ok || !j?.url) {
+        throw new Error(j?.error || "Internal error creating Checkout Session.");
+      }
       window.location.href = j.url;
     } catch (e) {
       setError(e.message || "Internal error creating Checkout Session.");
@@ -101,7 +100,8 @@ export default function PricingPage() {
         window.localStorage.setItem("editToken", j.editToken);
       }
       window.location.href =
-        j.redirect || `/editor?editToken=${encodeURIComponent(j.editToken || editToken)}`;
+        j.redirect ||
+        `/editor?editToken=${encodeURIComponent(j.editToken || editToken)}`;
     } catch (e) {
       setError(e.message || "Could not start Free profile.");
     } finally {
@@ -109,13 +109,14 @@ export default function PricingPage() {
     }
   }
 
-  // labels (fallbacks if /api/pricing/list is unavailable)
-  const starterMonthlyLabel = prices?.STARTER_MONTHLY || "$9.95 / month";
-  const starterLifetimeLabel = prices?.STARTER_LIFETIME || "$89.95";
-  const proMonthlyLabel = prices?.PRO_MONTHLY || "$19.95 / month";
-  const proLifetimeLabel = prices?.PRO_LIFETIME || "$199.95";
-  const bizMonthlyLabel = prices?.BUSINESS_MONTHLY || "$29.95 / month";
-  const bizLifetimeLabel = prices?.BUSINESS_LIFETIME || "$299.95";
+  // Labels with safe fallbacks
+  const starterMonthlyLabel   = prices?.STARTER_MONTHLY    || "$9.95 / month";
+  const starterLifetimeLabel  = prices?.STARTER_LIFETIME   || "$89.95";
+  const proMonthlyLabel       = prices?.PRO_MONTHLY        || "$19.95 / month";
+  const proLifetimeLabel      = prices?.PRO_LIFETIME       || "$199.95";
+  const bizMonthlyLabel       = prices?.BUSINESS_MONTHLY   || "$29.95 / month";
+  const bizLifetimeLabel      = prices?.BUSINESS_LIFETIME  || "$299.95";
+  const starterTag            = bannerMonths ? ` · ${bannerMonths} months free` : "";
 
   return (
     <div className="min-h-screen text-white bg-neutral-950">
@@ -128,29 +129,17 @@ export default function PricingPage() {
         {bannerMonths ? (
           <div className="mb-6 rounded-xl border border-green-600/40 bg-green-900/20 text-green-200 p-4">
             <b>{isStarterPlus ? "Starter+ referral applied" : "Referral applied"}:</b>{" "}
-            both you and your friend get <b>{bannerMonths} months free</b> on Starter (card
-            required to activate). Lifetime and non-Starter plans won’t apply the referral.
+            both you and your friend get <b>{bannerMonths} months free</b> on Starter
+            (card required to activate). Lifetime and non-Starter plans won’t apply the referral.
           </div>
         ) : null}
 
-        {notice ? (
-          <div className="mb-6 rounded-xl border border-blue-600/40 bg-blue-900/20 text-blue-200 p-4">
-            {notice}
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="mb-6 rounded-xl border border-red-600/40 bg-red-900/20 text-red-200 p-4">
-            {error}
-          </div>
-        ) : null}
-
-        {/* Controls */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
           <input
             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-4 py-3 outline-none"
             placeholder="Edit Token"
             value={editToken}
+            onChange={(e) => setEditToken(e.target.value)}
             readOnly
           />
           <input
@@ -161,14 +150,19 @@ export default function PricingPage() {
           />
         </div>
 
-        {/* Plan cards */}
+        {error ? (
+          <div className="mb-6 rounded-xl border border-red-600/40 bg-red-900/20 text-red-200 p-4">
+            {error}
+          </div>
+        ) : null}
+
         <div className="grid md:grid-cols-3 gap-6">
           {/* Free */}
           <div className="rounded-2xl border border-neutral-800 p-6">
             <div className="text-2xl font-semibold mb-2">Free</div>
             <p className="text-neutral-400 mb-6">
-              Create your page, add links, collect emails, and try products with basic
-              limits. You’re on Free until you upgrade.
+              Create your page, add links, collect emails, and try products with basic limits.
+              You’re on Free until you upgrade.
             </p>
             <button
               onClick={startFree}
@@ -188,8 +182,7 @@ export default function PricingPage() {
                 disabled={busy}
                 className="w-full rounded-xl border border-neutral-700 px-4 py-3 hover:bg-neutral-800 disabled:opacity-60"
               >
-                Monthly — {starterMonthlyLabel}
-                {starterTag}
+                Monthly — {starterMonthlyLabel}{starterTag}
               </button>
               <button
                 onClick={() => gotoCheckout("STRIPE_PRICE_STARTER_LIFETIME")}
@@ -223,7 +216,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Business row */}
+        {/* Business */}
         <div className="grid md:grid-cols-3 gap-6 mt-6">
           <div className="md:col-start-3 rounded-2xl border border-neutral-800 p-6">
             <div className="text-2xl font-semibold mb-2">Business</div>

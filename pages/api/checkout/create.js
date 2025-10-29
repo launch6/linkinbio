@@ -12,7 +12,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Body can be object or raw string
     const body =
       req.body && typeof req.body === "object"
         ? req.body
@@ -22,7 +21,7 @@ export default async function handler(req, res) {
 
     const {
       priceKey,        // e.g. "STRIPE_PRICE_STARTER_MONTHLY"
-      priceId,         // fallback Stripe price id
+      priceId,         // direct Stripe price id (fallback)
       editToken,
       email,
       refCode,         // any non-empty => referral flow
@@ -30,7 +29,7 @@ export default async function handler(req, res) {
       applyReferral3m, // boolean
     } = body;
 
-    // ---------- Resolve the price ----------
+    // Resolve price
     const resolvedPriceId =
       (priceKey && process.env[priceKey]) ||
       priceId ||
@@ -40,14 +39,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing price ID (env or payload)." });
     }
 
-    // Heuristic: monthly price => subscription
+    // Detect subscription (monthly) vs one-time (lifetime)
     const isSubscription =
       (priceKey && /_MONTHLY$/.test(priceKey)) ||
       resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
     const isStarterMonthly = resolvedPriceId === process.env.STRIPE_PRICE_STARTER_MONTHLY;
 
-    // ---------- Choose discounts (coupon first; promo fallback) ----------
+    // ---- Choose discounts (coupon first to HIDE the code chip; promo fallback to SHOW it) ----
     let discounts = undefined;
 
     if (isSubscription && isStarterMonthly && refCode) {
@@ -70,19 +69,15 @@ export default async function handler(req, res) {
       }
     }
 
-    // ---------- URLs ----------
+    // Success/cancel
     const baseUrl =
       process.env.BASE_URL ||
       `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
 
-    const success_url = `${baseUrl}/pricing?success=1`;
-    const cancel_url  = `${baseUrl}/pricing?canceled=1`;
-
-    // ---------- Build session ----------
     const sessionParams = {
       mode: isSubscription ? "subscription" : "payment",
-      success_url,
-      cancel_url,
+      success_url: `${baseUrl}/pricing?success=1`,
+      cancel_url: `${baseUrl}/pricing?canceled=1`,
       customer_email: email || undefined,
       line_items: [{ price: resolvedPriceId, quantity: 1 }],
       metadata: {
@@ -92,15 +87,10 @@ export default async function handler(req, res) {
       },
     };
 
-    // IMPORTANT: for subscriptions use subscription_data.discounts
-    if (isSubscription && discounts) {
-      sessionParams.subscription_data = { discounts };
-    } else if (discounts) {
-      // one-time/payment path — top-level discounts are OK
-      sessionParams.discounts = discounts;
-    }
+    // ✅ Correct way for Checkout: top-level discounts
+    if (discounts) sessionParams.discounts = discounts;
 
-    // Helpful debug in Vercel logs
+    // Debug
     console.log("checkout:create params", {
       priceKey,
       resolvedPriceId,

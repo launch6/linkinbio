@@ -53,7 +53,6 @@ function envPriceToPlan(priceId) {
       return { plan: row.plan, cadence: row.cadence };
     }
   }
-  // Fallback: assume starter monthly if unknown (but store priceId)
   return { plan: "starter", cadence: "monthly" };
 }
 
@@ -71,9 +70,7 @@ async function upsertFromCheckoutSession(session) {
   try {
     const line = session?.line_items?.data?.[0];
     priceId = line?.price?.id || null;
-  } catch {
-    // ignore
-  }
+  } catch {}
   priceId = priceId || session?.metadata?.priceId || null;
 
   const planInfo = envPriceToPlan(priceId);
@@ -145,16 +142,14 @@ async function markInvoicePaid(inv) {
 
 // ---------- Webhook handler ----------
 export default async function handler(req, res) {
-  // ===== Diagnostics: do we even receive the Stripe header? =====
   try {
-    console.log("webhook: method", req?.method);
+    // --- debug: show we’re on the right deployment & secret loaded ---
+    console.log("webhook: method", req.method, "url", req.url, "host", req.headers.host);
     console.log("webhook: header keys", Object.keys(req.headers || {}));
-  } catch (_) {}
+    console.log("webhook: secret prefix", (process.env.STRIPE_WEBHOOK_SECRET || "").slice(0, 8));
 
-  try {
     const sig = req.headers["stripe-signature"];
     if (!sig) {
-      // No signature means Stripe didn’t sign (wrong sender) or a proxy stripped it.
       return res.status(400).json({ error: "Missing Stripe signature header" });
     }
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
@@ -163,13 +158,19 @@ export default async function handler(req, res) {
     }
 
     const rawBody = await readRawBody(req);
-    let event;
 
+    let event;
     try {
-      event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
     } catch (err) {
       console.error("WEBHOOK VERIFY FAIL", { message: err?.message });
-      return res.status(400).send(`Webhook Error: ${err.message}`);
+      return res
+        .status(400)
+        .send(`Webhook Error: ${err.message}`);
     }
 
     const type = event.type;

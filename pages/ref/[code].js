@@ -1,5 +1,18 @@
-export async function getServerSideProps(ctx){
-  const { code } = ctx.params;
-  return { redirect: { destination: `/pricing?ref=${encodeURIComponent(code)}`, permanent: false } };
+// pages/ref/[code].js
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+
+export default function RefLanding() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const { code = "" } = router.query || {};
+    try {
+      if (code) localStorage.setItem("refCode", String(code));
+    } catch {}
+    router.replace(`/pricing?refCode=${encodeURIComponent(String(code || ""))}`);
+  }, [router.isReady, router.query, router]);
+
+  return <div style={{ display: "none" }} />;
 }
-export default function Ref(){ return null; }

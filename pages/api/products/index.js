@@ -1,110 +1,123 @@
 // pages/api/products/index.js
-import { MongoClient, ObjectId } from "mongodb";
+import { MongoClient } from "mongodb";
 
-let cachedClient = null;
+/** ── DB bootstrap (local cache so we don't reconnect every call) ─────────── */
+const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB = process.env.MONGODB_DB || "linkinbio";
+
+if (!MONGODB_URI) {
+  throw new Error("Missing MONGODB_URI env");
+}
+
+let _client = global._launch6MongoClient;
 async function getClient() {
-  if (cachedClient) return cachedClient;
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error("Missing MONGODB_URI");
-  const client = new MongoClient(uri, { ignoreUndefined: true });
-  await client.connect();
-  cachedClient = client;
-  return client;
+  if (_client) return _client;
+  const c = new MongoClient(MONGODB_URI);
+  await c.connect();
+  _client = c;
+  global._launch6MongoClient = c;
+  return c;
 }
 
-function sanitizeProduct(input = {}) {
-  const out = {
-    title: typeof input.title === "string" ? input.title.slice(0, 120) : "",
-    description:
-      typeof input.description === "string"
-        ? input.description.slice(0, 2000)
-        : "",
-    images: Array.isArray(input.images)
-      ? input.images.filter((u) => typeof u === "string").slice(0, 6)
-      : [],
-    stripeUrl:
-      typeof input.stripeUrl === "string" ? input.stripeUrl.slice(0, 2048) : "",
-    // NEW MVP FIELDS (Timer + Scarcity)
-    dropEndsAt:
-      typeof input.dropEndsAt === "string" || input.dropEndsAt instanceof Date
-        ? new Date(input.dropEndsAt)
-        : null,
-    unitsTotal:
-      Number.isFinite(Number(input.unitsTotal)) && Number(input.unitsTotal) >= 0
-        ? Number(input.unitsTotal)
-        : null,
-    unitsLeft:
-      Number.isFinite(Number(input.unitsLeft)) && Number(input.unitsLeft) >= 0
-        ? Number(input.unitsLeft)
-        : null,
+/** ── Helpers ────────────────────────────────────────────────────────────── */
+function cleanStr(x, max = 500) {
+  if (typeof x !== "string") return "";
+  const s = x.trim();
+  return s.length > max ? s.slice(0, max) : s;
+}
+function toISOorEmpty(v) {
+  if (!v) return "";
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? "" : d.toISOString();
+}
+function toIntOrEmpty(v) {
+  if (v === "" || v === null || v === undefined) return "";
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n >= 0 ? n : "";
+}
+function toBool(v) {
+  return !!v;
+}
+function sanitizeProduct(p) {
+  return {
+    id: cleanStr(p?.id || `p_${Math.random().toString(36).slice(2, 10)}`, 64),
+    title: cleanStr(p?.title || "", 300),
+    priceUrl: cleanStr(p?.priceUrl || "", 1000),
+    imageUrl: cleanStr(p?.imageUrl || "", 1000),
 
-    // Optional owner scoping; wire later with auth
-    owner: typeof input.owner === "string" ? input.owner : null,
-    updatedAt: new Date(),
+    // MVP fields
+    dropEndsAt: toISOorEmpty(p?.dropEndsAt || ""),
+    unitsTotal: toIntOrEmpty(p?.unitsTotal),
+    unitsLeft: toIntOrEmpty(p?.unitsLeft),
+
+    published: toBool(p?.published),
   };
-
-  if (
-    out.unitsTotal !== null &&
-    out.unitsLeft !== null &&
-    out.unitsLeft > out.unitsTotal
-  ) {
-    out.unitsLeft = out.unitsTotal;
-  }
-  return out;
 }
 
+/** ── API Route ──────────────────────────────────────────────────────────── */
 export default async function handler(req, res) {
   try {
     const client = await getClient();
-    const db = client.db(process.env.MONGODB_DB || "linkinbio");
-    const col = db.collection("products");
+    const db = client.db(MONGODB_DB);
+    const Profiles = db.collection("profiles");
 
     if (req.method === "GET") {
-      const { id, owner } = req.query;
-
-      if (id) {
-        const doc = await col.findOne({ _id: new ObjectId(String(id)) });
-        if (!doc) return res.status(404).json({ error: "Not found" });
-        return res.status(200).json(doc);
+      const editToken = cleanStr(req.query.editToken || "", 200);
+      if (!editToken) {
+        return res.status(400).json({ ok: false, error: "Missing editToken" });
       }
 
-      const query = owner ? { owner: String(owner) } : {};
-      const items = await col.find(query).sort({ updatedAt: -1 }).limit(50).toArray();
-      return res.status(200).json(items);
+      const doc = await Profiles.findOne({ editToken }, { projection: { products: 1, _id: 0 } });
+      return res.status(200).json({ ok: true, products: doc?.products || [] });
     }
 
     if (req.method === "POST") {
-      const data = sanitizeProduct(req.body || {});
-      if (!data.title || !data.stripeUrl) {
-        return res.status(400).json({ error: "title and stripeUrl are required" });
+      const body =
+        req.body && typeof req.body === "object"
+          ? req.body
+          : (() => {
+              try {
+                return JSON.parse(req.body || "{}");
+              } catch {
+                return {};
+              }
+            })();
+
+      const editToken = cleanStr(body.editToken || "", 200);
+      const incoming = Array.isArray(body.products) ? body.products : null;
+
+      if (!editToken) {
+        return res.status(400).json({ ok: false, error: "Missing editToken" });
       }
-      data.createdAt = new Date();
+      if (!incoming) {
+        return res.status(400).json({ ok: false, error: "Body must include products array" });
+      }
 
-      const { insertedId } = await col.insertOne(data);
-      const created = await col.findOne({ _id: insertedId });
-      return res.status(201).json(created);
-    }
+      // Sanitize + cap to a reasonable number for MVP
+      const products = incoming.slice(0, 100).map(sanitizeProduct);
 
-    if (req.method === "PUT") {
-      const { id } = req.query;
-      if (!id) return res.status(400).json({ error: "Missing id" });
-
-      const patch = sanitizeProduct(req.body || {});
-      delete patch.createdAt;
-
-      const result = await col.findOneAndUpdate(
-        { _id: new ObjectId(String(id)) },
-        { $set: patch },
-        { returnDocument: "after" }
+      const result = await Profiles.updateOne(
+        { editToken },
+        {
+          $set: {
+            products,
+            updatedAt: new Date(),
+          },
+        },
+        { upsert: true }
       );
-      if (!result.value) return res.status(404).json({ error: "Not found" });
-      return res.status(200).json(result.value);
+
+      return res.status(200).json({
+        ok: true,
+        saved: products.length,
+        upserted: !!result?.upsertedId,
+      });
     }
 
-    res.setHeader("Allow", "GET,POST,PUT");
+    res.setHeader("Allow", "GET, POST");
     return res.status(405).end("Method Not Allowed");
   } catch (err) {
-    console.error("products API error", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("products:index ERROR", { message: err?.message, stack: err?.stack });
+    return res.status(500).json({ ok: false, error: "Server error" });
   }
 }

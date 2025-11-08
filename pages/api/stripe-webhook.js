@@ -61,16 +61,12 @@ async function upsertFromCheckoutSession(session) {
   const client = await getClient();
   const db = client.db(MONGODB_DB);
 
-  // Metadata we set when creating Checkout Session
   const editToken = session?.metadata?.editToken || null;
   const refCode = session?.metadata?.refCode || null;
 
-  // Subscription sessions have subscription + customer + line_items
   const customerId = session?.customer || null;
   const subscriptionId = session?.subscription || null;
 
-  // Stripe may not expand line items; grab the price from the session if present
-  // We stored the chosen price in line_items[0].price on creation
   let priceId = null;
   try {
     const line = session?.line_items?.data?.[0];
@@ -78,10 +74,8 @@ async function upsertFromCheckoutSession(session) {
   } catch {
     // ignore
   }
-  // Fallback: some sessions include display_items/after_expansion; or we keep price in metadata.priceKey
   priceId = priceId || session?.metadata?.priceId || null;
 
-  // Determine plan from price
   const planInfo = envPriceToPlan(priceId);
 
   const update = {
@@ -96,7 +90,6 @@ async function upsertFromCheckoutSession(session) {
     },
   };
 
-  // Optional: if lifetime, you can null subscriptionId
   if (planInfo.cadence === "lifetime") {
     update.$set["stripe.subscriptionId"] = null;
   }
@@ -152,9 +145,16 @@ async function markInvoicePaid(inv) {
 
 // ---------- Webhook handler ----------
 export default async function handler(req, res) {
+  // ===== Diagnostics: do we even receive the Stripe header? =====
+  try {
+    console.log("webhook: method", req?.method);
+    console.log("webhook: header keys", Object.keys(req.headers || {}));
+  } catch (_) {}
+
   try {
     const sig = req.headers["stripe-signature"];
     if (!sig) {
+      // No signature means Stripe didn’t sign (wrong sender) or a proxy stripped it.
       return res.status(400).json({ error: "Missing Stripe signature header" });
     }
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
@@ -172,8 +172,6 @@ export default async function handler(req, res) {
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // If you want line items in session, request expansion in your checkout create call
-    // and Stripe will include them in event.data.object.line_items
     const type = event.type;
     const obj = event.data.object;
 
@@ -206,7 +204,6 @@ export default async function handler(req, res) {
         break;
       }
       default:
-        // No-op for other events; log and 200
         console.log("Unhandled Stripe event:", type);
         break;
     }

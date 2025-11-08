@@ -1,9 +1,10 @@
 // pages/api/stripe-webhook.js
 import Stripe from "stripe";
 import { MongoClient } from "mongodb";
+import { buffer } from "micro"; // <-- official way to get raw body
 
 export const config = {
-  api: { bodyParser: false }, // Stripe requires the raw body to verify signatures
+  api: { bodyParser: false }, // MUST be disabled for Stripe signature verification
 };
 
 // ---------- Stripe + DB ----------
@@ -25,19 +26,6 @@ async function getClient() {
 }
 
 // ---------- Helpers ----------
-async function readRawBody(req) {
-  return await new Promise((resolve, reject) => {
-    try {
-      const chunks = [];
-      req.on("data", (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
-      req.on("end", () => resolve(Buffer.concat(chunks)));
-      req.on("error", reject);
-    } catch (e) {
-      reject(e);
-    }
-  });
-}
-
 function envPriceToPlan(priceId) {
   if (!priceId) return { plan: "free", cadence: null };
   const map = [
@@ -70,7 +58,9 @@ async function upsertFromCheckoutSession(session) {
   try {
     const line = session?.line_items?.data?.[0];
     priceId = line?.price?.id || null;
-  } catch {}
+  } catch {
+    // ignore
+  }
   priceId = priceId || session?.metadata?.priceId || null;
 
   const planInfo = envPriceToPlan(priceId);
@@ -79,17 +69,13 @@ async function upsertFromCheckoutSession(session) {
     $set: {
       updatedAt: new Date(),
       "stripe.customerId": customerId || null,
-      "stripe.subscriptionId": subscriptionId || null,
+      "stripe.subscriptionId": planInfo.cadence === "lifetime" ? null : subscriptionId || null,
       "stripe.priceId": priceId || null,
       "stripe.lastEvent": "checkout.session.completed",
       refCode: refCode || null,
       plan: planInfo.plan,
     },
   };
-
-  if (planInfo.cadence === "lifetime") {
-    update.$set["stripe.subscriptionId"] = null;
-  }
 
   const query = editToken ? { editToken } : { "stripe.customerId": customerId };
   await db.collection("profiles").updateOne(query, update, { upsert: true });
@@ -142,76 +128,64 @@ async function markInvoicePaid(inv) {
 
 // ---------- Webhook handler ----------
 export default async function handler(req, res) {
-  try {
-    // --- debug: show we’re on the right deployment & secret loaded ---
-    console.log("webhook: method", req.method, "url", req.url, "host", req.headers.host);
-    console.log("webhook: header keys", Object.keys(req.headers || {}));
-    console.log("webhook: secret prefix", (process.env.STRIPE_WEBHOOK_SECRET || "").slice(0, 8));
-
-    const sig = req.headers["stripe-signature"];
-    if (!sig) {
-      return res.status(400).json({ error: "Missing Stripe signature header" });
-    }
-    if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error("WEBHOOK ERROR: Missing STRIPE_WEBHOOK_SECRET env");
-      return res.status(500).json({ error: "Server misconfigured" });
-    }
-
-    const rawBody = await readRawBody(req);
-
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(
-        rawBody,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.error("WEBHOOK VERIFY FAIL", { message: err?.message });
-      return res
-        .status(400)
-        .send(`Webhook Error: ${err.message}`);
-    }
-
-    const type = event.type;
-    const obj = event.data.object;
-
-    switch (type) {
-      case "checkout.session.completed": {
-        try {
-          await upsertFromCheckoutSession(obj);
-        } catch (e) {
-          console.error("checkout.session.completed handler error", { message: e?.message });
-          return res.status(500).json({ error: "Failed to persist checkout session" });
-        }
-        break;
-      }
-      case "customer.subscription.created": {
-        try {
-          await updateFromSubscriptionCreated(obj);
-        } catch (e) {
-          console.error("subscription.created handler error", { message: e?.message });
-          return res.status(500).json({ error: "Failed to persist subscription" });
-        }
-        break;
-      }
-      case "invoice.paid": {
-        try {
-          await markInvoicePaid(obj);
-        } catch (e) {
-          console.error("invoice.paid handler error", { message: e?.message });
-          return res.status(500).json({ error: "Failed to persist invoice" });
-        }
-        break;
-      }
-      default:
-        console.log("Unhandled Stripe event:", type);
-        break;
-    }
-
-    return res.status(200).json({ received: true });
-  } catch (err) {
-    console.error("stripe-webhook UNCAUGHT", { message: err?.message, stack: err?.stack });
-    return res.status(500).json({ error: "Internal webhook error" });
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).end("Method Not Allowed");
   }
+
+  const sig = req.headers["stripe-signature"];
+  if (!sig) {
+    console.error("WEBHOOK ERROR: Missing stripe-signature header");
+    return res.status(400).json({ error: "Missing Stripe signature header" });
+  }
+
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!endpointSecret) {
+    console.error("WEBHOOK ERROR: Missing STRIPE_WEBHOOK_SECRET env");
+    return res.status(500).json({ error: "Server misconfigured" });
+  }
+
+  let buf;
+  try {
+    buf = await buffer(req); // << raw bytes exactly as sent by Stripe
+  } catch (e) {
+    console.error("WEBHOOK ERROR: Failed to read raw body", { message: e?.message });
+    return res.status(400).json({ error: "Unable to read raw body" });
+  }
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(buf, sig, endpointSecret);
+  } catch (err) {
+    console.error("WEBHOOK VERIFY FAIL", {
+      message: err?.message,
+      secretTail: endpointSecret.slice(-8),
+      payloadBytes: buf?.length,
+      sigHeaderSample: String(sig).slice(0, 32) + "...",
+    });
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log("WEBHOOK OK", { type: event?.type, id: event?.id });
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed":
+        await upsertFromCheckoutSession(event.data.object);
+        break;
+      case "customer.subscription.created":
+        await updateFromSubscriptionCreated(event.data.object);
+        break;
+      case "invoice.paid":
+        await markInvoicePaid(event.data.object);
+        break;
+      default:
+        console.log("Unhandled Stripe event:", event.type);
+    }
+  } catch (e) {
+    console.error("WEBHOOK HANDLER ERROR", { type: event.type, message: e?.message });
+    return res.status(500).json({ error: "Failed to persist event" });
+  }
+
+  return res.status(200).json({ received: true });
 }

@@ -83,7 +83,9 @@ export default async function handler(req, res) {
   try {
     if (!id) {
       if (debug) {
-        return res.status(200).json({ ok: false, stage: "pre", error: "Missing product id", query: req.query });
+        return res
+          .status(200)
+          .json({ ok: false, stage: "pre", error: "Missing product id", query: req.query });
       }
       return res.status(400).json({ ok: false, error: "Missing product id" });
     }
@@ -104,7 +106,7 @@ export default async function handler(req, res) {
       diag.connected = true;
     } catch (e) {
       diag.connected = false;
-      diag.connectError = String(e && e.message || e);
+      diag.connectError = String((e && e.message) || e);
       if (debug) return res.status(200).json(diag);
       throw e;
     }
@@ -117,7 +119,7 @@ export default async function handler(req, res) {
       diag.lookupStatus = found.status;
     } catch (e) {
       diag.lookupStatus = "exception";
-      diag.lookupError = String(e && e.message || e);
+      diag.lookupError = String((e && e.message) || e);
       if (debug) return res.status(200).json(diag);
       throw e;
     }
@@ -162,4 +164,29 @@ export default async function handler(req, res) {
     }
 
     if (block) {
-      return redirectToReason(res, { editToken, reas
+      return redirectToReason(res, { editToken, reason: block });
+    }
+
+    // Build outgoing URL (tag product id & pass UTMs if any)
+    const out = new URL(priceUrl);
+    if (!out.searchParams.has("client_reference_id")) {
+      out.searchParams.set("client_reference_id", id);
+    }
+    const passthrough = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+    for (const key of passthrough) {
+      const val = pickParam(req.query, [key]);
+      if (val && !out.searchParams.has(key)) out.searchParams.set(key, val);
+    }
+
+    res.writeHead(302, { Location: out.toString() });
+    return res.end();
+  } catch (err) {
+    console.error("products/buy error:", err);
+    if (debug) {
+      return res
+        .status(200)
+        .json({ ok: false, stage: "catch", error: String((err && err.message) || err) });
+    }
+    return res.status(500).json({ ok: false, error: "Buy redirect failed" });
+  }
+}

@@ -23,6 +23,8 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export default function PublicPage() {
   const [editToken, setEditToken] = useState("");
   const [reason, setReason] = useState("");
@@ -113,20 +115,43 @@ export default function PublicPage() {
     const ended = rem === 0;
     const soldOut = left !== null && left <= 0;
 
-    if (soldOut) return { label: "Sold out", ended: false, soldOut: true };
+    // Flags for micro-UX
+    const endsSoon = Number.isFinite(rem) && rem !== null && rem > 0 && rem <= DAY_MS;
+    const lowStock =
+      left !== null &&
+      ((total && total > 0 && left / total <= 0.2) || left <= 3) &&
+      left > 0;
+
+    if (soldOut) {
+      return { label: "Sold out", ended: false, soldOut: true, endsSoon: false, lowStock: false };
+    }
     if (rem === null && total !== null && left !== null) {
-      return { label: `${left}/${total} left`, ended: false, soldOut: false };
+      return {
+        label: `${left}/${total} left`,
+        ended: false,
+        soldOut: false,
+        endsSoon: false,
+        lowStock,
+      };
     }
     if (rem === null) {
-      return { label: "", ended: false, soldOut: false };
+      return { label: "", ended: false, soldOut: false, endsSoon: false, lowStock: false };
     }
-    if (ended) return { label: "Drop ended", ended: true, soldOut: false };
+    if (ended) {
+      return { label: "Drop ended", ended: true, soldOut: false, endsSoon: false, lowStock: false };
+    }
 
     const base = `Ends in ${formatRemaining(rem)}`;
     if (total !== null && left !== null) {
-      return { label: `${left}/${total} left — ${base}`, ended: false, soldOut: false };
+      return {
+        label: `${left}/${total} left — ${base}`,
+        ended: false,
+        soldOut: false,
+        endsSoon,
+        lowStock,
+      };
     }
-    return { label: base, ended: false, soldOut: false };
+    return { label: base, ended: false, soldOut: false, endsSoon, lowStock: false };
   }
 
   function humanReason(r) {
@@ -189,28 +214,45 @@ export default function PublicPage() {
               const buyHref = `/api/products/buy?productId=${encodeURIComponent(
                 p.id
               )}&editToken=${encodeURIComponent(editToken)}`;
+
+              // Badge styles
+              const statusClass =
+                st.soldOut || st.ended
+                  ? "text-red-300"
+                  : st.endsSoon
+                  ? "text-amber-300"
+                  : "text-green-300";
+
               return (
                 <article key={p.id} className="rounded-2xl border border-neutral-800 overflow-hidden">
                   {p.imageUrl ? (
-                    <img
-                      src={p.imageUrl}
-                      alt={p.title || "Product image"}
-                      className="w-full aspect-[4/3] object-cover"
-                      loading="lazy"
-                    />
+                    <div className="relative">
+                      <img
+                        src={p.imageUrl}
+                        alt={p.title || "Product image"}
+                        className="w-full aspect-[4/3] object-cover"
+                        loading="lazy"
+                      />
+                      {/* Ribbon for Ends soon */}
+                      {st.endsSoon && !st.soldOut && !st.ended ? (
+                        <div className="absolute top-3 left-3 rounded-md bg-amber-500/20 border border-amber-400/40 px-2 py-1 text-xs text-amber-100 backdrop-blur">
+                          Ends soon
+                        </div>
+                      ) : null}
+                      {/* Ribbon for Low stock */}
+                      {st.lowStock && !st.soldOut && !st.ended ? (
+                        <div className="absolute top-3 right-3 rounded-md bg-fuchsia-500/20 border border-fuchsia-400/40 px-2 py-1 text-xs text-fuchsia-100 backdrop-blur">
+                          Low stock
+                        </div>
+                      ) : null}
+                    </div>
                   ) : null}
+
                   <div className="p-5">
                     <h2 className="text-xl font-semibold mb-1">{p.title || "Untitled"}</h2>
 
                     {st.label ? (
-                      <div
-                        className={
-                          "text-sm mb-3 " +
-                          (st.soldOut || st.ended ? "text-red-300" : "text-green-300")
-                        }
-                      >
-                        {st.label}
-                      </div>
+                      <div className={`text-sm mb-3 ${statusClass}`}>{st.label}</div>
                     ) : null}
 
                     {showBuy ? (

@@ -32,6 +32,28 @@ export default function PublicPage() {
   const [products, setProducts] = useState([]);
   const [remaining, setRemaining] = useState({}); // { [id]: ms }
   const timerRef = useRef(null);
+  const refreshRef = useRef(null); // NEW periodic refresh
+
+  // Small helper to load profile + products with no-store caching
+  async function loadAll(token) {
+    const bust = `_t=${Date.now()}`;
+    // profile
+    const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}&${bust}`, {
+      cache: "no-store",
+    });
+    const pj = await pr.json();
+    if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
+    // products
+    const r = await fetch(`/api/products?editToken=${encodeURIComponent(token)}&${bust}`, {
+      cache: "no-store",
+    });
+    const j = await r.json();
+    if (!j?.ok) throw new Error(j?.error || "Failed to load products");
+
+    const onlyPublished = (j.products || []).filter((p) => !!p.published);
+    setProfile(pj.profile);
+    setProducts(onlyPublished);
+  }
 
   // read URL params
   useEffect(() => {
@@ -43,7 +65,7 @@ export default function PublicPage() {
     setReason(r);
   }, []);
 
-  // fetch profile + products
+  // initial fetch + periodic refresh + on-focus refresh
   useEffect(() => {
     if (!editToken) {
       setLoading(false);
@@ -51,21 +73,12 @@ export default function PublicPage() {
       return;
     }
     let alive = true;
+
     (async () => {
       try {
         setLoading(true);
-        const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(editToken)}`);
-        const pj = await pr.json();
-        if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
-
-        const r = await fetch(`/api/products?editToken=${encodeURIComponent(editToken)}`);
-        const j = await r.json();
-        if (!j?.ok) throw new Error(j?.error || "Failed to load products");
-
+        await loadAll(editToken);
         if (!alive) return;
-        const onlyPublished = (j.products || []).filter((p) => !!p.published);
-        setProfile(pj.profile);
-        setProducts(onlyPublished);
         setError("");
       } catch (e) {
         if (!alive) return;
@@ -74,8 +87,30 @@ export default function PublicPage() {
         if (alive) setLoading(false);
       }
     })();
+
+    // periodic refresh every 15s
+    refreshRef.current = setInterval(async () => {
+      try {
+        await loadAll(editToken);
+      } catch {
+        /* ignore */
+      }
+    }, 15000);
+
+    // refresh when tab becomes visible
+    const onVis = async () => {
+      if (document.visibilityState === "visible") {
+        try {
+          await loadAll(editToken);
+        } catch {}
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+
     return () => {
       alive = false;
+      if (refreshRef.current) clearInterval(refreshRef.current);
+      document.removeEventListener("visibilitychange", onVis);
     };
   }, [editToken]);
 
@@ -141,12 +176,9 @@ export default function PublicPage() {
 
   // Badge styles by state
   const badgeClass = {
-    active:
-      "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
-    soldout:
-      "bg-rose-500/20 border-rose-400/40 text-rose-200",
-    ended:
-      "bg-amber-500/20 border-amber-400/40 text-amber-200",
+    active: "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
+    soldout: "bg-rose-500/20 border-rose-400/40 text-rose-200",
+    ended: "bg-amber-500/20 border-amber-400/40 text-amber-200",
   };
 
   const title = profile?.displayName || profile?.name || "Artist";
@@ -247,7 +279,8 @@ export default function PublicPage() {
                                     productId: p.id,
                                     editToken,
                                     ts: Date.now(),
-                                    ref: (typeof window !== "undefined" ? window.location.href : ""),
+                                    ref:
+                                      typeof window !== "undefined" ? window.location.href : "",
                                   }),
                                 ],
                                 { type: "application/json" }

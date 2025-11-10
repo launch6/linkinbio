@@ -104,7 +104,7 @@ export default function PublicPage() {
     };
   }, [editToken]);
 
-  // NEW: fire a page_view once per load (after we know editToken)
+  // fire a page_view once per load (after we know editToken)
   useEffect(() => {
     if (!editToken) return;
     try {
@@ -115,7 +115,6 @@ export default function PublicPage() {
         ref: typeof window !== "undefined" ? window.location.href : "",
       };
       const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-      // fire-and-forget; ignore errors
       navigator.sendBeacon("/api/track", blob);
     } catch {}
   }, [editToken]);
@@ -152,7 +151,7 @@ export default function PublicPage() {
     const total = toNumberOrNull(p.unitsTotal);
     const rem = remaining[p.id]; // ms or null
     const ended = rem === 0;
-    the const soldOut = left !== null && left <= 0;
+    const soldOut = left !== null && left <= 0; // <-- fixed line
 
     if (soldOut) return { key: "soldout", label: "Sold out", ended: false, soldOut: true };
     if (rem === null && total !== null && left !== null) {

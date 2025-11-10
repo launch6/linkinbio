@@ -20,6 +20,15 @@ async function getClient() {
 }
 
 /** ── Helpers ────────────────────────────────────────────────────────────── */
+function setNoStore(res) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Vercel-CDN-Cache-Control", "no-store");
+}
+function send(res, status, body) {
+  setNoStore(res);
+  return res.status(status).json(body);
+}
 function cleanStr(x, max = 500) {
   if (typeof x !== "string") return "";
   const s = x.trim();
@@ -64,11 +73,11 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       const editToken = cleanStr(req.query.editToken || "", 200);
       if (!editToken) {
-        return res.status(400).json({ ok: false, error: "Missing editToken" });
+        return send(res, 400, { ok: false, error: "Missing editToken" });
       }
 
       const doc = await Profiles.findOne({ editToken }, { projection: { products: 1, _id: 0 } });
-      return res.status(200).json({ ok: true, products: doc?.products || [] });
+      return send(res, 200, { ok: true, products: doc?.products || [] });
     }
 
     if (req.method === "POST") {
@@ -87,10 +96,10 @@ export default async function handler(req, res) {
       const incoming = Array.isArray(body.products) ? body.products : null;
 
       if (!editToken) {
-        return res.status(400).json({ ok: false, error: "Missing editToken" });
+        return send(res, 400, { ok: false, error: "Missing editToken" });
       }
       if (!incoming) {
-        return res.status(400).json({ ok: false, error: "Body must include products array" });
+        return send(res, 400, { ok: false, error: "Body must include products array" });
       }
 
       // Sanitize + cap to a reasonable number for MVP
@@ -107,7 +116,7 @@ export default async function handler(req, res) {
         { upsert: true }
       );
 
-      return res.status(200).json({
+      return send(res, 200, {
         ok: true,
         saved: products.length,
         upserted: !!result?.upsertedId,
@@ -115,9 +124,10 @@ export default async function handler(req, res) {
     }
 
     res.setHeader("Allow", "GET, POST");
+    setNoStore(res);
     return res.status(405).end("Method Not Allowed");
   } catch (err) {
     console.error("products:index ERROR", { message: err?.message, stack: err?.stack });
-    return res.status(500).json({ ok: false, error: "Server error" });
+    return send(res, 500, { ok: false, error: "Server error" });
   }
 }

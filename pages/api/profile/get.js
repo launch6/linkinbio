@@ -18,11 +18,21 @@ async function getDb() {
   return cachedDb;
 }
 
+function setNoStore(res) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Vercel-CDN-Cache-Control", "no-store");
+}
+function send(res, status, body) {
+  setNoStore(res);
+  return res.status(status).json(body);
+}
+
 export default async function handler(req, res) {
   try {
     const editToken = String(req.query.editToken || "");
     if (!editToken) {
-      return res.status(400).json({ ok: false, error: "Missing editToken" });
+      return send(res, 400, { ok: false, error: "Missing editToken" });
     }
 
     const db = await getDb();
@@ -30,10 +40,10 @@ export default async function handler(req, res) {
       .collection("profiles")
       .findOne({ editToken }, { projection: { _id: 0 } });
 
-    if (!profile) return res.status(404).json({ ok: false, error: "Not found" });
-    return res.status(200).json({ ok: true, profile });
+    if (!profile) return send(res, 404, { ok: false, error: "Not found" });
+    return send(res, 200, { ok: true, profile });
   } catch (err) {
     console.error("profile:get ERROR", err?.message);
-    return res.status(500).json({ ok: false, error: "Server error" });
+    return send(res, 500, { ok: false, error: "Server error" });
   }
 }

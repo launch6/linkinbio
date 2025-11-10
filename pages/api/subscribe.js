@@ -21,8 +21,7 @@ function noStore(res) {
   res.setHeader("Vercel-CDN-Cache-Control", "no-store");
 }
 
-// Very basic but effective email check for MVP:
-// - single "@", at least one "." after "@", no spaces, TLD present
+// Simple but safe email validation
 function isValidEmail(email) {
   if (typeof email !== "string") return false;
   const s = email.trim();
@@ -69,13 +68,18 @@ export default async function handler(req, res) {
     const Subs = db.collection("subscribers");
     const Events = db.collection("events");
 
-    // Confirm profile (and read email settings)
+    // Confirm profile and its settings
     const profile = await Profiles.findOne(
       { editToken },
       { projection: { _id: 0, collectEmail: 1, klaviyoListId: 1 } }
     );
     if (!profile) {
       return res.status(404).json({ ok: false, error: "profile_not_found" });
+    }
+
+    // ✅ Require collectEmail to be enabled
+    if (!profile.collectEmail) {
+      return res.status(403).json({ ok: false, error: "email_collection_disabled" });
     }
 
     // Upsert subscriber (unique by editToken + email)
@@ -101,7 +105,7 @@ export default async function handler(req, res) {
     } catch {}
 
     // Optional Klaviyo subscribe (best-effort; never blocks success)
-    if (profile.collectEmail && profile.klaviyoListId && KLAVIYO_API_KEY) {
+    if (profile.klaviyoListId && KLAVIYO_API_KEY) {
       try {
         await fetch(
           `https://a.klaviyo.com/api/v2/list/${encodeURIComponent(

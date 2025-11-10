@@ -29,9 +29,27 @@ function SubscribeForm({ editToken }) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
+  function isValidEmail(s) {
+    if (typeof s !== "string") return false;
+    const v = s.trim();
+    if (!v || v.includes(" ")) return false;
+    const at = v.indexOf("@");
+    if (at <= 0) return false;
+    const dot = v.indexOf(".", at + 2);
+    if (dot <= at + 1) return false;
+    if (dot >= v.length - 1) return false;
+    return true;
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     setMsg(""); setErr("");
+
+    if (!isValidEmail(email)) {
+      setErr('Please enter a valid email (must include "@" and a dot).');
+      return;
+    }
+
     try {
       setBusy(true);
       const payload = {
@@ -54,10 +72,11 @@ function SubscribeForm({ editToken }) {
       setErr(e.message || "Subscribe failed");
     } finally {
       setBusy(false);
-      // auto-clear banners after a few seconds
       setTimeout(() => { setMsg(""); setErr(""); }, 3000);
     }
   }
+
+  const disabled = busy || !email.trim() || !email.includes("@");
 
   return (
     <form onSubmit={onSubmit} className="mt-5 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
@@ -65,22 +84,25 @@ function SubscribeForm({ editToken }) {
         <label className="block text-sm opacity-70 mb-1">Get drop alerts</label>
         <input
           type="email"
-          required
+          inputMode="email"
           className="w-full sm:w-80 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none"
           placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          aria-invalid={!!err}
+          aria-describedby="sub-err"
         />
       </div>
       <button
         type="submit"
-        disabled={busy}
+        disabled={disabled}
         className="rounded-lg border border-neutral-700 px-4 py-2 hover:bg-neutral-800 disabled:opacity-60"
+        aria-disabled={disabled}
       >
         {busy ? "Joining…" : "Join"}
       </button>
       {msg ? <div className="text-emerald-300 text-sm ml-1 mt-1 sm:mt-0">{msg}</div> : null}
-      {err ? <div className="text-rose-300 text-sm ml-1 mt-1 sm:mt-0">{err}</div> : null}
+      {err ? <div id="sub-err" className="text-rose-300 text-sm ml-1 mt-1 sm:mt-0">{err}</div> : null}
     </form>
   );
 }
@@ -106,7 +128,7 @@ export default function PublicPage() {
     setReason(r);
   }, []);
 
-  // fetch profile + products (with no-store + cache-buster)
+  // fetch profile + products (no-store + cache-buster)
   async function fetchAll(token) {
     const bust = `_t=${Date.now()}`;
     const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}&${bust}`, {

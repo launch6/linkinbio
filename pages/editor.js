@@ -30,15 +30,24 @@ function normalizePlan(p) {
 
 export default function EditorPage() {
   const [editToken, setEditToken] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState(null);
-  const [loadError, setLoadError] = useState("");
 
-  // Products state for the editor
+  // load state
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [profile, setProfile] = useState(null);
+
+  // products editor state
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [saveError, setSaveError] = useState("");
+
+  // email capture panel state
+  const [collectEmail, setCollectEmail] = useState(false);
+  const [klaviyoListId, setKlaviyoListId] = useState("");
+  const [saveProfMsg, setSaveProfMsg] = useState("");
+  const [saveProfError, setSaveProfError] = useState("");
+  const [savingProf, setSavingProf] = useState(false);
 
   // Read editToken from URL (client-only)
   useEffect(() => {
@@ -64,13 +73,21 @@ export default function EditorPage() {
         const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(editToken)}`, { cache: "no-store" });
         const pj = await pr.json();
         if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
+
         // Products
         const r = await fetch(`/api/products?editToken=${encodeURIComponent(editToken)}`, { cache: "no-store" });
         const j = await r.json();
         if (!j?.ok) throw new Error(j?.error || "Failed to load products");
 
         if (!alive) return;
+
         setProfile(pj.profile);
+
+        // initialize email capture fields from profile
+        setCollectEmail(!!pj.profile?.collectEmail);
+        setKlaviyoListId(String(pj.profile?.klaviyoListId || ""));
+
+        // products
         setProducts(
           (Array.isArray(j.products) ? j.products : []).map((p) => ({
             ...p,
@@ -137,7 +154,7 @@ export default function EditorPage() {
       setSaveMsg("");
       setSaveError("");
 
-      // Second line of defense: prevent save if already over client limit (e.g., user edited in dev tools)
+      // Second line of defense: prevent save if already over client limit
       if (products.length > maxAllowed) {
         setSaveError(`Your plan (${planLabel}) allows up to ${maxAllowed} product${maxAllowed === 1 ? "" : "s"}.`);
         return;
@@ -195,6 +212,39 @@ export default function EditorPage() {
     }
   }
 
+  async function saveProfileSettings() {
+    try {
+      setSavingProf(true);
+      setSaveProfMsg("");
+      setSaveProfError("");
+
+      const resp = await fetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          editToken,
+          collectEmail,
+          klaviyoListId,
+        }),
+      });
+
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok || !json?.ok) {
+        const msg = (json && (json.error || json.message)) || `Save failed (${resp.status})`;
+        setSaveProfError(msg);
+        return;
+      }
+
+      setSaveProfMsg("Settings saved!");
+      setSaveProfError("");
+    } catch (e) {
+      setSaveProfError(e.message || "Failed to save settings");
+    } finally {
+      setSavingProf(false);
+      setTimeout(() => setSaveProfMsg(""), 2000);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
@@ -216,9 +266,9 @@ export default function EditorPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Launch6 — Editor</h1>
             <div className="text-sm opacity-70">
@@ -228,20 +278,20 @@ export default function EditorPage() {
           <code className="text-xs opacity-70">editToken: {editToken}</code>
         </div>
 
-        {/* Inline save error / success */}
+        {/* Inline save error / success for products */}
         {saveError ? (
-          <div className="mb-4 rounded-lg border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
+          <div className="rounded-lg border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
             {saveError}
           </div>
         ) : null}
         {saveMsg ? (
-          <div className="mb-4 rounded-lg border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
+          <div className="rounded-lg border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
             {saveMsg}
           </div>
         ) : null}
 
         {/* Profile summary */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 rounded-2xl border border-neutral-800 p-6">
             <div className="text-xl font-semibold mb-2">Profile</div>
             <div className="space-y-2 text-sm">
@@ -259,13 +309,46 @@ export default function EditorPage() {
             </div>
           </div>
 
+          {/* Email capture settings */}
           <div className="rounded-2xl border border-neutral-800 p-6">
-            <div className="text-xl font-semibold mb-2">Next steps</div>
-            <ol className="list-decimal list-inside text-sm space-y-2 opacity-90">
-              <li>Add a product (below)</li>
-              <li>Click <b>Save Products</b></li>
-              <li>Publish and share your l6.io link</li>
-            </ol>
+            <div className="text-xl font-semibold mb-2">Email Capture</div>
+
+            {saveProfError ? (
+              <div className="mb-3 rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
+                {saveProfError}
+              </div>
+            ) : null}
+            {saveProfMsg ? (
+              <div className="mb-3 rounded-md border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
+                {saveProfMsg}
+              </div>
+            ) : null}
+
+            <label className="flex items-center gap-2 text-sm mb-3">
+              <input
+                type="checkbox"
+                className="align-middle"
+                checked={collectEmail}
+                onChange={(e) => setCollectEmail(e.target.checked)}
+              />
+              Enable email capture on public page
+            </label>
+
+            <div className="text-xs opacity-70 mb-1">Klaviyo List ID</div>
+            <input
+              className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none mb-3"
+              value={klaviyoListId}
+              onChange={(e) => setKlaviyoListId(e.target.value)}
+              placeholder="e.g., Vd9H2a"
+            />
+
+            <button
+              onClick={saveProfileSettings}
+              disabled={savingProf}
+              className="rounded-md border border-neutral-700 px-3 py-2 hover:bg-neutral-800 disabled:opacity-60 text-sm"
+            >
+              {savingProf ? "Saving…" : "Save Settings"}
+            </button>
           </div>
         </div>
 

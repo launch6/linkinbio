@@ -20,15 +20,6 @@ async function getClient() {
 }
 
 /** ── Helpers ────────────────────────────────────────────────────────────── */
-function setNoStore(res) {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Vercel-CDN-Cache-Control", "no-store");
-}
-function send(res, status, body) {
-  setNoStore(res);
-  return res.status(status).json(body);
-}
 function cleanStr(x, max = 500) {
   if (typeof x !== "string") return "";
   const s = x.trim();
@@ -63,6 +54,21 @@ function sanitizeProduct(p) {
   };
 }
 
+/** ── Limits by plan ─────────────────────────────────────────────────────── */
+const MAX_PRODUCTS_BY_PLAN = {
+  free: 1,
+  starter: 5,
+  pro: 15,
+  business: 30,
+  // hidden Starter+ behaves as starter for limits
+  "starter+": 5,
+};
+function normalizePlan(p) {
+  const plan = String(p || "free").toLowerCase();
+  if (plan === "starterplus" || plan === "starter+") return "starter+";
+  return plan;
+}
+
 /** ── API Route ──────────────────────────────────────────────────────────── */
 export default async function handler(req, res) {
   try {
@@ -73,11 +79,12 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       const editToken = cleanStr(req.query.editToken || "", 200);
       if (!editToken) {
-        return send(res, 400, { ok: false, error: "Missing editToken" });
+        return res.status(400).json({ ok: false, error: "Missing editToken" });
       }
 
       const doc = await Profiles.findOne({ editToken }, { projection: { products: 1, _id: 0 } });
-      return send(res, 200, { ok: true, products: doc?.products || [] });
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(200).json({ ok: true, products: doc?.products || [] });
     }
 
     if (req.method === "POST") {
@@ -96,14 +103,35 @@ export default async function handler(req, res) {
       const incoming = Array.isArray(body.products) ? body.products : null;
 
       if (!editToken) {
-        return send(res, 400, { ok: false, error: "Missing editToken" });
+        return res.status(400).json({ ok: false, error: "Missing editToken" });
       }
       if (!incoming) {
-        return send(res, 400, { ok: false, error: "Body must include products array" });
+        return res.status(400).json({ ok: false, error: "Body must include products array" });
       }
 
-      // Sanitize + cap to a reasonable number for MVP
+      // Load profile to check plan
+      const profile = await Profiles.findOne(
+        { editToken },
+        { projection: { _id: 1, plan: 1 } }
+      );
+      const plan = normalizePlan(profile?.plan || "free");
+      const maxAllowed = MAX_PRODUCTS_BY_PLAN[plan] ?? MAX_PRODUCTS_BY_PLAN.free;
+
+      // Sanitize + cap absurd input size
       const products = incoming.slice(0, 100).map(sanitizeProduct);
+
+      // Enforce plan limit (count total products, regardless of published state)
+      const count = products.length;
+      if (count > maxAllowed) {
+        return res.status(400).json({
+          ok: false,
+          error: "limit",
+          message: `Your plan (${plan}) allows up to ${maxAllowed} product${maxAllowed === 1 ? "" : "s"}.`,
+          plan,
+          limit: maxAllowed,
+          attempted: count,
+        });
+      }
 
       const result = await Profiles.updateOne(
         { editToken },
@@ -116,18 +144,20 @@ export default async function handler(req, res) {
         { upsert: true }
       );
 
-      return send(res, 200, {
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(200).json({
         ok: true,
         saved: products.length,
         upserted: !!result?.upsertedId,
+        plan,
+        limit: maxAllowed,
       });
     }
 
     res.setHeader("Allow", "GET, POST");
-    setNoStore(res);
     return res.status(405).end("Method Not Allowed");
   } catch (err) {
     console.error("products:index ERROR", { message: err?.message, stack: err?.stack });
-    return send(res, 500, { ok: false, error: "Server error" });
+    return res.status(500).json({ ok: false, error: "Server error" });
   }
 }

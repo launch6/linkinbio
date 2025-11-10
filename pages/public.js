@@ -32,8 +32,6 @@ export default function PublicPage() {
   const [products, setProducts] = useState([]);
   const [remaining, setRemaining] = useState({}); // { [id]: ms }
   const timerRef = useRef(null);
-
-  // NEW: light refresher refs
   const refreshIntervalRef = useRef(null);
 
   // read URL params
@@ -46,11 +44,9 @@ export default function PublicPage() {
     setReason(r);
   }, []);
 
-  // fetch profile + products
+  // fetch profile + products (with no-store + cache-buster)
   async function fetchAll(token) {
-    // add cache-buster + no-store so we never get a cached products array
     const bust = `_t=${Date.now()}`;
-
     const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}&${bust}`, {
       cache: "no-store",
     });
@@ -68,6 +64,7 @@ export default function PublicPage() {
     setProducts(onlyPublished);
   }
 
+  // initial fetch + periodic refresh + on-focus refresh
   useEffect(() => {
     if (!editToken) {
       setLoading(false);
@@ -90,12 +87,10 @@ export default function PublicPage() {
       }
     })();
 
-    // NEW: periodic products refresh every 15s
     refreshIntervalRef.current = setInterval(() => {
       fetchAll(editToken).catch(() => {});
     }, 15000);
 
-    // NEW: refresh when the tab becomes visible
     const onVis = () => {
       if (document.visibilityState === "visible") {
         fetchAll(editToken).catch(() => {});
@@ -107,6 +102,22 @@ export default function PublicPage() {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
+  }, [editToken]);
+
+  // NEW: fire a page_view once per load (after we know editToken)
+  useEffect(() => {
+    if (!editToken) return;
+    try {
+      const payload = {
+        type: "page_view",
+        editToken,
+        ts: Date.now(),
+        ref: typeof window !== "undefined" ? window.location.href : "",
+      };
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      // fire-and-forget; ignore errors
+      navigator.sendBeacon("/api/track", blob);
+    } catch {}
   }, [editToken]);
 
   // countdown ticker
@@ -141,7 +152,7 @@ export default function PublicPage() {
     const total = toNumberOrNull(p.unitsTotal);
     const rem = remaining[p.id]; // ms or null
     const ended = rem === 0;
-    const soldOut = left !== null && left <= 0;
+    the const soldOut = left !== null && left <= 0;
 
     if (soldOut) return { key: "soldout", label: "Sold out", ended: false, soldOut: true };
     if (rem === null && total !== null && left !== null) {

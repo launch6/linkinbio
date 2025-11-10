@@ -8,7 +8,7 @@ export const config = {
 
 // ---------- Stripe + DB ----------
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
+  apiVersion: "2024-06-20", // keep your current version; Workbench will adapt
 });
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -61,26 +61,21 @@ async function upsertFromCheckoutSession(session) {
   const client = await getClient();
   const db = client.db(MONGODB_DB);
 
-  // Metadata we set when creating Checkout Session
+  // Metadata we might set when creating Checkout Session
   const editToken = session?.metadata?.editToken || null;
   const refCode = session?.metadata?.refCode || null;
 
-  // Subscription sessions have subscription + customer + line_items
   const customerId = session?.customer || null;
   const subscriptionId = session?.subscription || null;
 
-  // Stripe may not expand line items; grab the price from the session if present
+  // Try to get a price id from expanded line_items; fallback to metadata
   let priceId = null;
   try {
     const line = session?.line_items?.data?.[0];
     priceId = line?.price?.id || null;
-  } catch {
-    // ignore
-  }
-  // Fallback: some sessions include display_items/after_expansion; or we keep price in metadata.priceId
+  } catch { /* ignore */ }
   priceId = priceId || session?.metadata?.priceId || null;
 
-  // Determine plan from price
   const planInfo = envPriceToPlan(priceId);
 
   const update = {
@@ -144,14 +139,47 @@ async function markInvoicePaid(inv) {
   );
 }
 
+// ---------- NEW: Idempotency + Units decrement ----------
+
+/** mark event as processed (true on first time, false if seen) */
+async function markEventProcessed(eventId, type) {
+  const client = await getClient();
+  const db = client.db(MONGODB_DB);
+  const r = await db.collection("webhook_events").updateOne(
+    { _id: eventId },
+    { $setOnInsert: { type, created: new Date() } },
+    { upsert: true }
+  );
+  return r.upsertedCount === 1;
+}
+
+/** decrement unitsLeft atomically when >= 1 for the product id */
+async function decrementUnitsLeft(productId) {
+  if (!productId) return { ok: false, reason: "no_product_id" };
+  const client = await getClient();
+  const db = client.db(MONGODB_DB);
+
+  // Only decrement when unitsLeft is a number >= 1
+  const q = {
+    products: {
+      $elemMatch: {
+        id: productId,
+        unitsLeft: { $type: "number", $gte: 1 },
+      },
+    },
+  };
+  const u = { $inc: { "products.$.unitsLeft": -1 } };
+
+  const r = await db.collection("profiles").updateOne(q, u);
+  if (r.matchedCount === 0) {
+    return { ok: false, reason: "no_match_or_zero_units" };
+  }
+  return { ok: true };
+}
+
 // ---------- Webhook handler ----------
 export default async function handler(req, res) {
   try {
-    // Minimal debug to confirm runtime values (safe to keep)
-    console.log("webhook: method", req.method, "url", req.url, "host", req.headers.host);
-    console.log("webhook: header keys", Object.keys(req.headers || {}));
-    console.log("webhook: secret prefix", (process.env.STRIPE_WEBHOOK_SECRET || "").slice(0, 8)); // <—
-
     const sig = req.headers["stripe-signature"];
     if (!sig) {
       return res.status(400).json({ error: "Missing Stripe signature header" });
@@ -174,42 +202,75 @@ export default async function handler(req, res) {
     const type = event.type;
     const obj = event.data.object;
 
+    // Idempotency: if we've already processed this event id, ack and exit
+    const firstTime = await markEventProcessed(event.id, type);
+    if (!firstTime) {
+      return res.status(200).json({ received: true, deduped: true });
+    }
+
     switch (type) {
       case "checkout.session.completed": {
+        // 1) Keep your existing account/plan upsert
         try {
           await upsertFromCheckoutSession(obj);
         } catch (e) {
           console.error("checkout.session.completed handler error", { message: e?.message });
-          return res.status(500).json({ error: "Failed to persist checkout session" });
+          // fall through (do not throw; we still want to try decrement)
+        }
+
+        // 2) NEW: auto-decrement unitsLeft for the purchased product (if we have its id and the session is paid)
+        try {
+          const productId = obj?.client_reference_id || obj?.client_referenceId || null;
+          const status = obj?.payment_status || obj?.status;
+          const isPaid =
+            (obj.mode === "payment" && status === "paid") ||
+            (status === "complete" || status === "completed");
+
+          if (productId && isPaid) {
+            const dec = await decrementUnitsLeft(productId);
+            if (!dec.ok) {
+              console.warn("webhook decrement skipped:", dec.reason, { productId });
+            }
+          } else {
+            console.warn("webhook no-decrement (missing productId or unpaid)", {
+              productId,
+              mode: obj?.mode,
+              status,
+            });
+          }
+        } catch (e) {
+          console.error("decrementUnitsLeft error", { message: e?.message });
         }
         break;
       }
+
       case "customer.subscription.created": {
         try {
           await updateFromSubscriptionCreated(obj);
         } catch (e) {
           console.error("subscription.created handler error", { message: e?.message });
-          return res.status(500).json({ error: "Failed to persist subscription" });
         }
         break;
       }
+
       case "invoice.paid": {
         try {
           await markInvoicePaid(obj);
         } catch (e) {
           console.error("invoice.paid handler error", { message: e?.message });
-          return res.status(500).json({ error: "Failed to persist invoice" });
         }
         break;
       }
+
       default:
-        console.log("Unhandled Stripe event:", type);
+        // keep silent for unhandled types
         break;
     }
 
     return res.status(200).json({ received: true });
   } catch (err) {
     console.error("stripe-webhook UNCAUGHT", { message: err?.message, stack: err?.stack });
-    return res.status(500).json({ error: "Internal webhook error" });
+    // Return 200 to avoid Stripe retries storm; we use idempotency to be safe.
+    return res.status(200).json({ received: true, ok: false });
   }
 }

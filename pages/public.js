@@ -1,7 +1,7 @@
 // pages/public.js
 import { useEffect, useRef, useState } from "react";
 
-/** Mini helpers */
+/** Format ms as "Xd Yh Zm Ws". */
 function formatRemaining(ms) {
   if (ms <= 0) return "ended";
   const s = Math.floor(ms / 1000);
@@ -16,95 +16,24 @@ function formatRemaining(ms) {
   parts.push(`${secs}s`);
   return parts.join(" ");
 }
+
 function toNumberOrNull(v) {
   if (v === "" || v === null || v === undefined) return null;
   const n = parseInt(v, 10);
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-/** Inline Subscribe form (shows when profile.collectEmail = true) */
-function SubscribeForm({ editToken }) {
-  const [email, setEmail] = useState("");
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  function isValidEmail(s) {
-    if (typeof s !== "string") return false;
-    const v = s.trim();
-    if (!v || v.includes(" ")) return false;
-    const at = v.indexOf("@");
-    if (at <= 0) return false;
-    const dot = v.indexOf(".", at + 2);
-    if (dot <= at + 1) return false;
-    if (dot >= v.length - 1) return false;
-    return true;
-  }
-
-  async function onSubmit(e) {
-    e.preventDefault();
-    setMsg(""); setErr("");
-
-    if (!isValidEmail(email)) {
-      setErr('Please enter a valid email (must include "@" and a dot).');
-      return;
-    }
-
-    try {
-      setBusy(true);
-      const payload = {
-        editToken,
-        email,
-        ref: typeof window !== "undefined" ? window.location.href : "",
-      };
-      const r = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j?.ok) {
-        throw new Error(j?.error || `Subscribe failed (${r.status})`);
-      }
-      setMsg("Thanks! You're on the list.");
-      setEmail("");
-    } catch (e) {
-      setErr(e.message || "Subscribe failed");
-    } finally {
-      setBusy(false);
-      setTimeout(() => { setMsg(""); setErr(""); }, 3000);
-    }
-  }
-
-  const disabled = busy || !email.trim() || !email.includes("@");
-
-  return (
-    <form onSubmit={onSubmit} className="mt-5 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
-      <div className="w-full sm:w-auto">
-        <label className="block text-sm opacity-70 mb-1">Get drop alerts</label>
-        <input
-          type="email"
-          inputMode="email"
-          className="w-full sm:w-80 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          aria-invalid={!!err}
-          aria-describedby="sub-err"
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={disabled}
-        className="rounded-lg border border-neutral-700 px-4 py-2 hover:bg-neutral-800 disabled:opacity-60"
-        aria-disabled={disabled}
-      >
-        {busy ? "Joining…" : "Join"}
-      </button>
-      {msg ? <div className="text-emerald-300 text-sm ml-1 mt-1 sm:mt-0">{msg}</div> : null}
-      {err ? <div id="sub-err" className="text-rose-300 text-sm ml-1 mt-1 sm:mt-0">{err}</div> : null}
-    </form>
-  );
+// simple client-side email validator mirroring the API
+function isValidEmail(email) {
+  if (typeof email !== "string") return false;
+  const s = email.trim();
+  if (!s || s.includes(" ")) return false;
+  const at = s.indexOf("@");
+  if (at <= 0) return false;
+  const dot = s.indexOf(".", at + 2);
+  if (dot <= at + 1) return false;
+  if (dot >= s.length - 1) return false;
+  return true;
 }
 
 export default function PublicPage() {
@@ -115,6 +44,13 @@ export default function PublicPage() {
   const [profile, setProfile] = useState(null);
   const [products, setProducts] = useState([]);
   const [remaining, setRemaining] = useState({}); // { [id]: ms }
+
+  // email capture UI state
+  const [email, setEmail] = useState("");
+  const [emailErr, setEmailErr] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
@@ -128,7 +64,7 @@ export default function PublicPage() {
     setReason(r);
   }, []);
 
-  // fetch profile + products (no-store + cache-buster)
+  // fetch profile + products (with no-store + cache-buster)
   async function fetchAll(token) {
     const bust = `_t=${Date.now()}`;
     const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}&${bust}`, {
@@ -230,7 +166,6 @@ export default function PublicPage() {
     };
   }, [products]);
 
-  // derive per-product status
   function productStatus(p) {
     const left = toNumberOrNull(p.unitsLeft);
     const total = toNumberOrNull(p.unitsTotal);
@@ -254,7 +189,6 @@ export default function PublicPage() {
     return { key: "active", label: base, ended: false, soldOut: false };
   }
 
-  // Reason banner
   function humanReason(r) {
     switch ((r || "").toLowerCase()) {
       case "expired": return "This drop has ended.";
@@ -272,9 +206,70 @@ export default function PublicPage() {
     ended: "bg-amber-500/20 border-amber-400/40 text-amber-200",
   };
 
+  // handle email submit
+  async function handleSubscribe(e) {
+    e.preventDefault();
+    setEmailErr("");
+    if (!isValidEmail(email)) {
+      setEmailErr("Please enter a valid email (e.g., name@example.com).");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const resp = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          editToken,
+          email,
+          ref: typeof window !== "undefined" ? window.location.href : "",
+        }),
+      });
+      const json = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !json?.ok) {
+        // Map a couple of common errors to friendly text
+        if (json?.error === "email_collection_disabled") {
+          setEmailErr("Email signup is unavailable right now.");
+        } else if (json?.error === "invalid_email") {
+          setEmailErr("Please enter a valid email.");
+        } else {
+          setEmailErr("Subscribe failed. Please try again.");
+        }
+        return;
+      }
+
+      setSubscribed(true);
+    } catch {
+      setEmailErr("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
   const reasonText = humanReason(reason);
+  const canCollectEmail = !!profile?.collectEmail;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
+        <div className="opacity-80">Loading…</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-xl w-full rounded-xl border border-red-600/40 bg-red-900/20 p-4">
+          <div className="font-semibold mb-1">Can’t load page</div>
+          <div className="text-sm opacity-80">{error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -290,10 +285,51 @@ export default function PublicPage() {
         <header className="mb-8">
           <h1 className="text-4xl font-bold">{title}</h1>
           {bio ? <p className="text-neutral-400 mt-2">{bio}</p> : null}
-
-          {/* Email capture (if enabled on profile) */}
-          {profile?.collectEmail ? <SubscribeForm editToken={editToken} /> : null}
         </header>
+
+        {/* Email capture (only if enabled) */}
+        {canCollectEmail && (
+          <div className="mb-8 rounded-2xl border border-neutral-800 p-5">
+            <div className="text-lg font-semibold mb-2">Get first dibs on drops</div>
+            {!subscribed ? (
+              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 items-stretch">
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailErr) setEmailErr("");
+                  }}
+                  aria-invalid={!!emailErr}
+                  aria-describedby={emailErr ? "email-error" : undefined}
+                />
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-lg border border-emerald-600 px-4 py-2 hover:bg-emerald-900/20 disabled:opacity-60"
+                >
+                  {submitting ? "Joining…" : "Join"}
+                </button>
+              </form>
+            ) : (
+              <div className="rounded-lg border border-emerald-600/40 bg-emerald-900/20 text-emerald-200 px-3 py-2 text-sm">
+                You’re in! We’ll let you know about new drops.
+              </div>
+            )}
+            {emailErr ? (
+              <div id="email-error" className="mt-2 text-sm text-rose-300">
+                {emailErr}
+              </div>
+            ) : null}
+            <div className="mt-2 text-xs text-neutral-500">
+              We’ll only email you about releases. Unsubscribe anytime.
+            </div>
+          </div>
+        )}
 
         {/* Products */}
         {products.length === 0 ? (
@@ -373,7 +409,8 @@ export default function PublicPage() {
                                     productId: p.id,
                                     editToken,
                                     ts: Date.now(),
-                                    ref: typeof window !== "undefined" ? window.location.href : "",
+                                    ref:
+                                      typeof window !== "undefined" ? window.location.href : "",
                                   }),
                                 ],
                                 { type: "application/json" }

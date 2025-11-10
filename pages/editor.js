@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 function isoToLocal(iso) {
   if (!iso) return "";
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return ""; // guard against bad ISO
   const off = d.getTimezoneOffset();
   const local = new Date(d.getTime() - off * 60000);
   return local.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
@@ -13,7 +12,6 @@ function isoToLocal(iso) {
 function localToIso(local) {
   if (!local) return "";
   const d = new Date(local); // treat as local, browser makes an ISO
-  if (isNaN(d.getTime())) return "";
   return d.toISOString();
 }
 
@@ -21,12 +19,13 @@ export default function EditorPage() {
   const [editToken, setEditToken] = useState("");
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   // Products state for the editor
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   // Read editToken from URL (client-only)
   useEffect(() => {
@@ -41,7 +40,7 @@ export default function EditorPage() {
   useEffect(() => {
     if (!editToken) {
       setLoading(false);
-      setError("Missing editToken in URL");
+      setLoadError("Missing editToken in URL");
       return;
     }
     let alive = true;
@@ -49,30 +48,26 @@ export default function EditorPage() {
       try {
         setLoading(true);
         // Profile
-        const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(editToken)}`);
+        const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(editToken)}`, { cache: "no-store" });
         const pj = await pr.json();
         if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
         // Products
-        const r = await fetch(`/api/products?editToken=${encodeURIComponent(editToken)}`);
+        const r = await fetch(`/api/products?editToken=${encodeURIComponent(editToken)}`, { cache: "no-store" });
         const j = await r.json();
         if (!j?.ok) throw new Error(j?.error || "Failed to load products");
 
         if (!alive) return;
         setProfile(pj.profile);
-
-        // ⬇️ Normalize ISO → datetime-local for initial render
-        const normalized = Array.isArray(j.products)
-          ? j.products.map((p) => ({
-              ...p,
-              dropEndsAt: p.dropEndsAt ? isoToLocal(p.dropEndsAt) : "",
-            }))
-          : [];
-
-        setProducts(normalized);
-        setError("");
+        setProducts(
+          (Array.isArray(j.products) ? j.products : []).map((p) => ({
+            ...p,
+            dropEndsAt: p.dropEndsAt ? isoToLocal(p.dropEndsAt) : "",
+          }))
+        );
+        setLoadError("");
       } catch (e) {
         if (!alive) return;
-        setError(e.message || "Failed to load");
+        setLoadError(e.message || "Failed to load");
       } finally {
         if (alive) setLoading(false);
       }
@@ -115,7 +110,7 @@ export default function EditorPage() {
     try {
       setSaving(true);
       setSaveMsg("");
-      setError("");
+      setSaveError("");
 
       // sanitize/shape according to API schema
       const shaped = products.map((p) => ({
@@ -136,15 +131,25 @@ export default function EditorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ editToken, products: shaped }),
       });
-      const json = await resp.json();
-      if (!resp.ok || !json?.ok) throw new Error(json?.error || "Failed to save products");
+
+      const json = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !json?.ok) {
+        // Show the exact server message if available (e.g., plan limit)
+        const message =
+          (json && (json.message || json.error)) ||
+          `Save failed (${resp.status})`;
+        setSaveError(message);
+        return; // IMPORTANT: do not trip page-level error
+      }
 
       setSaveMsg("Saved!");
-      // Refresh what’s on the server (to reflect any server-side normalization)
-      const r2 = await fetch(`/api/products?editToken=${encodeURIComponent(editToken)}`);
+      setSaveError("");
+
+      // Refresh from server (to reflect any server-side normalization)
+      const r2 = await fetch(`/api/products?editToken=${encodeURIComponent(editToken)}`, { cache: "no-store" });
       const j2 = await r2.json();
       if (j2?.ok && Array.isArray(j2.products)) {
-        // Convert ISO -> datetime-local for UI
         setProducts(
           j2.products.map((p) => ({
             ...p,
@@ -153,7 +158,7 @@ export default function EditorPage() {
         );
       }
     } catch (e) {
-      setError(e.message || "Failed to save products");
+      setSaveError(e.message || "Failed to save products");
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMsg(""), 2000);
@@ -173,12 +178,12 @@ export default function EditorPage() {
     );
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
         <div className="max-w-xl w-full rounded-xl border border-red-600/40 bg-red-900/20 p-4">
           <div className="font-semibold mb-1">Can’t open editor</div>
-          <div className="text-sm opacity-80">{error}</div>
+          <div className="text-sm opacity-80">{loadError}</div>
         </div>
       </div>
     );
@@ -197,6 +202,18 @@ export default function EditorPage() {
           </div>
           <code className="text-xs opacity-70">editToken: {editToken}</code>
         </div>
+
+        {/* Inline save error / success */}
+        {saveError ? (
+          <div className="mb-4 rounded-lg border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
+            {saveError}
+          </div>
+        ) : null}
+        {saveMsg ? (
+          <div className="mb-4 rounded-lg border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
+            {saveMsg}
+          </div>
+        ) : null}
 
         {/* Profile summary */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -247,12 +264,6 @@ export default function EditorPage() {
               </button>
             </div>
           </div>
-
-          {saveMsg ? (
-            <div className="mb-4 rounded-lg border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
-              {saveMsg}
-            </div>
-          ) : null}
 
           {products.length === 0 ? (
             <div className="opacity-70 text-sm">No products yet. Click “Add product”.</div>
@@ -355,7 +366,7 @@ export default function EditorPage() {
                         </div>
 
                         <div className="text-xs opacity-70">
-                          If <b>Units left</b> hits 0, the public page should show “Sold out” and hide “Buy”.
+                          If <b>Units left</b> hits 0, the public page shows “Sold out” and hides “Buy”.
                         </div>
                       </div>
                     </div>

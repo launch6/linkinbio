@@ -15,6 +15,19 @@ function localToIso(local) {
   return d.toISOString();
 }
 
+const MAX_PRODUCTS_BY_PLAN = {
+  free: 1,
+  starter: 5,
+  pro: 15,
+  business: 30,
+  "starter+": 5,
+};
+function normalizePlan(p) {
+  const plan = String(p || "free").toLowerCase();
+  if (plan === "starterplus" || plan === "starter+") return "starter+";
+  return plan;
+}
+
 export default function EditorPage() {
   const [editToken, setEditToken] = useState("");
   const [loading, setLoading] = useState(true);
@@ -77,6 +90,9 @@ export default function EditorPage() {
     };
   }, [editToken]);
 
+  const planLabel = useMemo(() => normalizePlan(profile?.plan || "free"), [profile]);
+  const maxAllowed = MAX_PRODUCTS_BY_PLAN[planLabel] ?? MAX_PRODUCTS_BY_PLAN.free;
+
   function onProdChange(idx, key, val) {
     setProducts((prev) => {
       const next = [...prev];
@@ -86,6 +102,13 @@ export default function EditorPage() {
   }
 
   function addProduct() {
+    // Client-side gate: block if adding would exceed plan limit
+    const currentCount = products.length;
+    if (currentCount >= maxAllowed) {
+      setSaveError(`Your plan (${planLabel}) allows up to ${maxAllowed} product${maxAllowed === 1 ? "" : "s"}.`);
+      setSaveMsg("");
+      return;
+    }
     const id = `p_${Math.random().toString(36).slice(2, 9)}`;
     setProducts((prev) => [
       ...prev,
@@ -100,6 +123,8 @@ export default function EditorPage() {
         published: false,
       },
     ]);
+    // Clear any prior error if we successfully add
+    setSaveError("");
   }
 
   function removeProduct(idx) {
@@ -111,6 +136,12 @@ export default function EditorPage() {
       setSaving(true);
       setSaveMsg("");
       setSaveError("");
+
+      // Second line of defense: prevent save if already over client limit (e.g., user edited in dev tools)
+      if (products.length > maxAllowed) {
+        setSaveError(`Your plan (${planLabel}) allows up to ${maxAllowed} product${maxAllowed === 1 ? "" : "s"}.`);
+        return;
+      }
 
       // sanitize/shape according to API schema
       const shaped = products.map((p) => ({
@@ -135,12 +166,11 @@ export default function EditorPage() {
       const json = await resp.json().catch(() => ({}));
 
       if (!resp.ok || !json?.ok) {
-        // Show the exact server message if available (e.g., plan limit)
         const message =
           (json && (json.message || json.error)) ||
           `Save failed (${resp.status})`;
         setSaveError(message);
-        return; // IMPORTANT: do not trip page-level error
+        return;
       }
 
       setSaveMsg("Saved!");
@@ -164,11 +194,6 @@ export default function EditorPage() {
       setTimeout(() => setSaveMsg(""), 2000);
     }
   }
-
-  const planLabel = useMemo(() => {
-    if (!profile?.plan) return "free";
-    return String(profile.plan);
-  }, [profile]);
 
   if (loading) {
     return (
@@ -197,7 +222,7 @@ export default function EditorPage() {
           <div>
             <h1 className="text-3xl font-bold">Launch6 — Editor</h1>
             <div className="text-sm opacity-70">
-              Plan: <span className="uppercase">{planLabel}</span>
+              Plan: <span className="uppercase">{planLabel}</span> · Limit: {maxAllowed}
             </div>
           </div>
           <code className="text-xs opacity-70">editToken: {editToken}</code>

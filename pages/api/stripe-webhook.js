@@ -3,18 +3,19 @@ import Stripe from "stripe";
 import { MongoClient } from "mongodb";
 
 export const config = {
-  api: { bodyParser: false }, // Stripe requires the raw body to verify signatures
+  api: { bodyParser: false }, // Stripe needs raw body
 };
 
 // ---------- Stripe + DB ----------
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20", // keep your current version; Workbench will adapt
+  // You said Workbench/webhook endpoint is on 2025-10-29.clover
+  apiVersion: "2025-10-29.clover",
 });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || "linkinbio";
-let cachedClient = null;
 
+let cachedClient = null;
 async function getClient() {
   if (cachedClient) return cachedClient;
   if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
@@ -38,6 +39,7 @@ async function readRawBody(req) {
   });
 }
 
+// Map Stripe price IDs to plans (kept from your version)
 function envPriceToPlan(priceId) {
   if (!priceId) return { plan: "free", cadence: null };
   const map = [
@@ -53,27 +55,25 @@ function envPriceToPlan(priceId) {
       return { plan: row.plan, cadence: row.cadence };
     }
   }
-  // Fallback: assume starter monthly if unknown (but store priceId)
   return { plan: "starter", cadence: "monthly" };
 }
 
+// ---------- Plan/Profile updates (kept) ----------
 async function upsertFromCheckoutSession(session) {
   const client = await getClient();
   const db = client.db(MONGODB_DB);
 
-  // Metadata we might set when creating Checkout Session
   const editToken = session?.metadata?.editToken || null;
   const refCode = session?.metadata?.refCode || null;
 
   const customerId = session?.customer || null;
   const subscriptionId = session?.subscription || null;
 
-  // Try to get a price id from expanded line_items; fallback to metadata
   let priceId = null;
   try {
     const line = session?.line_items?.data?.[0];
     priceId = line?.price?.id || null;
-  } catch { /* ignore */ }
+  } catch {}
   priceId = priceId || session?.metadata?.priceId || null;
 
   const planInfo = envPriceToPlan(priceId);
@@ -101,7 +101,6 @@ async function updateFromSubscriptionCreated(sub) {
   const customerId = sub?.customer || null;
   const subscriptionId = sub?.id || null;
   const priceId = sub?.items?.data?.[0]?.price?.id || null;
-
   const planInfo = envPriceToPlan(priceId);
 
   await db.collection("profiles").updateOne(
@@ -139,42 +138,60 @@ async function markInvoicePaid(inv) {
   );
 }
 
-// ---------- NEW: Idempotency + Units decrement ----------
-
-/** mark event as processed (true on first time, false if seen) */
-async function markEventProcessed(eventId, type) {
+// ---------- Product stock decrement ----------
+async function wasProcessed(eventId) {
   const client = await getClient();
   const db = client.db(MONGODB_DB);
-  const r = await db.collection("webhook_events").updateOne(
-    { _id: eventId },
-    { $setOnInsert: { type, created: new Date() } },
-    { upsert: true }
-  );
-  return r.upsertedCount === 1;
+  const col = db.collection("events_processed");
+  const found = await col.findOne({ _id: eventId });
+  return !!found;
+}
+async function markProcessed(eventId) {
+  const client = await getClient();
+  const db = client.db(MONGODB_DB);
+  const col = db.collection("events_processed");
+  try {
+    await col.insertOne({ _id: eventId, ts: Date.now() });
+  } catch {
+    // duplicate insert is fine (already processed)
+  }
 }
 
-/** decrement unitsLeft atomically when >= 1 for the product id */
-async function decrementUnitsLeft(productId) {
-  if (!productId) return { ok: false, reason: "no_product_id" };
+/**
+ * Decrement unitsLeft by 1 for productId across any profile document that has that product.
+ * Guard: only decrement if unitsLeft is a number >= 1.
+ */
+async function decrementUnitsLeftByProductId(productId) {
+  if (!productId) return { matched: 0, modified: 0, product: null };
+
   const client = await getClient();
   const db = client.db(MONGODB_DB);
+  const Profiles = db.collection("profiles");
 
-  // Only decrement when unitsLeft is a number >= 1
-  const q = {
-    products: {
-      $elemMatch: {
-        id: productId,
-        unitsLeft: { $type: "number", $gte: 1 },
-      },
-    },
+  // Find the document that contains this product with unitsLeft >= 1
+  const doc = await Profiles.findOne(
+    { "products.id": productId, "products.unitsLeft": { $type: "number", $gte: 1 } },
+    { projection: { _id: 1 } }
+  );
+  if (!doc?._id) return { matched: 0, modified: 0, product: null };
+
+  // Atomic decrement on the matching array element
+  const r = await Profiles.updateOne(
+    { _id: doc._id, "products.id": productId, "products.unitsLeft": { $type: "number", $gte: 1 } },
+    { $inc: { "products.$.unitsLeft": -1 }, $set: { updatedAt: new Date() } }
+  );
+
+  // Return the updated product snapshot (optional, helpful for logs)
+  const updated = await Profiles.findOne(
+    { _id: doc._id, "products.id": productId },
+    { projection: { _id: 0, products: { $elemMatch: { id: productId } } } }
+  );
+
+  return {
+    matched: r.matchedCount || 0,
+    modified: r.modifiedCount || 0,
+    product: updated?.products?.[0] || null,
   };
-  const u = { $inc: { "products.$.unitsLeft": -1 } };
-
-  const r = await db.collection("profiles").updateOne(q, u);
-  if (r.matchedCount === 0) {
-    return { ok: false, reason: "no_match_or_zero_units" };
-  }
-  return { ok: true };
 }
 
 // ---------- Webhook handler ----------
@@ -190,8 +207,8 @@ export default async function handler(req, res) {
     }
 
     const rawBody = await readRawBody(req);
-    let event;
 
+    let event;
     try {
       event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
@@ -202,46 +219,55 @@ export default async function handler(req, res) {
     const type = event.type;
     const obj = event.data.object;
 
-    // Idempotency: if we've already processed this event id, ack and exit
-    const firstTime = await markEventProcessed(event.id, type);
-    if (!firstTime) {
-      return res.status(200).json({ received: true, deduped: true });
+    // Idempotency gate for decrementing logic (only for events we act on)
+    const candidateForDecrement =
+      type === "checkout.session.completed" &&
+      obj?.payment_status === "paid" &&
+      obj?.status === "complete";
+
+    if (candidateForDecrement) {
+      // If we've already processed this event, skip entirely
+      if (await wasProcessed(event.id)) {
+        return res.status(200).json({ received: true, duplicate: true });
+      }
     }
 
     switch (type) {
       case "checkout.session.completed": {
-        // 1) Keep your existing account/plan upsert
+        // Keep your plan/profile logic
         try {
           await upsertFromCheckoutSession(obj);
         } catch (e) {
-          console.error("checkout.session.completed handler error", { message: e?.message });
-          // fall through (do not throw; we still want to try decrement)
+          console.error("checkout.session.completed profile update error", { message: e?.message });
+          // continue; profile plan update failing should not block stock decrement
         }
 
-        // 2) NEW: auto-decrement unitsLeft for the purchased product (if we have its id and the session is paid)
-        try {
-          const productId = obj?.client_reference_id || obj?.client_referenceId || null;
-          const status = obj?.payment_status || obj?.status;
-          const isPaid =
-            (obj.mode === "payment" && status === "paid") ||
-            (status === "complete" || status === "completed");
+        // New: product stock decrement — requires client_reference_id set by /api/products/buy
+        const productId = obj?.client_reference_id || null;
 
-          if (productId && isPaid) {
-            const dec = await decrementUnitsLeft(productId);
-            if (!dec.ok) {
-              console.warn("webhook decrement skipped:", dec.reason, { productId });
-            }
-          } else {
-            console.warn("webhook no-decrement (missing productId or unpaid)", {
+        if (productId) {
+          try {
+            const dec = await decrementUnitsLeftByProductId(productId);
+            // Mark processed after successful attempt (even if matched=0, to avoid replays)
+            await markProcessed(event.id);
+
+            return res.status(200).json({
+              received: true,
+              decremented: dec.modified === 1,
+              match: dec.matched,
               productId,
-              mode: obj?.mode,
-              status,
+              productSnapshot: dec.product || null,
             });
+          } catch (e) {
+            console.error("decrementUnitsLeft error", { message: e?.message, productId });
+            // Don't mark processed here so Stripe can retry
+            return res.status(500).json({ error: "Failed to decrement unitsLeft" });
           }
-        } catch (e) {
-          console.error("decrementUnitsLeft error", { message: e?.message });
+        } else {
+          // No product id present — just acknowledge so Stripe doesn't keep retrying
+          await markProcessed(event.id);
+          return res.status(200).json({ received: true, productId: null });
         }
-        break;
       }
 
       case "customer.subscription.created": {
@@ -249,6 +275,7 @@ export default async function handler(req, res) {
           await updateFromSubscriptionCreated(obj);
         } catch (e) {
           console.error("subscription.created handler error", { message: e?.message });
+          return res.status(500).json({ error: "Failed to persist subscription" });
         }
         break;
       }
@@ -258,19 +285,19 @@ export default async function handler(req, res) {
           await markInvoicePaid(obj);
         } catch (e) {
           console.error("invoice.paid handler error", { message: e?.message });
+          return res.status(500).json({ error: "Failed to persist invoice" });
         }
         break;
       }
 
       default:
-        // keep silent for unhandled types
+        // Acknowledge unhandled events
         break;
     }
 
     return res.status(200).json({ received: true });
   } catch (err) {
     console.error("stripe-webhook UNCAUGHT", { message: err?.message, stack: err?.stack });
-    // Return 200 to avoid Stripe retries storm; we use idempotency to be safe.
-    return res.status(200).json({ received: true, ok: false });
+    return res.status(500).json({ error: "Internal webhook error" });
   }
 }

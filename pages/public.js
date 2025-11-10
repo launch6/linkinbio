@@ -23,8 +23,6 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 export default function PublicPage() {
   const [editToken, setEditToken] = useState("");
   const [reason, setReason] = useState("");
@@ -32,7 +30,7 @@ export default function PublicPage() {
   const [error, setError] = useState("");
   const [profile, setProfile] = useState(null);
   const [products, setProducts] = useState([]);
-  const [remaining, setRemaining] = useState({}); // { [id]: ms|null }
+  const [remaining, setRemaining] = useState({}); // { [id]: ms }
   const timerRef = useRef(null);
 
   // read URL params
@@ -95,7 +93,7 @@ export default function PublicPage() {
       for (const p of products) {
         const endsIso = p.dropEndsAt || "";
         const endsMs = endsIso ? Date.parse(endsIso) : null;
-        next[p.id] = Number.isFinite(endsMs) ? Math.max(0, endsMs - now) : null;
+        next[p.id] = endsMs ? Math.max(0, endsMs - now) : null;
       }
       setRemaining(next);
     }
@@ -111,47 +109,24 @@ export default function PublicPage() {
   function productStatus(p) {
     const left = toNumberOrNull(p.unitsLeft);
     const total = toNumberOrNull(p.unitsTotal);
-    const rem = remaining[p.id]; // ms|null
+    const rem = remaining[p.id]; // ms or null
     const ended = rem === 0;
     const soldOut = left !== null && left <= 0;
 
-    // Flags for micro-UX
-    const endsSoon = Number.isFinite(rem) && rem !== null && rem > 0 && rem <= DAY_MS;
-    const lowStock =
-      left !== null &&
-      ((total && total > 0 && left / total <= 0.2) || left <= 3) &&
-      left > 0;
-
-    if (soldOut) {
-      return { label: "Sold out", ended: false, soldOut: true, endsSoon: false, lowStock: false };
-    }
+    if (soldOut) return { key: "soldout", label: "Sold out", ended: false, soldOut: true };
     if (rem === null && total !== null && left !== null) {
-      return {
-        label: `${left}/${total} left`,
-        ended: false,
-        soldOut: false,
-        endsSoon: false,
-        lowStock,
-      };
+      return { key: "active", label: `${left}/${total} left`, ended: false, soldOut: false };
     }
     if (rem === null) {
-      return { label: "", ended: false, soldOut: false, endsSoon: false, lowStock: false };
+      return { key: "active", label: "", ended: false, soldOut: false };
     }
-    if (ended) {
-      return { label: "Drop ended", ended: true, soldOut: false, endsSoon: false, lowStock: false };
-    }
+    if (ended) return { key: "ended", label: "Drop ended", ended: true, soldOut: false };
 
     const base = `Ends in ${formatRemaining(rem)}`;
     if (total !== null && left !== null) {
-      return {
-        label: `${left}/${total} left — ${base}`,
-        ended: false,
-        soldOut: false,
-        endsSoon,
-        lowStock,
-      };
+      return { key: "active", label: `${left}/${total} left — ${base}`, ended: false, soldOut: false };
     }
-    return { label: base, ended: false, soldOut: false, endsSoon, lowStock: false };
+    return { key: "active", label: base, ended: false, soldOut: false };
   }
 
   function humanReason(r) {
@@ -164,24 +139,15 @@ export default function PublicPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
-        <div className="opacity-80">Loading…</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-xl w-full rounded-xl border border-red-600/40 bg-red-900/20 p-4">
-          <div className="font-semibold mb-1">Can’t load page</div>
-          <div className="text-sm opacity-80">{error}</div>
-        </div>
-      </div>
-    );
-  }
+  // Badge styles by state
+  const badgeClass = {
+    active:
+      "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
+    soldout:
+      "bg-rose-500/20 border-rose-400/40 text-rose-200",
+    ended:
+      "bg-amber-500/20 border-amber-400/40 text-amber-200",
+  };
 
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
@@ -211,59 +177,95 @@ export default function PublicPage() {
             {products.map((p) => {
               const st = productStatus(p);
               const showBuy = !st.ended && !st.soldOut && !!p.priceUrl;
-              const buyHref = `/api/products/buy?productId=${encodeURIComponent(
-                p.id
-              )}&editToken=${encodeURIComponent(editToken)}`;
-
-              // Badge styles
-              const statusClass =
-                st.soldOut || st.ended
-                  ? "text-red-300"
-                  : st.endsSoon
-                  ? "text-amber-300"
-                  : "text-green-300";
+              const buyHref = `/api/products/buy?editToken=${encodeURIComponent(
+                editToken
+              )}&productId=${encodeURIComponent(p.id)}`;
 
               return (
-                <article key={p.id} className="rounded-2xl border border-neutral-800 overflow-hidden">
-                  {p.imageUrl ? (
-                    <div className="relative">
+                <article
+                  key={p.id}
+                  className="relative rounded-2xl border border-neutral-800 overflow-hidden"
+                  aria-labelledby={`prod-${p.id}-title`}
+                >
+                  {/* Image with corner ribbon */}
+                  <div className="relative">
+                    {p.imageUrl ? (
                       <img
                         src={p.imageUrl}
                         alt={p.title || "Product image"}
                         className="w-full aspect-[4/3] object-cover"
                         loading="lazy"
                       />
-                      {/* Ribbon for Ends soon */}
-                      {st.endsSoon && !st.soldOut && !st.ended ? (
-                        <div className="absolute top-3 left-3 rounded-md bg-amber-500/20 border border-amber-400/40 px-2 py-1 text-xs text-amber-100 backdrop-blur">
-                          Ends soon
-                        </div>
-                      ) : null}
-                      {/* Ribbon for Low stock */}
-                      {st.lowStock && !st.soldOut && !st.ended ? (
-                        <div className="absolute top-3 right-3 rounded-md bg-fuchsia-500/20 border border-fuchsia-400/40 px-2 py-1 text-xs text-fuchsia-100 backdrop-blur">
-                          Low stock
-                        </div>
-                      ) : null}
+                    ) : (
+                      <div className="w-full aspect-[4/3] bg-neutral-900" />
+                    )}
+
+                    {/* Corner ribbon */}
+                    <div className="absolute left-3 top-3">
+                      <span
+                        className={
+                          "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
+                          (badgeClass[st.key] || badgeClass.active)
+                        }
+                        aria-live="polite"
+                      >
+                        {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : (st.label || "Live")}
+                      </span>
                     </div>
-                  ) : null}
+                  </div>
 
                   <div className="p-5">
-                    <h2 className="text-xl font-semibold mb-1">{p.title || "Untitled"}</h2>
+                    <h2 id={`prod-${p.id}-title`} className="text-xl font-semibold mb-1">
+                      {p.title || "Untitled"}
+                    </h2>
 
+                    {/* Status line (secondary) */}
                     {st.label ? (
-                      <div className={`text-sm mb-3 ${statusClass}`}>{st.label}</div>
+                      <div
+                        className={
+                          "text-sm mb-3 " +
+                          (st.soldOut || st.ended ? "text-rose-300" : "text-emerald-300")
+                        }
+                      >
+                        {st.label}
+                      </div>
                     ) : null}
 
                     {showBuy ? (
                       <a
                         href={buyHref}
-                        className="inline-block rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
+                        className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        aria-label={`Buy ${p.title || "this product"}`}
+                        onClick={() => {
+                          try {
+                            navigator.sendBeacon(
+                              "/api/track",
+                              new Blob(
+                                [
+                                  JSON.stringify({
+                                    type: "buy_click",
+                                    productId: p.id,
+                                    editToken,
+                                    ts: Date.now(),
+                                    ref: (typeof window !== "undefined" ? window.location.href : ""),
+                                  }),
+                                ],
+                                { type: "application/json" }
+                              )
+                            );
+                          } catch {}
+                        }}
                       >
                         Buy
+                        <span className="text-xs opacity-70">→</span>
                       </a>
                     ) : (
-                      <div className="inline-flex rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400">
+                      <div
+                        className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
+                        aria-disabled="true"
+                        role="button"
+                        tabIndex={-1}
+                      >
                         {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : "Unavailable"}
                       </div>
                     )}

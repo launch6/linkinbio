@@ -1,7 +1,7 @@
 // pages/public.js
 import { useEffect, useRef, useState } from "react";
 
-/** Format ms as "Xd Yh Zm Ws". */
+/** Mini helpers */
 function formatRemaining(ms) {
   if (ms <= 0) return "ended";
   const s = Math.floor(ms / 1000);
@@ -16,11 +16,73 @@ function formatRemaining(ms) {
   parts.push(`${secs}s`);
   return parts.join(" ");
 }
-
 function toNumberOrNull(v) {
   if (v === "" || v === null || v === undefined) return null;
   const n = parseInt(v, 10);
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** Inline Subscribe form (shows when profile.collectEmail = true) */
+function SubscribeForm({ editToken }) {
+  const [email, setEmail] = useState("");
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setMsg(""); setErr("");
+    try {
+      setBusy(true);
+      const payload = {
+        editToken,
+        email,
+        ref: typeof window !== "undefined" ? window.location.href : "",
+      };
+      const r = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) {
+        throw new Error(j?.error || `Subscribe failed (${r.status})`);
+      }
+      setMsg("Thanks! You're on the list.");
+      setEmail("");
+    } catch (e) {
+      setErr(e.message || "Subscribe failed");
+    } finally {
+      setBusy(false);
+      // auto-clear banners after a few seconds
+      setTimeout(() => { setMsg(""); setErr(""); }, 3000);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="mt-5 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+      <div className="w-full sm:w-auto">
+        <label className="block text-sm opacity-70 mb-1">Get drop alerts</label>
+        <input
+          type="email"
+          required
+          className="w-full sm:w-80 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={busy}
+        className="rounded-lg border border-neutral-700 px-4 py-2 hover:bg-neutral-800 disabled:opacity-60"
+      >
+        {busy ? "Joining…" : "Join"}
+      </button>
+      {msg ? <div className="text-emerald-300 text-sm ml-1 mt-1 sm:mt-0">{msg}</div> : null}
+      {err ? <div className="text-rose-300 text-sm ml-1 mt-1 sm:mt-0">{err}</div> : null}
+    </form>
+  );
 }
 
 export default function PublicPage() {
@@ -146,12 +208,13 @@ export default function PublicPage() {
     };
   }, [products]);
 
+  // derive per-product status
   function productStatus(p) {
     const left = toNumberOrNull(p.unitsLeft);
     const total = toNumberOrNull(p.unitsTotal);
     const rem = remaining[p.id]; // ms or null
     const ended = rem === 0;
-    const soldOut = left !== null && left <= 0; // <-- fixed line
+    const soldOut = left !== null && left <= 0;
 
     if (soldOut) return { key: "soldout", label: "Sold out", ended: false, soldOut: true };
     if (rem === null && total !== null && left !== null) {
@@ -169,6 +232,7 @@ export default function PublicPage() {
     return { key: "active", label: base, ended: false, soldOut: false };
   }
 
+  // Reason banner
   function humanReason(r) {
     switch ((r || "").toLowerCase()) {
       case "expired": return "This drop has ended.";
@@ -204,6 +268,9 @@ export default function PublicPage() {
         <header className="mb-8">
           <h1 className="text-4xl font-bold">{title}</h1>
           {bio ? <p className="text-neutral-400 mt-2">{bio}</p> : null}
+
+          {/* Email capture (if enabled on profile) */}
+          {profile?.collectEmail ? <SubscribeForm editToken={editToken} /> : null}
         </header>
 
         {/* Products */}
@@ -284,8 +351,7 @@ export default function PublicPage() {
                                     productId: p.id,
                                     editToken,
                                     ts: Date.now(),
-                                    ref:
-                                      typeof window !== "undefined" ? window.location.href : "",
+                                    ref: typeof window !== "undefined" ? window.location.href : "",
                                   }),
                                 ],
                                 { type: "application/json" }

@@ -32,28 +32,9 @@ export default function PublicPage() {
   const [products, setProducts] = useState([]);
   const [remaining, setRemaining] = useState({}); // { [id]: ms }
   const timerRef = useRef(null);
-  const refreshRef = useRef(null); // NEW periodic refresh
 
-  // Small helper to load profile + products with no-store caching
-  async function loadAll(token) {
-    const bust = `_t=${Date.now()}`;
-    // profile
-    const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}&${bust}`, {
-      cache: "no-store",
-    });
-    const pj = await pr.json();
-    if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
-    // products
-    const r = await fetch(`/api/products?editToken=${encodeURIComponent(token)}&${bust}`, {
-      cache: "no-store",
-    });
-    const j = await r.json();
-    if (!j?.ok) throw new Error(j?.error || "Failed to load products");
-
-    const onlyPublished = (j.products || []).filter((p) => !!p.published);
-    setProfile(pj.profile);
-    setProducts(onlyPublished);
-  }
+  // NEW: light refresher refs
+  const refreshIntervalRef = useRef(null);
 
   // read URL params
   useEffect(() => {
@@ -65,7 +46,28 @@ export default function PublicPage() {
     setReason(r);
   }, []);
 
-  // initial fetch + periodic refresh + on-focus refresh
+  // fetch profile + products
+  async function fetchAll(token) {
+    // add cache-buster + no-store so we never get a cached products array
+    const bust = `_t=${Date.now()}`;
+
+    const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}&${bust}`, {
+      cache: "no-store",
+    });
+    const pj = await pr.json();
+    if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
+
+    const r = await fetch(`/api/products?editToken=${encodeURIComponent(token)}&${bust}`, {
+      cache: "no-store",
+    });
+    const j = await r.json();
+    if (!j?.ok) throw new Error(j?.error || "Failed to load products");
+
+    const onlyPublished = (j.products || []).filter((p) => !!p.published);
+    setProfile(pj.profile);
+    setProducts(onlyPublished);
+  }
+
   useEffect(() => {
     if (!editToken) {
       setLoading(false);
@@ -77,7 +79,7 @@ export default function PublicPage() {
     (async () => {
       try {
         setLoading(true);
-        await loadAll(editToken);
+        await fetchAll(editToken);
         if (!alive) return;
         setError("");
       } catch (e) {
@@ -88,28 +90,21 @@ export default function PublicPage() {
       }
     })();
 
-    // periodic refresh every 15s
-    refreshRef.current = setInterval(async () => {
-      try {
-        await loadAll(editToken);
-      } catch {
-        /* ignore */
-      }
+    // NEW: periodic products refresh every 15s
+    refreshIntervalRef.current = setInterval(() => {
+      fetchAll(editToken).catch(() => {});
     }, 15000);
 
-    // refresh when tab becomes visible
-    const onVis = async () => {
+    // NEW: refresh when the tab becomes visible
+    const onVis = () => {
       if (document.visibilityState === "visible") {
-        try {
-          await loadAll(editToken);
-        } catch {}
+        fetchAll(editToken).catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
-      alive = false;
-      if (refreshRef.current) clearInterval(refreshRef.current);
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, [editToken]);

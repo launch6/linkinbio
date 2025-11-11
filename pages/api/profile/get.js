@@ -6,6 +6,17 @@ const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
 let cachedClient = null;
 let cachedDb = null;
 
+function noStore(res) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Vercel-CDN-Cache-Control", "no-store");
+  res.setHeader("CDN-Cache-Control", "no-store");
+}
+function send(res, status, body) {
+  noStore(res);
+  return res.status(status).json(body);
+}
+
 async function getDb() {
   if (cachedDb) return cachedDb;
   if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
@@ -16,16 +27,6 @@ async function getDb() {
   }
   cachedDb = client.db(MONGODB_DB);
   return cachedDb;
-}
-
-function setNoStore(res) {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Vercel-CDN-Cache-Control", "no-store");
-}
-function send(res, status, body) {
-  setNoStore(res);
-  return res.status(status).json(body);
 }
 
 export default async function handler(req, res) {

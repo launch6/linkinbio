@@ -3,6 +3,7 @@ import { MongoClient } from "mongodb";
 
 const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
 
+// --- DB bootstrap with global cache ---
 let _client = global._launch6MongoClient;
 async function getClient() {
   if (_client) return _client;
@@ -14,6 +15,7 @@ async function getClient() {
   return c;
 }
 
+// Small helper for headers so client doesn't cache this
 function noStore(res) {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -29,55 +31,46 @@ export default async function handler(req, res) {
   }
 
   try {
-    const slug = String(req.query.slug || "").trim();
-    if (!slug) return res.status(400).json({ ok: false, error: "missing_slug" });
+    const slug = String(req.query.slug || "").trim().toLowerCase();
+    if (!slug) {
+      return res.status(400).json({ ok: false, error: "missing_slug" });
+    }
 
     const client = await getClient();
     const db = client.db(MONGODB_DB);
+    const Profiles = db.collection("profiles");
 
-    const doc = await db.collection("profiles").findOne(
+    // Support either field name
+    const doc = await Profiles.findOne(
       { $or: [{ publicSlug: slug }, { slug }] },
       {
         projection: {
           _id: 0,
           displayName: 1,
-          name: 1,
           bio: 1,
-          description: 1,
           collectEmail: 1,
-          klaviyoListId: 1, // not shown to client; only used to decide if capture is enabled
+          publicSlug: 1,
+          slug: 1,
           products: 1,
         },
       }
     );
 
-    if (!doc) return res.status(404).json({ ok: false, error: "not_found" });
+    if (!doc) {
+      return res.status(404).json({ ok: false, error: "not_found" });
+    }
 
-    const profilePublic = {
+    const products = Array.isArray(doc.products) ? doc.products : [];
+    const published = products.filter((p) => !!p.published);
+
+    const profile = {
       displayName: doc.displayName || doc.name || "Artist",
       bio: doc.bio || doc.description || "",
       collectEmail: !!doc.collectEmail,
+      publicSlug: (doc.publicSlug || doc.slug || "").toLowerCase(),
     };
 
-    const productsPublished = (Array.isArray(doc.products) ? doc.products : [])
-      .filter(p => !!p.published)
-      .map(p => ({
-        id: p.id,
-        title: p.title || "",
-        priceUrl: p.priceUrl || "",
-        imageUrl: p.imageUrl || "",
-        dropEndsAt: p.dropEndsAt || "",
-        unitsTotal: p.unitsTotal ?? "",
-        unitsLeft: p.unitsLeft ?? "",
-        published: true,
-      }));
-
-    return res.status(200).json({
-      ok: true,
-      slug,
-      profile: profilePublic,
-      products: productsPublished,
-    });
+    return res.status(200).json({ ok: true, profile, products: published });
   } catch (err) {
     console.error("public/profile ERROR", err?.message);
     return res.status(500).json({ ok: false, error: "server_error" });

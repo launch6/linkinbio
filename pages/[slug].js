@@ -1,4 +1,5 @@
 // pages/[slug].js
+import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 
@@ -53,9 +54,6 @@ export default function PublicSlugPage() {
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
-  // post-checkout banner
-  const [notice, setNotice] = useState(null); // { type:'success'|'info'|'error', text:string } | null
-
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
@@ -66,7 +64,6 @@ export default function PublicSlugPage() {
 
     const ct = (r.headers.get("content-type") || "").toLowerCase();
     if (!ct.includes("application/json")) {
-      // Avoid crashing if upstream returns an HTML error page
       const text = await r.text().catch(() => "");
       throw new Error(text ? "Upstream not JSON" : "Failed to load");
     }
@@ -130,20 +127,6 @@ export default function PublicSlugPage() {
       navigator.sendBeacon("/api/track", blob);
     } catch {}
   }, [slug]);
-
-  // read ?success=1 / ?canceled=1 and force-refresh on success
-  useEffect(() => {
-    if (!router.isReady || !slug) return;
-    const q = router.query || {};
-    if (q.success === "1" || q.success === 1) {
-      setNotice({ type: "success", text: "Thanks for your purchase! 🎉" });
-      fetchAll(slug).catch(() => {});
-    } else if (q.canceled === "1" || q.canceled === 1) {
-      setNotice({ type: "info", text: "Checkout canceled." });
-    } else {
-      setNotice(null);
-    }
-  }, [router.isReady, router.query, slug]);
 
   // countdown ticker
   useEffect(() => {
@@ -255,6 +238,19 @@ export default function PublicSlugPage() {
   const bio = profile?.bio || profile?.description || "";
   const canCollectEmail = !!profile?.collectEmail;
 
+  // --- SEO / Social ---
+  const firstImage = products?.[0]?.imageUrl || "";
+  const site = "https://linkinbio-tau-pink.vercel.app";
+  const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
+  const seoTitle = title ? `${title} — Drops` : "Drops";
+  const left = toNumberOrNull(products?.[0]?.unitsLeft);
+  const total = toNumberOrNull(products?.[0]?.unitsTotal);
+  const leftPart = left != null && total != null ? ` • ${left}/${total} left` : "";
+  const seoDesc =
+    (products?.[0]?.title
+      ? `${products[0].title}${leftPart}`
+      : "Limited releases and timed drops.") + (bio ? ` — ${bio}` : "");
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
@@ -275,186 +271,165 @@ export default function PublicSlugPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        {/* Success / Cancel banner */}
-        {notice ? (
-          <div
-            className={
-              "mb-6 rounded-xl border p-4 " +
-              (notice.type === "success"
-                ? "border-emerald-500/40 bg-emerald-900/20 text-emerald-200"
-                : notice.type === "error"
-                ? "border-rose-500/40 bg-rose-900/20 text-rose-200"
-                : "border-amber-500/40 bg-amber-900/20 text-amber-200")
-            }
-            role="status"
-            aria-live="polite"
-          >
-            {notice.text}
-          </div>
-        ) : null}
+    <>
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDesc} />
+        <meta name="robots" content="index,follow,max-image-preview:large" />
 
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold">{title}</h1>
-          {bio ? <p className="text-neutral-400 mt-2">{bio}</p> : null}
-        </header>
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDesc} />
+        {firstImage ? <meta property="og:image" content={firstImage} /> : null}
 
-        {/* Email capture (slug flow) */}
-        {canCollectEmail && (
-          <div className="mb-8 rounded-2xl border border-neutral-800 p-5">
-            <div className="text-lg font-semibold mb-2">Get first dibs on drops</div>
-            {!subscribed ? (
-              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 items-stretch">
-                <input
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailErr) setEmailErr("");
-                  }}
-                  aria-invalid={!!emailErr}
-                  aria-describedby={emailErr ? "email-error" : undefined}
-                />
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="rounded-lg border border-emerald-600 px-4 py-2 hover:bg-emerald-900/20 disabled:opacity-60"
-                >
-                  {submitting ? "Joining…" : "Join"}
-                </button>
-              </form>
-            ) : (
-              <div className="rounded-lg border border-emerald-600/40 bg-emerald-900/20 text-emerald-200 px-3 py-2 text-sm">
-                You’re in! We’ll let you know about new drops.
+        {/* Twitter */}
+        <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDesc} />
+        {firstImage ? <meta name="twitter:image" content={firstImage} /> : null}
+        <link rel="canonical" href={pageUrl} />
+      </Head>
+
+      <div className="min-h-screen bg-neutral-950 text-white">
+        <div className="max-w-5xl mx-auto px-6 py-10">
+          <header className="mb-8">
+            <h1 className="text-4xl font-bold">{title}</h1>
+            {bio ? <p className="text-neutral-400 mt-2">{bio}</p> : null}
+          </header>
+
+          {/* Email capture (slug flow) */}
+          {canCollectEmail && (
+            <div className="mb-8 rounded-2xl border border-neutral-800 p-5">
+              <div className="text-lg font-semibold mb-2">Get first dibs on drops</div>
+              {!subscribed ? (
+                <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 items-stretch">
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailErr) setEmailErr("");
+                    }}
+                    aria-invalid={!!emailErr}
+                    aria-describedby={emailErr ? "email-error" : undefined}
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="rounded-lg border border-emerald-600 px-4 py-2 hover:bg-emerald-900/20 disabled:opacity-60"
+                  >
+                    {submitting ? "Joining…" : "Join"}
+                  </button>
+                </form>
+              ) : (
+                <div className="rounded-lg border border-emerald-600/40 bg-emerald-900/20 text-emerald-200 px-3 py-2 text-sm">
+                  You’re in! We’ll let you know about new drops.
+                </div>
+              )}
+              {emailErr ? (
+                <div id="email-error" className="mt-2 text-sm text-rose-300">
+                  {emailErr}
+                </div>
+              ) : null}
+              <div className="mt-2 text-xs text-neutral-500">
+                We’ll only email you about releases. Unsubscribe anytime.
               </div>
-            )}
-            {emailErr ? (
-              <div id="email-error" className="mt-2 text-sm text-rose-300">
-                {emailErr}
-              </div>
-            ) : null}
-            <div className="mt-2 text-xs text-neutral-500">
-              We’ll only email you about releases. Unsubscribe anytime.
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Products */}
-        {products.length === 0 ? (
-          <div className="opacity-70">No products are published yet.</div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            {products.map((p) => {
-              const left = toNumberOrNull(p.unitsLeft);
-              const total = toNumberOrNull(p.unitsTotal);
-              const rem = remaining[p.id];
-              const ended = rem === 0;
-              const soldOut = left !== null && left <= 0;
+          {/* Products */}
+          {products.length === 0 ? (
+            <div className="opacity-70">No products are published yet.</div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-6">
+              {products.map((p) => {
+                const left = toNumberOrNull(p.unitsLeft);
+                const total = toNumberOrNull(p.unitsTotal);
+                const rem = remaining[p.id];
+                const ended = rem === 0;
+                const soldOut = left !== null && left <= 0;
 
-              const base = rem == null ? "" : `Ends in ${formatRemaining(rem)}`;
-              const label =
-                soldOut ? "Sold out" :
-                ended   ? "Drop ended" :
-                (total != null && left != null ? `${left}/${total} left${base ? " — " + base : ""}` : base);
+                const base = rem == null ? "" : `Ends in ${formatRemaining(rem)}`;
+                const label =
+                  soldOut ? "Sold out" :
+                  ended   ? "Drop ended" :
+                  (total != null && left != null ? `${left}/${total} left${base ? " — " + base : ""}` : base);
 
-              const key =
-                soldOut ? "soldout" :
-                ended   ? "ended"   : "active";
+                const key =
+                  soldOut ? "soldout" :
+                  ended   ? "ended"   : "active";
 
-              const showBuy = !ended && !soldOut && !!p.priceUrl;
-              const buyHref = `/api/products/buy?productId=${encodeURIComponent(p.id)}${
-                slug ? `&slug=${encodeURIComponent(slug)}` : ""
-              }`;
+                const showBuy = !ended && !soldOut && !!p.priceUrl;
+                const buyHref = `/api/products/buy?productId=${encodeURIComponent(p.id)}${
+                  slug ? `&slug=${encodeURIComponent(slug)}` : ""
+                }`;
 
-              return (
-                <article
-                  key={p.id}
-                  className="relative rounded-2xl border border-neutral-800 overflow-hidden"
-                  aria-labelledby={`prod-${p.id}-title`}
-                >
-                  <div className="relative">
-                    {p.imageUrl ? (
-                      <img
-                        src={p.imageUrl}
-                        alt={p.title || "Product image"}
-                        className="w-full aspect-[4/3] object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[4/3] bg-neutral-900" />
-                    )}
-                    <div className="absolute left-3 top-3">
-                      <span
-                        className={`inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm ${
-                          key === "active"
-                            ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
-                            : key === "soldout"
-                            ? "bg-rose-500/20 border-rose-400/40 text-rose-200"
-                            : "bg-amber-500/20 border-amber-400/40 text-amber-200"
-                        }`}
-                        aria-live="polite"
-                      >
-                        {label || "Live"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-5">
-                    <h2 id={`prod-${p.id}-title`} className="text-xl font-semibold mb-1">
-                      {p.title || "Untitled"}
-                    </h2>
-
-                    {showBuy ? (
-                      <a
-                        href={buyHref}
-                        className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        aria-label={`Buy ${p.title || "this product"}`}
-                        onClick={() => {
-                          try {
-                            navigator.sendBeacon(
-                              "/api/track",
-                              new Blob(
-                                [
-                                  JSON.stringify({
-                                    type: "buy_click",
-                                    productId: p.id,
-                                    publicSlug: slug || null,
-                                    ts: Date.now(),
-                                    ref:
-                                      typeof window !== "undefined" ? window.location.href : "",
-                                  }),
-                                ],
-                                { type: "application/json" }
-                              )
-                            );
-                          } catch {}
-                        }}
-                      >
-                        Buy <span className="text-xs opacity-70">→</span>
-                      </a>
-                    ) : (
-                      <div
-                        className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
-                        aria-disabled="true"
-                        role="button"
-                        tabIndex={-1}
-                      >
-                        {soldOut ? "Sold out" : ended ? "Drop ended" : "Unavailable"}
+                return (
+                  <article key={p.id} className="relative rounded-2xl border border-neutral-800 overflow-hidden" aria-labelledby={`prod-${p.id}-title`}>
+                    <div className="relative">
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt={p.title || "Product image"} className="w-full aspect-[4/3] object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full aspect-[4/3] bg-neutral-900" />
+                      )}
+                      <div className="absolute left-3 top-3">
+                        <span className={`inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm ${
+                          key === "active" ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                          : key === "soldout" ? "bg-rose-500/20 border-rose-400/40 text-rose-200"
+                          : "bg-amber-500/20 border-amber-400/40 text-amber-200"
+                        }`} aria-live="polite">
+                          {label || "Live"}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
+                    </div>
+
+                    <div className="p-5">
+                      <h2 id={`prod-${p.id}-title`} className="text-xl font-semibold mb-1">
+                        {p.title || "Untitled"}
+                      </h2>
+
+                      {showBuy ? (
+                        <a
+                          href={buyHref}
+                          className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          aria-label={`Buy ${p.title || "this product"}`}
+                          onClick={() => {
+                            try {
+                              navigator.sendBeacon(
+                                "/api/track",
+                                new Blob([JSON.stringify({
+                                  type: "buy_click",
+                                  productId: p.id,
+                                  publicSlug: slug || null,
+                                  ts: Date.now(),
+                                  ref: typeof window !== "undefined" ? window.location.href : "",
+                                })], { type: "application/json" })
+                              );
+                            } catch {}
+                          }}
+                        >
+                          Buy <span className="text-xs opacity-70">→</span>
+                        </a>
+                      ) : (
+                        <div className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400" aria-disabled="true" role="button" tabIndex={-1}>
+                          {soldOut ? "Sold out" : ended ? "Drop ended" : "Unavailable"}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

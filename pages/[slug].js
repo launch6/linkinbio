@@ -1,4 +1,5 @@
 // pages/[slug].js
+import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 
 /** Format ms as "Xd Yh Zm Ws". */
@@ -23,7 +24,7 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-// Same validator your API uses (simple but strict).
+// simple client-side email validator (matches API)
 function isValidEmail(email) {
   if (typeof email !== "string") return false;
   const s = email.trim();
@@ -37,15 +38,16 @@ function isValidEmail(email) {
 }
 
 export default function PublicSlugPage() {
-  const [slug, setSlug] = useState("");
+  const router = useRouter();
+  const { slug } = router.query;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [profile, setProfile] = useState(null);
   const [products, setProducts] = useState([]);
   const [remaining, setRemaining] = useState({}); // { [id]: ms }
 
-  // email capture state
+  // email capture UI state
   const [email, setEmail] = useState("");
   const [emailErr, setEmailErr] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -54,32 +56,24 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  // read slug from URL
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const parts = window.location.pathname.split("/").filter(Boolean);
-    setSlug(parts[0] || "");
-  }, []);
-
-  async function fetchAllSlug(s) {
-    const bust = `_t=${Date.now()}`;
-    const r = await fetch(`/api/public/profile?slug=${encodeURIComponent(s)}&${bust}`, {
-      cache: "no-store",
-    });
+  // fetch public profile + products via slug
+  async function fetchAll(slugVal) {
+    const r = await fetch(`/api/public?slug=${encodeURIComponent(slugVal)}`, { cache: "no-store" });
     const j = await r.json();
     if (!j?.ok) throw new Error(j?.error || "Failed to load");
-    setProfile(j.profile || {});
-    setProducts(Array.isArray(j.products) ? j.products : []);
+    setProfile(j.profile || null);
+    setProducts(Array.isArray(j.products) ? j.products.filter(p => !!p.published) : []);
   }
 
   // initial + periodic refresh
   useEffect(() => {
     if (!slug) return;
     let alive = true;
+
     (async () => {
       try {
         setLoading(true);
-        await fetchAllSlug(slug);
+        await fetchAll(slug);
         if (!alive) return;
         setError("");
       } catch (e) {
@@ -89,13 +83,14 @@ export default function PublicSlugPage() {
         if (alive) setLoading(false);
       }
     })();
+
     refreshIntervalRef.current = setInterval(() => {
-      fetchAllSlug(slug).catch(() => {});
+      fetchAll(slug).catch(() => {});
     }, 15000);
 
     const onVis = () => {
       if (document.visibilityState === "visible") {
-        fetchAllSlug(slug).catch(() => {});
+        fetchAll(slug).catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -104,6 +99,22 @@ export default function PublicSlugPage() {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
+  }, [slug]);
+
+  // track page_view (slug-based)
+  useEffect(() => {
+    if (!slug) return;
+    try {
+      const payload = {
+        type: "page_view",
+        // keep editToken out; slug-only event
+        ts: Date.now(),
+        ref: typeof window !== "undefined" ? window.location.href : "",
+        publicSlug: slug,
+      };
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      navigator.sendBeacon("/api/track", blob);
+    } catch {}
   }, [slug]);
 
   // countdown ticker
@@ -156,13 +167,23 @@ export default function PublicSlugPage() {
     return { key: "active", label: base, ended: false, soldOut: false };
   }
 
-  // Badge styles
+  function humanReason(r) {
+    switch ((r || "").toLowerCase()) {
+      case "expired": return "This drop has ended.";
+      case "soldout": return "This item is sold out.";
+      case "unpublished": return "This product isn’t available right now.";
+      case "noprice": return "This product doesn’t have a checkout set yet.";
+      default: return "";
+    }
+  }
+
   const badgeClass = {
     active: "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
     soldout: "bg-rose-500/20 border-rose-400/40 text-rose-200",
     ended: "bg-amber-500/20 border-amber-400/40 text-amber-200",
   };
 
+  // handle slug-based subscribe
   async function handleSubscribe(e) {
     e.preventDefault();
     setEmailErr("");
@@ -176,7 +197,7 @@ export default function PublicSlugPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          slug,
+          publicSlug: slug,
           email,
           ref: typeof window !== "undefined" ? window.location.href : "",
         }),
@@ -187,6 +208,8 @@ export default function PublicSlugPage() {
           setEmailErr("Email signup is unavailable right now.");
         } else if (json?.error === "invalid_email") {
           setEmailErr("Please enter a valid email.");
+        } else if (json?.error === "profile_not_found") {
+          setEmailErr("Creator not found.");
         } else {
           setEmailErr("Subscribe failed. Please try again.");
         }
@@ -199,6 +222,10 @@ export default function PublicSlugPage() {
       setSubmitting(false);
     }
   }
+
+  const title = profile?.displayName || profile?.name || "Artist";
+  const bio = profile?.bio || profile?.description || "";
+  const canCollectEmail = !!profile?.collectEmail;
 
   if (loading) {
     return (
@@ -219,20 +246,15 @@ export default function PublicSlugPage() {
     );
   }
 
-  const title = profile?.displayName || "Artist";
-  const bio = profile?.bio || "";
-  const canCollectEmail = !!profile?.collectEmail;
-
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="max-w-5xl mx-auto px-6 py-10">
-        {/* Header */}
         <header className="mb-8">
           <h1 className="text-4xl font-bold">{title}</h1>
           {bio ? <p className="text-neutral-400 mt-2">{bio}</p> : null}
         </header>
 
-        {/* Email capture (public, by slug) */}
+        {/* Email capture (slug flow) */}
         {canCollectEmail && (
           <div className="mb-8 rounded-2xl border border-neutral-800 p-5">
             <div className="text-lg font-semibold mb-2">Get first dibs on drops</div>
@@ -282,36 +304,42 @@ export default function PublicSlugPage() {
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
             {products.map((p) => {
-              const st = productStatus(p);
-              const showBuy = !st.ended && !st.soldOut && !!p.priceUrl;
-              const buyHref = `/api/products/buy?id=${encodeURIComponent(p.id)}`;
+              const left = toNumberOrNull(p.unitsLeft);
+              const total = toNumberOrNull(p.unitsTotal);
+              const rem = remaining[p.id];
+              const ended = rem === 0;
+              const soldOut = left !== null && left <= 0;
+
+              const base = rem == null ? "" : `Ends in ${formatRemaining(rem)}`;
+              const label =
+                soldOut ? "Sold out" :
+                ended   ? "Drop ended" :
+                (total != null && left != null ? `${left}/${total} left${base ? " — " + base : ""}` : base);
+
+              const key =
+                soldOut ? "soldout" :
+                ended   ? "ended"   : "active";
+
+              const showBuy = !ended && !soldOut && !!p.priceUrl;
+              const buyHref = `/api/products/buy?productId=${encodeURIComponent(p.id)}${
+                slug ? `&slug=${encodeURIComponent(slug)}` : ""
+              }`;
 
               return (
-                <article
-                  key={p.id}
-                  className="relative rounded-2xl border border-neutral-800 overflow-hidden"
-                  aria-labelledby={`prod-${p.id}-title`}
-                >
+                <article key={p.id} className="relative rounded-2xl border border-neutral-800 overflow-hidden" aria-labelledby={`prod-${p.id}-title`}>
                   <div className="relative">
                     {p.imageUrl ? (
-                      <img
-                        src={p.imageUrl}
-                        alt={p.title || "Product image"}
-                        className="w-full aspect-[4/3] object-cover"
-                        loading="lazy"
-                      />
+                      <img src={p.imageUrl} alt={p.title || "Product image"} className="w-full aspect-[4/3] object-cover" loading="lazy" />
                     ) : (
                       <div className="w-full aspect-[4/3] bg-neutral-900" />
                     )}
                     <div className="absolute left-3 top-3">
-                      <span
-                        className={
-                          "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
-                          (badgeClass[st.key] || badgeClass.active)
-                        }
-                        aria-live="polite"
-                      >
-                        {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : (st.label || "Live")}
+                      <span className={`inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm ${
+                        key === "active" ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                        : key === "soldout" ? "bg-rose-500/20 border-rose-400/40 text-rose-200"
+                        : "bg-amber-500/20 border-amber-400/40 text-amber-200"
+                      }`} aria-live="polite">
+                        {label || "Live"}
                       </span>
                     </div>
                   </div>
@@ -321,33 +349,31 @@ export default function PublicSlugPage() {
                       {p.title || "Untitled"}
                     </h2>
 
-                    {st.label ? (
-                      <div
-                        className={
-                          "text-sm mb-3 " +
-                          (st.soldOut || st.ended ? "text-rose-300" : "text-emerald-300")
-                        }
-                      >
-                        {st.label}
-                      </div>
-                    ) : null}
-
                     {showBuy ? (
                       <a
                         href={buyHref}
                         className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         aria-label={`Buy ${p.title || "this product"}`}
+                        onClick={() => {
+                          try {
+                            navigator.sendBeacon(
+                              "/api/track",
+                              new Blob([JSON.stringify({
+                                type: "buy_click",
+                                productId: p.id,
+                                publicSlug: slug || null,
+                                ts: Date.now(),
+                                ref: typeof window !== "undefined" ? window.location.href : "",
+                              })], { type: "application/json" })
+                            );
+                          } catch {}
+                        }}
                       >
                         Buy <span className="text-xs opacity-70">→</span>
                       </a>
                     ) : (
-                      <div
-                        className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
-                        aria-disabled="true"
-                        role="button"
-                        tabIndex={-1}
-                      >
-                        {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : "Unavailable"}
+                      <div className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400" aria-disabled="true" role="button" tabIndex={-1}>
+                        {soldOut ? "Sold out" : ended ? "Drop ended" : "Unavailable"}
                       </div>
                     )}
                   </div>
@@ -359,9 +385,4 @@ export default function PublicSlugPage() {
       </div>
     </div>
   );
-}
-
-// We keep SSR trivial to avoid bundling server libs into the client build.
-export async function getServerSideProps() {
-  return { props: {} };
 }

@@ -56,13 +56,25 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  // fetch public profile + products via slug
+  // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
-    const r = await fetch(`/api/public?slug=${encodeURIComponent(slugVal)}`, { cache: "no-store" });
-    const j = await r.json();
-    if (!j?.ok) throw new Error(j?.error || "Failed to load");
+    const url = `/api/public?slug=${encodeURIComponent(slugVal)}`;
+    const r = await fetch(url, { cache: "no-store" });
+
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    if (!ct.includes("application/json")) {
+      // Avoid crashing if upstream returns an HTML error page
+      const text = await r.text().catch(() => "");
+      throw new Error(text ? "Upstream not JSON" : "Failed to load");
+    }
+
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j?.ok) {
+      throw new Error(j?.error || "Failed to load");
+    }
+
     setProfile(j.profile || null);
-    setProducts(Array.isArray(j.products) ? j.products.filter(p => !!p.published) : []);
+    setProducts(Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []);
   }
 
   // initial + periodic refresh
@@ -107,7 +119,6 @@ export default function PublicSlugPage() {
     try {
       const payload = {
         type: "page_view",
-        // keep editToken out; slug-only event
         ts: Date.now(),
         ref: typeof window !== "undefined" ? window.location.href : "",
         publicSlug: slug,
@@ -326,19 +337,33 @@ export default function PublicSlugPage() {
               }`;
 
               return (
-                <article key={p.id} className="relative rounded-2xl border border-neutral-800 overflow-hidden" aria-labelledby={`prod-${p.id}-title`}>
+                <article
+                  key={p.id}
+                  className="relative rounded-2xl border border-neutral-800 overflow-hidden"
+                  aria-labelledby={`prod-${p.id}-title`}
+                >
                   <div className="relative">
                     {p.imageUrl ? (
-                      <img src={p.imageUrl} alt={p.title || "Product image"} className="w-full aspect-[4/3] object-cover" loading="lazy" />
+                      <img
+                        src={p.imageUrl}
+                        alt={p.title || "Product image"}
+                        className="w-full aspect-[4/3] object-cover"
+                        loading="lazy"
+                      />
                     ) : (
                       <div className="w-full aspect-[4/3] bg-neutral-900" />
                     )}
                     <div className="absolute left-3 top-3">
-                      <span className={`inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm ${
-                        key === "active" ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
-                        : key === "soldout" ? "bg-rose-500/20 border-rose-400/40 text-rose-200"
-                        : "bg-amber-500/20 border-amber-400/40 text-amber-200"
-                      }`} aria-live="polite">
+                      <span
+                        className={`inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm ${
+                          key === "active"
+                            ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                            : key === "soldout"
+                            ? "bg-rose-500/20 border-rose-400/40 text-rose-200"
+                            : "bg-amber-500/20 border-amber-400/40 text-amber-200"
+                        }`}
+                        aria-live="polite"
+                      >
                         {label || "Live"}
                       </span>
                     </div>
@@ -358,13 +383,19 @@ export default function PublicSlugPage() {
                           try {
                             navigator.sendBeacon(
                               "/api/track",
-                              new Blob([JSON.stringify({
-                                type: "buy_click",
-                                productId: p.id,
-                                publicSlug: slug || null,
-                                ts: Date.now(),
-                                ref: typeof window !== "undefined" ? window.location.href : "",
-                              })], { type: "application/json" })
+                              new Blob(
+                                [
+                                  JSON.stringify({
+                                    type: "buy_click",
+                                    productId: p.id,
+                                    publicSlug: slug || null,
+                                    ts: Date.now(),
+                                    ref:
+                                      typeof window !== "undefined" ? window.location.href : "",
+                                  }),
+                                ],
+                                { type: "application/json" }
+                              )
                             );
                           } catch {}
                         }}
@@ -372,7 +403,12 @@ export default function PublicSlugPage() {
                         Buy <span className="text-xs opacity-70">→</span>
                       </a>
                     ) : (
-                      <div className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400" aria-disabled="true" role="button" tabIndex={-1}>
+                      <div
+                        className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
+                        aria-disabled="true"
+                        role="button"
+                        tabIndex={-1}
+                      >
                         {soldOut ? "Sold out" : ended ? "Drop ended" : "Unavailable"}
                       </div>
                     )}

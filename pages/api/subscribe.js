@@ -19,6 +19,7 @@ function noStore(res) {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Vercel-CDN-Cache-Control", "no-store");
+  res.setHeader("x-subscribe-version", "v2-slug"); // <-- deploy tag
 }
 
 // Simple but safe email validation
@@ -28,10 +29,20 @@ function isValidEmail(email) {
   if (!s || s.includes(" ")) return false;
   const at = s.indexOf("@");
   if (at <= 0) return false;
-  const dot = s.indexOf(".", at + 2); // ensure something between @ and .
+  const dot = s.indexOf(".", at + 2);
   if (dot <= at + 1) return false;
-  if (dot >= s.length - 1) return false; // needs chars after "."
+  if (dot >= s.length - 1) return false;
   return true;
+}
+
+function slugFromRef(ref) {
+  try {
+    const u = new URL(ref);
+    const parts = u.pathname.split("/").filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : "";
+  } catch {
+    return "";
+  }
 }
 
 export default async function handler(req, res) {
@@ -46,18 +57,15 @@ export default async function handler(req, res) {
     const body =
       req.body && typeof req.body === "object"
         ? req.body
-        : (() => {
-            try { return JSON.parse(req.body || "{}"); }
-            catch { return {}; }
-          })();
+        : (() => { try { return JSON.parse(req.body || "{}"); } catch { return {}; } })();
 
-    const editToken = String(body.editToken || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const ref = typeof body.ref === "string" ? body.ref : "";
 
-    if (!editToken) {
-      return res.status(400).json({ ok: false, error: "missing_editToken" });
-    }
+    // Accept editToken OR publicSlug (and infer slug from ref)
+    let editToken = String(body.editToken || "").trim();
+    let publicSlug = String(body.publicSlug || "").trim() || slugFromRef(ref);
+
     if (!isValidEmail(email)) {
       return res.status(400).json({ ok: false, error: "invalid_email" });
     }
@@ -68,16 +76,24 @@ export default async function handler(req, res) {
     const Subs = db.collection("subscribers");
     const Events = db.collection("events");
 
-    // Confirm profile and its settings
-    const profile = await Profiles.findOne(
-      { editToken },
-      { projection: { _id: 0, collectEmail: 1, klaviyoListId: 1 } }
-    );
+    // Resolve profile by editToken or publicSlug
+    let profile = null;
+    if (editToken) {
+      profile = await Profiles.findOne(
+        { editToken },
+        { projection: { _id: 0, editToken: 1, collectEmail: 1, klaviyoListId: 1 } }
+      );
+    } else if (publicSlug) {
+      profile = await Profiles.findOne(
+        { publicSlug },
+        { projection: { _id: 0, editToken: 1, collectEmail: 1, klaviyoListId: 1 } }
+      );
+      if (profile?.editToken) editToken = profile.editToken; // normalize to editToken downstream
+    }
+
     if (!profile) {
       return res.status(404).json({ ok: false, error: "profile_not_found" });
     }
-
-    // ✅ Require collectEmail to be enabled
     if (!profile.collectEmail) {
       return res.status(403).json({ ok: false, error: "email_collection_disabled" });
     }
@@ -104,13 +120,11 @@ export default async function handler(req, res) {
       });
     } catch {}
 
-    // Optional Klaviyo subscribe (best-effort; never blocks success)
+    // Optional Klaviyo (best-effort)
     if (profile.klaviyoListId && KLAVIYO_API_KEY) {
       try {
         await fetch(
-          `https://a.klaviyo.com/api/v2/list/${encodeURIComponent(
-            profile.klaviyoListId
-          )}/subscribe?api_key=${encodeURIComponent(KLAVIYO_API_KEY)}`,
+          `https://a.klaviyo.com/api/v2/list/${encodeURIComponent(profile.klaviyoListId)}/subscribe?api_key=${encodeURIComponent(KLAVIYO_API_KEY)}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -120,10 +134,7 @@ export default async function handler(req, res) {
       } catch {}
     }
 
-    return res.status(200).json({
-      ok: true,
-      upserted: !!upRes?.upsertedId,
-    });
+    return res.status(200).json({ ok: true, upserted: !!upRes?.upsertedId });
   } catch (err) {
     console.error("subscribe ERROR", err?.message);
     return res.status(500).json({ ok: false, error: "server_error" });

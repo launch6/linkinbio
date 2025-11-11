@@ -64,25 +64,24 @@ export default function PublicPage() {
     setReason(r);
   }, []);
 
-  // fetch profile + products (with no-store + cache-buster)
-  async function fetchAll(token) {
-    const bust = `_t=${Date.now()}`;
-    const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}&${bust}`, {
-      cache: "no-store",
-    });
-    const pj = await pr.json();
-    if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
+  // fetch profile + products (no-store; APIs already send no-store headers)
+async function fetchAll(token) {
+  const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}`, {
+    cache: "no-store",
+  });
+  const pj = await pr.json();
+  if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
 
-    const r = await fetch(`/api/products?editToken=${encodeURIComponent(token)}&${bust}`, {
-      cache: "no-store",
-    });
-    const j = await r.json();
-    if (!j?.ok) throw new Error(j?.error || "Failed to load products");
+  const r = await fetch(`/api/products?editToken=${encodeURIComponent(token)}`, {
+    cache: "no-store",
+  });
+  const j = await r.json();
+  if (!j?.ok) throw new Error(j?.error || "Failed to load products");
 
-    const onlyPublished = (j.products || []).filter((p) => !!p.published);
-    setProfile(pj.profile);
-    setProducts(onlyPublished);
-  }
+  const onlyPublished = (j.products || []).filter((p) => !!p.published);
+  setProfile(pj.profile);
+  setProducts(onlyPublished);
+}
 
   // initial fetch + periodic refresh + on-focus refresh
   useEffect(() => {

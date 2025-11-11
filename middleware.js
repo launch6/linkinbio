@@ -1,56 +1,34 @@
 // middleware.js
 import { NextResponse } from "next/server";
 
-/**
- * Allow-list middleware:
- * - Always allow API routes
- * - Always allow webhook + health endpoints
- * - Allow pricing and our set-token helper
- * - Everything else continues normally
- */
 export function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // 1) Always allow API
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.next();
-  }
-
-  // 2) Explicit allow-list (add more paths here as needed)
-  const allowed = new Set([
-    "/",
-    "/pricing",
-    "/set-token",
-    "/dashboard", // dashboard root
-  ]);
-
-  // allow /dashboard/<editToken>
-  if (pathname.startsWith("/dashboard")) {
-    return NextResponse.next();
-  }
-
-  // allow explicit paths
-  if (allowed.has(pathname)) {
-    return NextResponse.next();
-  }
-
-  // 3) Webhook/health (in case you referenced without /api/)
+  // 1) Skip assets & static files (let Vercel cache these)
   if (
-    pathname === "/api/stripe-webhook" ||
-    pathname === "/api/klaviyo-capture" ||
-    pathname === "/api/ping"
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/static") ||
+    pathname === "/favicon.ico" ||
+    /\.(?:js|css|png|jpg|jpeg|gif|webp|svg|ico|txt|map)$/.test(pathname)
   ) {
     return NextResponse.next();
   }
 
-  // Default: continue (don’t rewrite or block)
-  return NextResponse.next();
+  // 2) Always pass API routes through (API handlers set their own headers)
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // 3) For all other HTML routes (/, /pricing, /public, /editor, /dashboard, /[slug], etc.)
+  //    force no-store at both browser and Vercel CDN layers
+  const res = NextResponse.next();
+  res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.headers.set("Pragma", "no-cache");
+  res.headers.set("Vercel-CDN-Cache-Control", "no-store");
+  return res;
 }
 
-/**
- * Match all routes so we can allow-list what we need.
- * (You can narrow this if you prefer.)
- */
+// Match everything; we filter inside middleware
 export const config = {
   matcher: ["/:path*"],
 };

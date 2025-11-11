@@ -53,6 +53,9 @@ export default function PublicSlugPage() {
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
+  // post-checkout banner
+  const [notice, setNotice] = useState(null); // { type:'success'|'info'|'error', text:string } | null
+
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
@@ -127,6 +130,20 @@ export default function PublicSlugPage() {
       navigator.sendBeacon("/api/track", blob);
     } catch {}
   }, [slug]);
+
+  // read ?success=1 / ?canceled=1 and force-refresh on success
+  useEffect(() => {
+    if (!router.isReady || !slug) return;
+    const q = router.query || {};
+    if (q.success === "1" || q.success === 1) {
+      setNotice({ type: "success", text: "Thanks for your purchase! 🎉" });
+      fetchAll(slug).catch(() => {});
+    } else if (q.canceled === "1" || q.canceled === 1) {
+      setNotice({ type: "info", text: "Checkout canceled." });
+    } else {
+      setNotice(null);
+    }
+  }, [router.isReady, router.query, slug]);
 
   // countdown ticker
   useEffect(() => {
@@ -260,6 +277,24 @@ export default function PublicSlugPage() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* Success / Cancel banner */}
+        {notice ? (
+          <div
+            className={
+              "mb-6 rounded-xl border p-4 " +
+              (notice.type === "success"
+                ? "border-emerald-500/40 bg-emerald-900/20 text-emerald-200"
+                : notice.type === "error"
+                ? "border-rose-500/40 bg-rose-900/20 text-rose-200"
+                : "border-amber-500/40 bg-amber-900/20 text-amber-200")
+            }
+            role="status"
+            aria-live="polite"
+          >
+            {notice.text}
+          </div>
+        ) : null}
+
         <header className="mb-8">
           <h1 className="text-4xl font-bold">{title}</h1>
           {bio ? <p className="text-neutral-400 mt-2">{bio}</p> : null}
@@ -422,6 +457,7 @@ export default function PublicSlugPage() {
     </div>
   );
 }
+
 export async function getServerSideProps() {
   // Force SSR so any slug resolves at request time.
   return { props: {} };

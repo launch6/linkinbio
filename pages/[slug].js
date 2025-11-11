@@ -422,3 +422,7 @@ export default function PublicSlugPage() {
     </div>
   );
 }
+export async function getServerSideProps() {
+  // Force SSR so any slug resolves at request time.
+  return { props: {} };
+}

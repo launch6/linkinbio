@@ -41,6 +41,7 @@ export default function EditorPage() {
   const [bio, setBio] = useState("");
   const [publicSlug, setPublicSlug] = useState("");
   const [socialInstagram, setSocialInstagram] = useState("");
+  const [socialFacebook, setSocialFacebook] = useState(""); // NEW
   const [socialTiktok, setSocialTiktok] = useState("");
   const [socialYoutube, setSocialYoutube] = useState("");
   const [socialX, setSocialX] = useState("");
@@ -90,25 +91,19 @@ export default function EditorPage() {
         setLoading(true);
         // Profile
         const pr = await fetch(
-          `/api/profile/get?editToken=${encodeURIComponent(
-            editToken
-          )}`,
+          `/api/profile/get?editToken=${encodeURIComponent(editToken)}`,
           { cache: "no-store" }
         );
         const pj = await pr.json();
-        if (!pj?.ok)
-          throw new Error(pj?.error || "Failed to load profile");
+        if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
 
         // Products
         const r = await fetch(
-          `/api/products?editToken=${encodeURIComponent(
-            editToken
-          )}`,
+          `/api/products?editToken=${encodeURIComponent(editToken)}`,
           { cache: "no-store" }
         );
         const j = await r.json();
-        if (!j?.ok)
-          throw new Error(j?.error || "Failed to load products");
+        if (!j?.ok) throw new Error(j?.error || "Failed to load products");
 
         if (!alive) return;
 
@@ -116,9 +111,7 @@ export default function EditorPage() {
         setProfile(prof);
 
         // profile fields
-        setDisplayName(
-          prof.displayName || prof.name || "New Creator"
-        );
+        setDisplayName(prof.displayName || prof.name || "New Creator");
         setBio(prof.bio || "");
         setPublicSlug(prof.publicSlug || prof.slug || "");
         setCollectEmail(!!prof.collectEmail);
@@ -126,6 +119,7 @@ export default function EditorPage() {
 
         const social = prof.social || {};
         setSocialInstagram(social.instagram || "");
+        setSocialFacebook(social.facebook || ""); // NEW
         setSocialTiktok(social.tiktok || "");
         setSocialYoutube(social.youtube || "");
         setSocialX(social.x || "");
@@ -135,9 +129,7 @@ export default function EditorPage() {
         setLinks(
           Array.isArray(prof.links)
             ? prof.links.map((l) => ({
-                id:
-                  (l && l.id) ||
-                  `l_${Math.random().toString(36).slice(2, 9)}`,
+                id: (l && l.id) || `l_${Math.random().toString(36).slice(2, 9)}`,
                 label: String(l?.label || "").slice(0, 200),
                 url: String(l?.url || "").slice(0, 2000),
               }))
@@ -149,17 +141,10 @@ export default function EditorPage() {
           (Array.isArray(j.products) ? j.products : []).map((p) => ({
             ...p,
             dropEndsAt: p.dropEndsAt ? isoToLocal(p.dropEndsAt) : "",
-            unitsTotal:
-              p.unitsTotal === null || p.unitsTotal === undefined
-                ? ""
-                : p.unitsTotal,
-            unitsLeft:
-              p.unitsLeft === null || p.unitsLeft === undefined
-                ? ""
-                : p.unitsLeft,
+            unitsTotal: p.unitsTotal === null || p.unitsTotal === undefined ? "" : p.unitsTotal,
+            unitsLeft: p.unitsLeft === null || p.unitsLeft === undefined ? "" : p.unitsLeft,
             showTimer: !!p.showTimer,
-            showInventory:
-              "showInventory" in p ? !!p.showInventory : true,
+            showInventory: "showInventory" in p ? !!p.showInventory : true,
           }))
         );
         setLoadError("");
@@ -179,8 +164,7 @@ export default function EditorPage() {
     () => normalizePlan(profile?.plan || "free"),
     [profile]
   );
-  const maxAllowed =
-    MAX_PRODUCTS_BY_PLAN[planLabel] ?? MAX_PRODUCTS_BY_PLAN.free;
+  const maxAllowed = MAX_PRODUCTS_BY_PLAN[planLabel] ?? MAX_PRODUCTS_BY_PLAN.free;
   const isFree = planLabel === "free";
 
   function onProdChange(idx, key, val) {
@@ -194,10 +178,9 @@ export default function EditorPage() {
   function addProduct() {
     const currentCount = products.length;
     if (currentCount >= maxAllowed) {
+      // we keep this guard as a safety net, but now we also disable the button in UI
       setSaveError(
-        `Your plan (${planLabel}) allows up to ${maxAllowed} product${
-          maxAllowed === 1 ? "" : "s"
-        }.`
+        `Your plan (${planLabel}) allows up to ${maxAllowed} product${maxAllowed === 1 ? "" : "s"}.`
       );
       setSaveMsg("");
       return;
@@ -233,9 +216,7 @@ export default function EditorPage() {
 
       if (products.length > maxAllowed) {
         setSaveError(
-          `Your plan (${planLabel}) allows up to ${maxAllowed} product${
-            maxAllowed === 1 ? "" : "s"
-          }.`
+          `Your plan (${planLabel}) allows up to ${maxAllowed} product${maxAllowed === 1 ? "" : "s"}.`
         );
         return;
       }
@@ -269,8 +250,7 @@ export default function EditorPage() {
 
       if (!resp.ok || !json?.ok) {
         const message =
-          (json && (json.message || json.error)) ||
-          `Save failed (${resp.status})`;
+          (json && (json.message || json.error)) || `Save failed (${resp.status})`;
         setSaveError(message);
         return;
       }
@@ -279,9 +259,7 @@ export default function EditorPage() {
       setSaveError("");
 
       const r2 = await fetch(
-        `/api/products?editToken=${encodeURIComponent(
-          editToken
-        )}`,
+        `/api/products?editToken=${encodeURIComponent(editToken)}`,
         { cache: "no-store" }
       );
       const j2 = await r2.json();
@@ -290,17 +268,10 @@ export default function EditorPage() {
           j2.products.map((p) => ({
             ...p,
             dropEndsAt: p.dropEndsAt ? isoToLocal(p.dropEndsAt) : "",
-            unitsTotal:
-              p.unitsTotal === null || p.unitsTotal === undefined
-                ? ""
-                : p.unitsTotal,
-            unitsLeft:
-              p.unitsLeft === null || p.unitsLeft === undefined
-                ? ""
-                : p.unitsLeft,
+            unitsTotal: p.unitsTotal === null || p.unitsTotal === undefined ? "" : p.unitsTotal,
+            unitsLeft: p.unitsLeft === null || p.unitsLeft === undefined ? "" : p.unitsLeft,
             showTimer: !!p.showTimer,
-            showInventory:
-              "showInventory" in p ? !!p.showInventory : true,
+            showInventory: "showInventory" in p ? !!p.showInventory : true,
           }))
         );
       }
@@ -325,6 +296,7 @@ export default function EditorPage() {
         publicSlug,
         social: {
           instagram: socialInstagram,
+          facebook: socialFacebook, // NEW
           tiktok: socialTiktok,
           youtube: socialYoutube,
           x: socialX,
@@ -365,6 +337,7 @@ export default function EditorPage() {
 
       const socialResp = json.social || {};
       setSocialInstagram(socialResp.instagram || "");
+      setSocialFacebook(socialResp.facebook || "");
       setSocialTiktok(socialResp.tiktok || "");
       setSocialYoutube(socialResp.youtube || "");
       setSocialX(socialResp.x || "");
@@ -442,8 +415,7 @@ export default function EditorPage() {
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json?.ok) {
         const msg =
-          (json && (json.error || json.message)) ||
-          `Save failed (${resp.status})`;
+          (json && (json.error || json.message)) || `Save failed (${resp.status})`;
         setSaveLinksError(msg);
         return;
       }
@@ -486,9 +458,7 @@ export default function EditorPage() {
     );
   }
 
-  const publicUrlPreview = publicSlug
-    ? `/${publicSlug}`
-    : "/(slug-not-set)";
+  const publicUrlPreview = publicSlug ? `/${publicSlug}` : "/(slug-not-set)";
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -498,13 +468,10 @@ export default function EditorPage() {
           <div>
             <h1 className="text-3xl font-bold">Launch6 — Editor</h1>
             <div className="text-sm opacity-70">
-              Plan: <span className="uppercase">{planLabel}</span> ·
-              Limit: {maxAllowed}
+              Plan: <span className="uppercase">{planLabel}</span> · Limit: {maxAllowed}
             </div>
           </div>
-          <code className="text-xs opacity-70">
-            editToken: {editToken}
-          </code>
+          <code className="text-xs opacity-70">editToken: {editToken}</code>
         </div>
 
         {/* Inline save error / success for products */}
@@ -523,28 +490,20 @@ export default function EditorPage() {
         <div className="grid md:grid-cols-3 gap-6">
           {/* Profile editor */}
           <div className="md:col-span-2 rounded-2xl border border-neutral-800 p-6 space-y-4">
-            <div className="text-xl font-semibold mb-1">
-              Profile
-            </div>
+            <div className="text-xl font-semibold mb-1">Profile</div>
 
             <div>
-              <div className="text-xs opacity-70 mb-1">
-                Display name
-              </div>
+              <div className="text-xs opacity-70 mb-1">Display name</div>
               <input
                 className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                 value={displayName}
-                onChange={(e) =>
-                  setDisplayName(e.target.value)
-                }
+                onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your name or studio"
               />
             </div>
 
             <div>
-              <div className="text-xs opacity-70 mb-1">
-                Bio / description
-              </div>
+              <div className="text-xs opacity-70 mb-1">Bio / description</div>
               <textarea
                 className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none text-sm min-h-[80px]"
                 value={bio}
@@ -554,9 +513,7 @@ export default function EditorPage() {
             </div>
 
             <div>
-              <div className="text-xs opacity-70 mb-1">
-                Public URL slug
-              </div>
+              <div className="text-xs opacity-70 mb-1">Public URL slug</div>
               <input
                 className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none text-sm"
                 value={publicSlug}
@@ -564,63 +521,53 @@ export default function EditorPage() {
                 placeholder="e.g., backyardsofkeywest"
               />
               <div className="text-xs opacity-60 mt-1">
-                This becomes <code>{publicUrlPreview}</code> on your
-                domain (e.g.{" "}
-                <span className="opacity-80">
-                  l6.io{publicUrlPreview}
-                </span>
-                ). Lowercase letters, numbers and dashes work best.
+                This becomes <code>{publicUrlPreview}</code> on your domain (e.g.{" "}
+                <span className="opacity-80">l6.io{publicUrlPreview}</span>). Lowercase letters,
+                numbers and dashes work best.
               </div>
             </div>
 
             <div className="pt-2 border-t border-neutral-800 mt-2">
-              <div className="text-sm font-semibold mb-2">
-                Social links
-              </div>
+              <div className="text-sm font-semibold mb-2">Social links</div>
               <div className="grid md:grid-cols-2 gap-3 text-sm">
                 <div>
-                  <div className="text-xs opacity-70 mb-1">
-                    Instagram
-                  </div>
+                  <div className="text-xs opacity-70 mb-1">Instagram</div>
                   <input
                     className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                     value={socialInstagram}
-                    onChange={(e) =>
-                      setSocialInstagram(e.target.value)
-                    }
+                    onChange={(e) => setSocialInstagram(e.target.value)}
                     placeholder="https://instagram.com/…"
                   />
                 </div>
                 <div>
-                  <div className="text-xs opacity-70 mb-1">
-                    TikTok
-                  </div>
+                  <div className="text-xs opacity-70 mb-1">Facebook</div>
+                  <input
+                    className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
+                    value={socialFacebook}
+                    onChange={(e) => setSocialFacebook(e.target.value)}
+                    placeholder="https://facebook.com/…"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs opacity-70 mb-1">TikTok</div>
                   <input
                     className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                     value={socialTiktok}
-                    onChange={(e) =>
-                      setSocialTiktok(e.target.value)
-                    }
+                    onChange={(e) => setSocialTiktok(e.target.value)}
                     placeholder="https://www.tiktok.com/@…"
                   />
                 </div>
                 <div>
-                  <div className="text-xs opacity-70 mb-1">
-                    YouTube
-                  </div>
+                  <div className="text-xs opacity-70 mb-1">YouTube</div>
                   <input
                     className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                     value={socialYoutube}
-                    onChange={(e) =>
-                      setSocialYoutube(e.target.value)
-                    }
+                    onChange={(e) => setSocialYoutube(e.target.value)}
                     placeholder="https://youtube.com/@…"
                   />
                 </div>
                 <div>
-                  <div className="text-xs opacity-70 mb-1">
-                    X / Twitter
-                  </div>
+                  <div className="text-xs opacity-70 mb-1">X / Twitter</div>
                   <input
                     className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                     value={socialX}
@@ -629,15 +576,11 @@ export default function EditorPage() {
                   />
                 </div>
                 <div>
-                  <div className="text-xs opacity-70 mb-1">
-                    Website
-                  </div>
+                  <div className="text-xs opacity-70 mb-1">Website</div>
                   <input
                     className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                     value={socialWebsite}
-                    onChange={(e) =>
-                      setSocialWebsite(e.target.value)
-                    }
+                    onChange={(e) => setSocialWebsite(e.target.value)}
                     placeholder="https://…"
                   />
                 </div>
@@ -653,17 +596,14 @@ export default function EditorPage() {
                 {savingProf ? "Saving…" : "Save profile"}
               </button>
               <div className="text-xs opacity-60 mt-1">
-                Saves name, bio, slug, social links and (if on a paid
-                plan) email capture settings.
+                Saves name, bio, slug, social links and (if on a paid plan) email capture settings.
               </div>
             </div>
           </div>
 
           {/* Email capture settings / upsell */}
           <div className="rounded-2xl border border-neutral-800 p-6">
-            <div className="text-xl font-semibold mb-2">
-              Email Capture
-            </div>
+            <div className="text-xl font-semibold mb-2">Email Capture</div>
 
             {saveProfError ? (
               <div className="mb-3 rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
@@ -679,9 +619,8 @@ export default function EditorPage() {
             {isFree ? (
               <div className="text-sm text-neutral-300">
                 Email capture and Klaviyo list sync are available on{" "}
-                <span className="font-semibold">Starter</span> and
-                above. Upgrade to start building your list from your
-                drops.
+                <span className="font-semibold">Starter</span> and above. Upgrade to start building
+                your list from your drops.
               </div>
             ) : (
               <>
@@ -690,22 +629,16 @@ export default function EditorPage() {
                     type="checkbox"
                     className="align-middle"
                     checked={collectEmail}
-                    onChange={(e) =>
-                      setCollectEmail(e.target.checked)
-                    }
+                    onChange={(e) => setCollectEmail(e.target.checked)}
                   />
                   Enable email capture on public page
                 </label>
 
-                <div className="text-xs opacity-70 mb-1">
-                  Klaviyo List ID
-                </div>
+                <div className="text-xs opacity-70 mb-1">Klaviyo List ID</div>
                 <input
                   className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none mb-3"
                   value={klaviyoListId}
-                  onChange={(e) =>
-                    setKlaviyoListId(e.target.value)
-                  }
+                  onChange={(e) => setKlaviyoListId(e.target.value)}
                   placeholder="e.g., Vd9H2a"
                 />
 
@@ -754,9 +687,7 @@ export default function EditorPage() {
           ) : null}
 
           {links.length === 0 ? (
-            <div className="opacity-70 text-sm">
-              No links yet. Click “Add link”.
-            </div>
+            <div className="opacity-70 text-sm">No links yet. Click “Add link”.</div>
           ) : (
             <div className="space-y-4">
               {links.map((l, idx) => (
@@ -765,26 +696,18 @@ export default function EditorPage() {
                   className="grid md:grid-cols-12 gap-3 items-center"
                 >
                   <div className="md:col-span-4">
-                    <div className="text-xs opacity-70 mb-1">
-                      Label
-                    </div>
+                    <div className="text-xs opacity-70 mb-1">Label</div>
                     <input
                       className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none text-sm"
                       value={l.label || ""}
                       onChange={(e) =>
-                        onLinkChange(
-                          idx,
-                          "label",
-                          e.target.value
-                        )
+                        onLinkChange(idx, "label", e.target.value)
                       }
                       placeholder="e.g., Shop, Podcast, Gallery show"
                     />
                   </div>
                   <div className="md:col-span-7">
-                    <div className="text-xs opacity-70 mb-1">
-                      URL
-                    </div>
+                    <div className="text-xs opacity-70 mb-1">URL</div>
                     <input
                       className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none text-sm"
                       value={l.url || ""}
@@ -811,11 +734,17 @@ export default function EditorPage() {
         {/* Products Editor */}
         <div className="rounded-2xl border border-neutral-800 p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-xl font-semibold">Products</div>
+            <div>
+              <div className="text-xl font-semibold">Products</div>
+              <div className="text-xs opacity-60">
+                Your plan allows up to {maxAllowed} product{maxAllowed === 1 ? "" : "s"}.
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={addProduct}
-                className="rounded-lg border border-neutral-700 px-3 py-2 hover:bg-neutral-800"
+                disabled={products.length >= maxAllowed}
+                className="rounded-lg border border-neutral-700 px-3 py-2 hover:bg-neutral-800 disabled:opacity-40"
               >
                 + Add product
               </button>
@@ -852,11 +781,7 @@ export default function EditorPage() {
                             className="mr-2 align-middle"
                             checked={!!p.published}
                             onChange={(e) =>
-                              onProdChange(
-                                idx,
-                                "published",
-                                e.target.checked
-                              )
+                              onProdChange(idx, "published", e.target.checked)
                             }
                           />
                           Published
@@ -873,18 +798,12 @@ export default function EditorPage() {
                     <div className="grid md:grid-cols-2 gap-3">
                       <div className="space-y-3">
                         <div>
-                          <div className="text-xs opacity-70 mb-1">
-                            Title
-                          </div>
+                          <div className="text-xs opacity-70 mb-1">Title</div>
                           <input
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.title || ""}
                             onChange={(e) =>
-                              onProdChange(
-                                idx,
-                                "title",
-                                e.target.value
-                              )
+                              onProdChange(idx, "title", e.target.value)
                             }
                             placeholder="e.g., Sunset Study — 12x16 Print"
                           />
@@ -898,36 +817,26 @@ export default function EditorPage() {
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.priceUrl || ""}
                             onChange={(e) =>
-                              onProdChange(
-                                idx,
-                                "priceUrl",
-                                e.target.value
-                              )
+                              onProdChange(idx, "priceUrl", e.target.value)
                             }
                             placeholder="https://buy.stripe.com/..."
                           />
                         </div>
 
                         <div>
-                          <div className="text-xs opacity-70 mb-1">
-                            Image URL
-                          </div>
+                          <div className="text-xs opacity-70 mb-1">Image URL</div>
                           <input
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.imageUrl || ""}
                             onChange={(e) =>
-                              onProdChange(
-                                idx,
-                                "imageUrl",
-                                e.target.value
-                              )
+                              onProdChange(idx, "imageUrl", e.target.value)
                             }
                             placeholder="https://…/image.jpg"
                           />
                           <div className="text-xs opacity-60 mt-1">
-                            Paste a direct HTTPS image link (ideally
-                            ~1200×900px, under ~2&nbsp;MB). Upload from
-                            your computer is coming soon.
+                            Paste a direct HTTPS image link (ideally ~1200×900px,{" "}
+                            <strong>max ~2&nbsp;MB file size</strong>). Upload from your computer is
+                            coming soon.
                           </div>
                         </div>
                       </div>
@@ -942,16 +851,12 @@ export default function EditorPage() {
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.dropEndsAt || ""}
                             onChange={(e) =>
-                              onProdChange(
-                                idx,
-                                "dropEndsAt",
-                                e.target.value
-                              )
+                              onProdChange(idx, "dropEndsAt", e.target.value)
                             }
                           />
                           <div className="text-xs opacity-60 mt-1">
-                            If set, the public page can show a
-                            countdown and hide “Buy” after expiry.
+                            If set, the public page can show a countdown and hide “Buy” after
+                            expiry.
                           </div>
                         </div>
 
@@ -966,11 +871,7 @@ export default function EditorPage() {
                               className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                               value={p.unitsTotal ?? ""}
                               onChange={(e) =>
-                                onProdChange(
-                                  idx,
-                                  "unitsTotal",
-                                  e.target.value
-                                )
+                                onProdChange(idx, "unitsTotal", e.target.value)
                               }
                               placeholder="e.g., 10"
                             />
@@ -985,11 +886,7 @@ export default function EditorPage() {
                               className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                               value={p.unitsLeft ?? ""}
                               onChange={(e) =>
-                                onProdChange(
-                                  idx,
-                                  "unitsLeft",
-                                  e.target.value
-                                )
+                                onProdChange(idx, "unitsLeft", e.target.value)
                               }
                               placeholder="e.g., 5"
                             />
@@ -997,8 +894,8 @@ export default function EditorPage() {
                         </div>
 
                         <div className="text-xs opacity-70">
-                          If <b>Units left</b> hits 0, the public page
-                          shows “Sold out” and hides “Buy”.
+                          If <b>Units left</b> hits 0, the public page shows “Sold out” and hides
+                          “Buy”.
                         </div>
 
                         {/* Timer + inventory toggles */}
@@ -1009,11 +906,7 @@ export default function EditorPage() {
                               className="align-middle"
                               checked={!!p.showTimer}
                               onChange={(e) =>
-                                onProdChange(
-                                  idx,
-                                  "showTimer",
-                                  e.target.checked
-                                )
+                                onProdChange(idx, "showTimer", e.target.checked)
                               }
                             />
                             Show countdown timer on public page
@@ -1024,18 +917,13 @@ export default function EditorPage() {
                               className="align-middle"
                               checked={!!p.showInventory}
                               onChange={(e) =>
-                                onProdChange(
-                                  idx,
-                                  "showInventory",
-                                  e.target.checked
-                                )
+                                onProdChange(idx, "showInventory", e.target.checked)
                               }
                             />
                             Show “X/Y left” on public page
                           </label>
                           <div className="text-xs opacity-60">
-                            Combine timer + “X/Y left” for
-                            Instagram/TikTok-style drops.
+                            Combine timer + “X/Y left” for Instagram/TikTok-style drops.
                           </div>
                         </div>
                       </div>

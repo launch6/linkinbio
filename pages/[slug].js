@@ -283,6 +283,7 @@ export default function PublicSlugPage() {
   const social = profile?.social || {};
   const hasSocialRow =
     social.instagram ||
+    social.facebook || // NEW
     social.tiktok ||
     social.youtube ||
     social.x ||
@@ -378,6 +379,16 @@ export default function PublicSlugPage() {
                     className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
                   >
                     IG
+                  </a>
+                )}
+                {social.facebook && (
+                  <a
+                    href={social.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                  >
+                    FB
                   </a>
                 )}
                 {social.tiktok && (

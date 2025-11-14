@@ -45,7 +45,8 @@ function cleanLinks(arr) {
 
 function cleanSocial(raw) {
   if (!raw || typeof raw !== "object") return null;
-  const keys = ["instagram", "tiktok", "youtube", "x", "website"];
+  // 👇 added "facebook" here
+  const keys = ["instagram", "facebook", "tiktok", "youtube", "x", "website"];
   const out = {};
   for (const k of keys) {
     const v = raw[k];
@@ -63,7 +64,7 @@ function cleanSocial(raw) {
 // Body can include:
 // - editToken (required)
 // - displayName, bio, publicSlug
-// - social: { instagram, tiktok, youtube, x, website }
+// - social: { instagram, facebook, tiktok, youtube, x, website }
 // - collectEmail / klaviyoListId  (plan-gated; Free forces false/null)
 // - links: [{ id?, label, url }]  (allowed for all plans)
 export default async function handler(req, res) {

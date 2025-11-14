@@ -127,6 +127,7 @@ export default function EditorPage() {
   );
   const maxAllowed =
     MAX_PRODUCTS_BY_PLAN[planLabel] ?? MAX_PRODUCTS_BY_PLAN.free;
+  const isAtProductLimit = products.length >= maxAllowed;
 
   function onProdChange(idx, key, val) {
     setProducts((prev) => {
@@ -399,12 +400,15 @@ export default function EditorPage() {
 
         {/* Products Editor */}
         <div className="rounded-2xl border border-neutral-800 p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-2">
             <div className="text-xl font-semibold">Products</div>
             <div className="flex items-center gap-2">
               <button
                 onClick={addProduct}
-                className="rounded-lg border border-neutral-700 px-3 py-2 hover:bg-neutral-800"
+                disabled={isAtProductLimit}
+                className={
+                  "rounded-lg border border-neutral-700 px-3 py-2 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                }
               >
                 + Add product
               </button>
@@ -417,6 +421,15 @@ export default function EditorPage() {
               </button>
             </div>
           </div>
+
+          {isAtProductLimit ? (
+            <div className="mb-4 text-xs text-rose-300">
+              You’ve reached your <span className="uppercase">{planLabel}</span>{" "}
+              plan limit of {maxAllowed} product
+              {maxAllowed === 1 ? "" : "s"}. Upgrade on the pricing page to add
+              more drops and unlock additional capacity.
+            </div>
+          ) : null}
 
           {products.length === 0 ? (
             <div className="opacity-70 text-sm">

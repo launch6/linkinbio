@@ -112,6 +112,7 @@ export default async function handler(req, res) {
 
     return send(res, 200, {
       ok: true,
+      version: "public-v2",
       profile: {
         displayName: doc.displayName || doc.name || "",
         bio: doc.bio || doc.description || "",

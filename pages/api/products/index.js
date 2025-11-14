@@ -1,10 +1,7 @@
 // pages/api/products/index.js
 import { MongoClient } from "mongodb";
 
-const {
-  MONGODB_URI,
-  MONGODB_DB = "linkinbio",
-} = process.env;
+const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
 
 // --- DB bootstrap with global cache ---
 let _client = global._launch6MongoClient;
@@ -47,13 +44,20 @@ function toIsoOrEmpty(v) {
   return Number.isFinite(t) ? new Date(t).toISOString() : "";
 }
 
-// Enforce plan-based product limits (kept)
-function maxProductsForPlan(plan) {
-  switch ((plan || "free").toLowerCase()) {
-    case "starter": return 1;
-    case "pro": return 10;
-    case "business": return 100;
-    default: return 1; // free
+// Enforce plan-based product limits (aligned with frontend)
+function maxProductsForPlan(planRaw) {
+  const plan = String(planRaw || "free").toLowerCase();
+  if (plan === "starterplus" || plan === "starter+") return 5;
+
+  switch (plan) {
+    case "starter":
+      return 5;
+    case "pro":
+      return 15;
+    case "business":
+      return 30;
+    default:
+      return 1; // free / unknown
   }
 }
 
@@ -68,8 +72,11 @@ export default async function handler(req, res) {
       return res.status(405).end("Method Not Allowed");
     }
 
-    const editToken = String(req.query.editToken || req.body?.editToken || "").trim();
-    if (!editToken) return send(res, 400, { ok: false, error: "Missing editToken" });
+    const editToken = String(
+      req.query.editToken || req.body?.editToken || ""
+    ).trim();
+    if (!editToken)
+      return send(res, 400, { ok: false, error: "Missing editToken" });
 
     const client = await getClient();
     const db = client.db(MONGODB_DB);
@@ -81,33 +88,45 @@ export default async function handler(req, res) {
     );
 
     if (method === "GET") {
-      const products = Array.isArray(profile?.products) ? profile.products : [];
+      const products = Array.isArray(profile?.products)
+        ? profile.products
+        : [];
       return send(res, 200, { ok: true, products });
     }
 
     // POST — save array of products
-    const body = req.body && typeof req.body === "object" ? req.body : (() => {
-      try { return JSON.parse(req.body || "{}"); } catch { return {}; }
-    })();
+    const body =
+      req.body && typeof req.body === "object"
+        ? req.body
+        : (() => {
+            try {
+              return JSON.parse(req.body || "{}");
+            } catch {
+              return {};
+            }
+          })();
 
     const arr = Array.isArray(body.products) ? body.products : [];
+
     // sanitize each product + include new flags
     const cleaned = arr.map((p) => {
-      const id = String(p?.id || "").trim() || `p_${Math.random().toString(36).slice(2, 10)}`;
+      const id =
+        String(p?.id || "").trim() ||
+        `p_${Math.random().toString(36).slice(2, 10)}`;
       const title = String(p?.title || "").trim();
       const priceUrl = String(p?.priceUrl || "").trim();
       const imageUrl = String(p?.imageUrl || "").trim();
       const dropEndsAt = toIsoOrEmpty(p?.dropEndsAt || "");
       const unitsTotal = toNonNegIntOrNull(p?.unitsTotal);
-      const unitsLeft = toNonNegIntOrNull(p?.unitsLeft);
+      const unitsLeftRaw = toNonNegIntOrNull(p?.unitsLeft);
       const published = !!p?.published;
 
-      // NEW: opt-in flags
+      // NEW: opt-in flags (timer off by default, inventory ON by default)
       const showTimer = toBool(p?.showTimer, false);
-      const showInventory = toBool(p?.showInventory, false);
+      const showInventory = toBool(p?.showInventory, true);
 
       // Guard: unitsLeft cannot exceed unitsTotal if both present
-      let safeLeft = unitsLeft;
+      let safeLeft = unitsLeftRaw;
       if (unitsTotal !== null && safeLeft !== null) {
         safeLeft = Math.min(unitsTotal, safeLeft);
       }
@@ -117,17 +136,17 @@ export default async function handler(req, res) {
         title,
         priceUrl,
         imageUrl,
-        dropEndsAt,     // ISO string or ""
-        unitsTotal,     // number|null
+        dropEndsAt, // ISO string or ""
+        unitsTotal, // number|null
         unitsLeft: safeLeft, // number|null
         published: !!published,
-        showTimer,      // <-- NEW
-        showInventory,  // <-- NEW
+        showTimer,
+        showInventory,
       };
     });
 
     // Plan enforcement
-    const plan = (profile?.plan || "free").toLowerCase();
+    const plan = profile?.plan || "free";
     const max = maxProductsForPlan(plan);
     if (cleaned.length > max) {
       return send(res, 403, { ok: false, error: "plan_limit", max });

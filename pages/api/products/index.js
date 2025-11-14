@@ -1,17 +1,16 @@
 // pages/api/products/index.js
 import { MongoClient } from "mongodb";
 
-/** ── DB bootstrap (local cache so we don't reconnect every call) ─────────── */
-const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_DB = process.env.MONGODB_DB || "linkinbio";
+const {
+  MONGODB_URI,
+  MONGODB_DB = "linkinbio",
+} = process.env;
 
-if (!MONGODB_URI) {
-  throw new Error("Missing MONGODB_URI env");
-}
-
+// --- DB bootstrap with global cache ---
 let _client = global._launch6MongoClient;
 async function getClient() {
   if (_client) return _client;
+  if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
   const c = new MongoClient(MONGODB_URI);
   await c.connect();
   _client = c;
@@ -19,117 +18,140 @@ async function getClient() {
   return c;
 }
 
-/** ── Helpers ────────────────────────────────────────────────────────────── */
+// headers helpers
 function noStore(res) {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Vercel-CDN-Cache-Control", "no-store");
-  res.setHeader("CDN-Cache-Control", "no-store");
 }
 function send(res, status, body) {
   noStore(res);
   return res.status(status).json(body);
 }
 
-function cleanStr(x, max = 500) {
-  if (typeof x !== "string") return "";
-  const s = x.trim();
-  return s.length > max ? s.slice(0, max) : s;
+// sanitize helpers
+function toBool(v, def = false) {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") return v === "true" || v === "1";
+  if (typeof v === "number") return v === 1;
+  return def;
 }
-function toISOorEmpty(v) {
-  if (!v) return "";
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? "" : d.toISOString();
-}
-function toIntOrEmpty(v) {
-  if (v === "" || v === null || v === undefined) return "";
+function toNonNegIntOrNull(v) {
+  if (v === "" || v === null || v === undefined) return null;
   const n = parseInt(v, 10);
-  return Number.isFinite(n) && n >= 0 ? n : "";
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
-function toBool(v) {
-  return !!v;
-}
-function sanitizeProduct(p) {
-  return {
-    id: cleanStr(p?.id || `p_${Math.random().toString(36).slice(2, 10)}`, 64),
-    title: cleanStr(p?.title || "", 300),
-    priceUrl: cleanStr(p?.priceUrl || "", 1000),
-    imageUrl: cleanStr(p?.imageUrl || "", 1000),
-
-    // MVP fields
-    dropEndsAt: toISOorEmpty(p?.dropEndsAt || ""),
-    unitsTotal: toIntOrEmpty(p?.unitsTotal),
-    unitsLeft: toIntOrEmpty(p?.unitsLeft),
-
-    published: toBool(p?.published),
-  };
+function toIsoOrEmpty(v) {
+  if (!v) return "";
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? new Date(t).toISOString() : "";
 }
 
-/** ── API Route ──────────────────────────────────────────────────────────── */
+// Enforce plan-based product limits (kept)
+function maxProductsForPlan(plan) {
+  switch ((plan || "free").toLowerCase()) {
+    case "starter": return 1;
+    case "pro": return 10;
+    case "business": return 100;
+    default: return 1; // free
+  }
+}
+
+// GET: list products
+// POST: create/update (array) with plan enforcement
 export default async function handler(req, res) {
+  noStore(res);
   try {
+    const method = req.method;
+    if (!["GET", "POST"].includes(method)) {
+      res.setHeader("Allow", "GET, POST");
+      return res.status(405).end("Method Not Allowed");
+    }
+
+    const editToken = String(req.query.editToken || req.body?.editToken || "").trim();
+    if (!editToken) return send(res, 400, { ok: false, error: "Missing editToken" });
+
     const client = await getClient();
     const db = client.db(MONGODB_DB);
     const Profiles = db.collection("profiles");
 
-    if (req.method === "GET") {
-      const editToken = cleanStr(req.query.editToken || "", 200);
-      if (!editToken) {
-        return send(res, 400, { ok: false, error: "Missing editToken" });
-      }
+    const profile = await Profiles.findOne(
+      { editToken },
+      { projection: { _id: 0, plan: 1, products: 1 } }
+    );
 
-      const doc = await Profiles.findOne({ editToken }, { projection: { products: 1, _id: 0 } });
-      return send(res, 200, { ok: true, products: doc?.products || [] });
+    if (method === "GET") {
+      const products = Array.isArray(profile?.products) ? profile.products : [];
+      return send(res, 200, { ok: true, products });
     }
 
-    if (req.method === "POST") {
-      const body =
-        req.body && typeof req.body === "object"
-          ? req.body
-          : (() => {
-              try {
-                return JSON.parse(req.body || "{}");
-              } catch {
-                return {};
-              }
-            })();
+    // POST — save array of products
+    const body = req.body && typeof req.body === "object" ? req.body : (() => {
+      try { return JSON.parse(req.body || "{}"); } catch { return {}; }
+    })();
 
-      const editToken = cleanStr(body.editToken || "", 200);
-      const incoming = Array.isArray(body.products) ? body.products : null;
+    const arr = Array.isArray(body.products) ? body.products : [];
+    // sanitize each product + include new flags
+    const cleaned = arr.map((p) => {
+      const id = String(p?.id || "").trim() || `p_${Math.random().toString(36).slice(2, 10)}`;
+      const title = String(p?.title || "").trim();
+      const priceUrl = String(p?.priceUrl || "").trim();
+      const imageUrl = String(p?.imageUrl || "").trim();
+      const dropEndsAt = toIsoOrEmpty(p?.dropEndsAt || "");
+      const unitsTotal = toNonNegIntOrNull(p?.unitsTotal);
+      const unitsLeft = toNonNegIntOrNull(p?.unitsLeft);
+      const published = !!p?.published;
 
-      if (!editToken) {
-        return send(res, 400, { ok: false, error: "Missing editToken" });
+      // NEW: opt-in flags
+      const showTimer = toBool(p?.showTimer, false);
+      const showInventory = toBool(p?.showInventory, false);
+
+      // Guard: unitsLeft cannot exceed unitsTotal if both present
+      let safeLeft = unitsLeft;
+      if (unitsTotal !== null && safeLeft !== null) {
+        safeLeft = Math.min(unitsTotal, safeLeft);
       }
-      if (!incoming) {
-        return send(res, 400, { ok: false, error: "Body must include products array" });
-      }
 
-      // Sanitize + cap to a reasonable number for MVP
-      const products = incoming.slice(0, 100).map(sanitizeProduct);
+      return {
+        id,
+        title,
+        priceUrl,
+        imageUrl,
+        dropEndsAt,     // ISO string or ""
+        unitsTotal,     // number|null
+        unitsLeft: safeLeft, // number|null
+        published: !!published,
+        showTimer,      // <-- NEW
+        showInventory,  // <-- NEW
+      };
+    });
 
-      const result = await Profiles.updateOne(
-        { editToken },
-        {
-          $set: {
-            products,
-            updatedAt: new Date(),
-          },
+    // Plan enforcement
+    const plan = (profile?.plan || "free").toLowerCase();
+    const max = maxProductsForPlan(plan);
+    if (cleaned.length > max) {
+      return send(res, 403, { ok: false, error: "plan_limit", max });
+    }
+
+    const r = await Profiles.updateOne(
+      { editToken },
+      {
+        $set: {
+          updatedAt: new Date(),
+          products: cleaned,
         },
-        { upsert: true }
-      );
+      },
+      { upsert: true }
+    );
 
-      return send(res, 200, {
-        ok: true,
-        saved: products.length,
-        upserted: !!result?.upsertedId,
-      });
-    }
-
-    res.setHeader("Allow", "GET, POST");
-    noStore(res);
-    return res.status(405).end("Method Not Allowed");
+    return send(res, 200, {
+      ok: true,
+      matched: r.matchedCount || 0,
+      upserted: !!r.upsertedId,
+      products: cleaned,
+    });
   } catch (err) {
-    console.error("products:index ERROR", { message: err?.message, stack: err?.stack });
-    return send(res, 500, { ok: false, error: "Server error" });
+    console.error("products API ERROR", err?.message);
+    return send(res, 500, { ok: false, error: "server_error" });
   }
 }

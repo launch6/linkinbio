@@ -60,6 +60,7 @@ export default async function handler(req, res) {
           publicSlug: 1,
           products: 1,
           links: 1,
+          social: 1,
         },
       }
     );
@@ -89,6 +90,7 @@ export default async function handler(req, res) {
         collectEmail: !!doc.collectEmail,
         publicSlug: doc.publicSlug || slug,
         links,
+        social: doc.social || {},
       },
       products: published,
     });

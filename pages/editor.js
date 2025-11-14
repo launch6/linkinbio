@@ -36,6 +36,16 @@ export default function EditorPage() {
   const [loadError, setLoadError] = useState("");
   const [profile, setProfile] = useState(null);
 
+  // profile fields
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
+  const [publicSlug, setPublicSlug] = useState("");
+  const [socialInstagram, setSocialInstagram] = useState("");
+  const [socialTiktok, setSocialTiktok] = useState("");
+  const [socialYoutube, setSocialYoutube] = useState("");
+  const [socialX, setSocialX] = useState("");
+  const [socialWebsite, setSocialWebsite] = useState("");
+
   // products editor state
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -102,16 +112,29 @@ export default function EditorPage() {
 
         if (!alive) return;
 
-        setProfile(pj.profile);
+        const prof = pj.profile || {};
+        setProfile(prof);
 
-        // initialize email capture fields from profile
-        setCollectEmail(!!pj.profile?.collectEmail);
-        setKlaviyoListId(String(pj.profile?.klaviyoListId || ""));
+        // profile fields
+        setDisplayName(
+          prof.displayName || prof.name || "New Creator"
+        );
+        setBio(prof.bio || "");
+        setPublicSlug(prof.publicSlug || prof.slug || "");
+        setCollectEmail(!!prof.collectEmail);
+        setKlaviyoListId(String(prof.klaviyoListId || ""));
+
+        const social = prof.social || {};
+        setSocialInstagram(social.instagram || "");
+        setSocialTiktok(social.tiktok || "");
+        setSocialYoutube(social.youtube || "");
+        setSocialX(social.x || "");
+        setSocialWebsite(social.website || "");
 
         // links
         setLinks(
-          Array.isArray(pj.profile?.links)
-            ? pj.profile.links.map((l) => ({
+          Array.isArray(prof.links)
+            ? prof.links.map((l) => ({
                 id:
                   (l && l.id) ||
                   `l_${Math.random().toString(36).slice(2, 9)}`,
@@ -169,7 +192,6 @@ export default function EditorPage() {
   }
 
   function addProduct() {
-    // Client-side gate: block if adding would exceed plan limit
     const currentCount = products.length;
     if (currentCount >= maxAllowed) {
       setSaveError(
@@ -196,7 +218,6 @@ export default function EditorPage() {
         published: false,
       },
     ]);
-    // Clear any prior error if we successfully add
     setSaveError("");
   }
 
@@ -210,7 +231,6 @@ export default function EditorPage() {
       setSaveMsg("");
       setSaveError("");
 
-      // Second line of defense: prevent save if already over client limit
       if (products.length > maxAllowed) {
         setSaveError(
           `Your plan (${planLabel}) allows up to ${maxAllowed} product${
@@ -220,7 +240,6 @@ export default function EditorPage() {
         return;
       }
 
-      // sanitize/shape according to API schema
       const shaped = products.map((p) => ({
         id: p.id,
         title: String(p.title || "").slice(0, 200),
@@ -259,7 +278,6 @@ export default function EditorPage() {
       setSaveMsg("Saved!");
       setSaveError("");
 
-      // Refresh from server (to reflect any server-side normalization)
       const r2 = await fetch(
         `/api/products?editToken=${encodeURIComponent(
           editToken
@@ -294,36 +312,76 @@ export default function EditorPage() {
     }
   }
 
-  async function saveProfileSettings() {
+  async function saveProfile() {
     try {
       setSavingProf(true);
       setSaveProfMsg("");
       setSaveProfError("");
 
+      const payload = {
+        editToken,
+        displayName,
+        bio,
+        publicSlug,
+        social: {
+          instagram: socialInstagram,
+          tiktok: socialTiktok,
+          youtube: socialYoutube,
+          x: socialX,
+          website: socialWebsite,
+        },
+      };
+
+      if (!isFree) {
+        payload.collectEmail = collectEmail;
+        payload.klaviyoListId = klaviyoListId;
+      }
+
       const resp = await fetch("/api/profile/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          editToken,
-          collectEmail,
-          klaviyoListId,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json?.ok) {
         const msg =
-          (json && (json.error || json.message)) ||
+          json?.message ||
+          (json?.error === "slug_taken"
+            ? "That URL is already in use. Try another slug."
+            : json?.error) ||
           `Save failed (${resp.status})`;
         setSaveProfError(msg);
         return;
       }
 
-      // Reflect any server-side gating (e.g., Free forcing collectEmail=false)
+      // reflect updated fields & plan/email gating
       setCollectEmail(!!json.collectEmail);
       setKlaviyoListId(String(json.klaviyoListId || ""));
 
-      setSaveProfMsg("Settings saved!");
+      setDisplayName(json.displayName ?? displayName);
+      setBio(json.bio ?? bio);
+      setPublicSlug(json.publicSlug ?? publicSlug);
+
+      const socialResp = json.social || {};
+      setSocialInstagram(socialResp.instagram || "");
+      setSocialTiktok(socialResp.tiktok || "");
+      setSocialYoutube(socialResp.youtube || "");
+      setSocialX(socialResp.x || "");
+      setSocialWebsite(socialResp.website || "");
+
+      setProfile((prev) => ({
+        ...(prev || {}),
+        plan: json.plan || prev?.plan || "free",
+        displayName: json.displayName ?? displayName,
+        bio: json.bio ?? bio,
+        publicSlug: json.publicSlug ?? publicSlug,
+        social: json.social || prev?.social || {},
+        collectEmail: json.collectEmail,
+        klaviyoListId: json.klaviyoListId,
+      }));
+
+      setSaveProfMsg("Profile saved!");
       setSaveProfError("");
     } catch (e) {
       setSaveProfError(e.message || "Failed to save settings");
@@ -428,6 +486,10 @@ export default function EditorPage() {
     );
   }
 
+  const publicUrlPreview = publicSlug
+    ? `/${publicSlug}`
+    : "/(slug-not-set)";
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
@@ -457,26 +519,142 @@ export default function EditorPage() {
           </div>
         ) : null}
 
-        {/* Profile summary + Email capture */}
+        {/* Profile + Email capture */}
         <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 rounded-2xl border border-neutral-800 p-6">
-            <div className="text-xl font-semibold mb-2">Profile</div>
-            <div className="space-y-2 text-sm">
-              <div>
-                <span className="opacity-60">Display name:</span>{" "}
-                {profile?.displayName ||
-                  profile?.name ||
-                  "New Creator"}
+          {/* Profile editor */}
+          <div className="md:col-span-2 rounded-2xl border border-neutral-800 p-6 space-y-4">
+            <div className="text-xl font-semibold mb-1">
+              Profile
+            </div>
+
+            <div>
+              <div className="text-xs opacity-70 mb-1">
+                Display name
               </div>
-              <div>
-                <span className="opacity-60">Public slug:</span>{" "}
-                {profile?.publicSlug ||
-                  profile?.slug ||
-                  "(not set)"}
+              <input
+                className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
+                value={displayName}
+                onChange={(e) =>
+                  setDisplayName(e.target.value)
+                }
+                placeholder="Your name or studio"
+              />
+            </div>
+
+            <div>
+              <div className="text-xs opacity-70 mb-1">
+                Bio / description
               </div>
-              <div>
-                <span className="opacity-60">Status:</span>{" "}
-                {String(profile?.status ?? "active")}
+              <textarea
+                className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none text-sm min-h-[80px]"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell people what you create, how you drop pieces, etc."
+              />
+            </div>
+
+            <div>
+              <div className="text-xs opacity-70 mb-1">
+                Public URL slug
+              </div>
+              <input
+                className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none text-sm"
+                value={publicSlug}
+                onChange={(e) => setPublicSlug(e.target.value)}
+                placeholder="e.g., backyardsofkeywest"
+              />
+              <div className="text-xs opacity-60 mt-1">
+                This becomes <code>{publicUrlPreview}</code> on your
+                domain (e.g.{" "}
+                <span className="opacity-80">
+                  l6.io{publicUrlPreview}
+                </span>
+                ). Lowercase letters, numbers and dashes work best.
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-neutral-800 mt-2">
+              <div className="text-sm font-semibold mb-2">
+                Social links
+              </div>
+              <div className="grid md:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-xs opacity-70 mb-1">
+                    Instagram
+                  </div>
+                  <input
+                    className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
+                    value={socialInstagram}
+                    onChange={(e) =>
+                      setSocialInstagram(e.target.value)
+                    }
+                    placeholder="https://instagram.com/…"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs opacity-70 mb-1">
+                    TikTok
+                  </div>
+                  <input
+                    className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
+                    value={socialTiktok}
+                    onChange={(e) =>
+                      setSocialTiktok(e.target.value)
+                    }
+                    placeholder="https://www.tiktok.com/@…"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs opacity-70 mb-1">
+                    YouTube
+                  </div>
+                  <input
+                    className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
+                    value={socialYoutube}
+                    onChange={(e) =>
+                      setSocialYoutube(e.target.value)
+                    }
+                    placeholder="https://youtube.com/@…"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs opacity-70 mb-1">
+                    X / Twitter
+                  </div>
+                  <input
+                    className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
+                    value={socialX}
+                    onChange={(e) => setSocialX(e.target.value)}
+                    placeholder="https://x.com/…"
+                  />
+                </div>
+                <div>
+                  <div className="text-xs opacity-70 mb-1">
+                    Website
+                  </div>
+                  <input
+                    className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
+                    value={socialWebsite}
+                    onChange={(e) =>
+                      setSocialWebsite(e.target.value)
+                    }
+                    placeholder="https://…"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3">
+              <button
+                onClick={saveProfile}
+                disabled={savingProf}
+                className="rounded-md border border-neutral-700 px-3 py-2 hover:bg-neutral-800 disabled:opacity-60 text-sm"
+              >
+                {savingProf ? "Saving…" : "Save profile"}
+              </button>
+              <div className="text-xs opacity-60 mt-1">
+                Saves name, bio, slug, social links and (if on a paid
+                plan) email capture settings.
               </div>
             </div>
           </div>
@@ -487,6 +665,17 @@ export default function EditorPage() {
               Email Capture
             </div>
 
+            {saveProfError ? (
+              <div className="mb-3 rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
+                {saveProfError}
+              </div>
+            ) : null}
+            {saveProfMsg ? (
+              <div className="mb-3 rounded-md border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
+                {saveProfMsg}
+              </div>
+            ) : null}
+
             {isFree ? (
               <div className="text-sm text-neutral-300">
                 Email capture and Klaviyo list sync are available on{" "}
@@ -496,17 +685,6 @@ export default function EditorPage() {
               </div>
             ) : (
               <>
-                {saveProfError ? (
-                  <div className="mb-3 rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
-                    {saveProfError}
-                  </div>
-                ) : null}
-                {saveProfMsg ? (
-                  <div className="mb-3 rounded-md border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
-                    {saveProfMsg}
-                  </div>
-                ) : null}
-
                 <label className="flex items-center gap-2 text-sm mb-3">
                   <input
                     type="checkbox"
@@ -532,11 +710,11 @@ export default function EditorPage() {
                 />
 
                 <button
-                  onClick={saveProfileSettings}
+                  onClick={saveProfile}
                   disabled={savingProf}
                   className="rounded-md border border-neutral-700 px-3 py-2 hover:bg-neutral-800 disabled:opacity-60 text-sm"
                 >
-                  {savingProf ? "Saving…" : "Save Settings"}
+                  {savingProf ? "Saving…" : "Save profile & email"}
                 </button>
               </>
             )}
@@ -746,6 +924,11 @@ export default function EditorPage() {
                             }
                             placeholder="https://…/image.jpg"
                           />
+                          <div className="text-xs opacity-60 mt-1">
+                            Paste a direct HTTPS image link (ideally
+                            ~1200×900px, under ~2&nbsp;MB). Upload from
+                            your computer is coming soon.
+                          </div>
                         </div>
                       </div>
 

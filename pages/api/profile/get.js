@@ -61,6 +61,7 @@ export default async function handler(req, res) {
           collectEmail: 1,
           klaviyoListId: 1,
           links: 1,
+          social: 1,
         },
       }
     );
@@ -92,6 +93,7 @@ export default async function handler(req, res) {
         collectEmail: !!doc.collectEmail,
         klaviyoListId: doc.klaviyoListId || "",
         links,
+        social: doc.social || {},
       },
     });
   } catch (err) {

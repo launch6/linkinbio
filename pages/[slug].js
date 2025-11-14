@@ -212,21 +212,6 @@ export default function PublicSlugPage() {
     };
   }
 
-  function humanReason(r) {
-    switch ((r || "").toLowerCase()) {
-      case "expired":
-        return "This drop has ended.";
-      case "soldout":
-        return "This item is sold out.";
-      case "unpublished":
-        return "This product isn’t available right now.";
-      case "noprice":
-        return "This product doesn’t have a checkout set yet.";
-      default:
-        return "";
-    }
-  }
-
   const badgeClass = {
     active:
       "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
@@ -294,6 +279,14 @@ export default function PublicSlugPage() {
           l.url.trim().length > 0
       )
     : [];
+
+  const social = profile?.social || {};
+  const hasSocialRow =
+    social.instagram ||
+    social.tiktok ||
+    social.youtube ||
+    social.x ||
+    social.website;
 
   // --- SEO / Social ---
   const firstImage = products?.[0]?.imageUrl || "";
@@ -374,6 +367,61 @@ export default function PublicSlugPage() {
             {bio ? (
               <p className="text-neutral-400 mt-2">{bio}</p>
             ) : null}
+
+            {hasSocialRow && (
+              <div className="flex flex-wrap gap-2 mt-4 text-xs">
+                {social.instagram && (
+                  <a
+                    href={social.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                  >
+                    IG
+                  </a>
+                )}
+                {social.tiktok && (
+                  <a
+                    href={social.tiktok}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                  >
+                    TikTok
+                  </a>
+                )}
+                {social.youtube && (
+                  <a
+                    href={social.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                  >
+                    YouTube
+                  </a>
+                )}
+                {social.x && (
+                  <a
+                    href={social.x}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                  >
+                    X
+                  </a>
+                )}
+                {social.website && (
+                  <a
+                    href={social.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                  >
+                    Website
+                  </a>
+                )}
+              </div>
+            )}
           </header>
 
           {/* Email capture (slug flow) */}

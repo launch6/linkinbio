@@ -155,6 +155,7 @@ export default function PublicSlugPage() {
     };
   }, [products]);
 
+  // status builder that respects flags
   function productStatus(p) {
     const left = toNumberOrNull(p.unitsLeft);
     const total = toNumberOrNull(p.unitsTotal);
@@ -163,19 +164,26 @@ export default function PublicSlugPage() {
     const soldOut = left !== null && left <= 0;
 
     if (soldOut) return { key: "soldout", label: "Sold out", ended: false, soldOut: true };
-    if (rem === null && total !== null && left !== null) {
-      return { key: "active", label: `${left}/${total} left`, ended: false, soldOut: false };
-    }
-    if (rem === null) {
-      return { key: "active", label: "", ended: false, soldOut: false };
-    }
     if (ended) return { key: "ended", label: "Drop ended", ended: true, soldOut: false };
 
-    const base = `Ends in ${formatRemaining(rem)}`;
-    if (total !== null && left !== null) {
-      return { key: "active", label: `${left}/${total} left — ${base}`, ended: false, soldOut: false };
+    const parts = [];
+
+    // only show X/Y when showInventory is true and both numbers exist
+    if (p.showInventory && total !== null && left !== null) {
+      parts.push(`${left}/${total} left`);
     }
-    return { key: "active", label: base, ended: false, soldOut: false };
+
+    // only show countdown when showTimer is true and timer exists
+    if (p.showTimer && rem !== null) {
+      parts.push(`Ends in ${formatRemaining(rem)}`);
+    }
+
+    return {
+      key: "active",
+      label: parts.join(" — "),
+      ended: false,
+      soldOut: false,
+    };
   }
 
   function humanReason(r) {
@@ -243,9 +251,12 @@ export default function PublicSlugPage() {
   const site = "https://linkinbio-tau-pink.vercel.app";
   const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
-  const left = toNumberOrNull(products?.[0]?.unitsLeft);
-  const total = toNumberOrNull(products?.[0]?.unitsTotal);
-  const leftPart = left != null && total != null ? ` • ${left}/${total} left` : "";
+  const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
+  const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
+  const leftPart =
+    products?.[0]?.showInventory && left0 != null && total0 != null
+      ? ` • ${left0}/${total0} left`
+      : "";
   const seoDesc =
     (products?.[0]?.title
       ? `${products[0].title}${leftPart}`
@@ -349,42 +360,38 @@ export default function PublicSlugPage() {
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
               {products.map((p) => {
-                const left = toNumberOrNull(p.unitsLeft);
-                const total = toNumberOrNull(p.unitsTotal);
-                const rem = remaining[p.id];
-                const ended = rem === 0;
-                const soldOut = left !== null && left <= 0;
-
-                const base = rem == null ? "" : `Ends in ${formatRemaining(rem)}`;
-                const label =
-                  soldOut ? "Sold out" :
-                  ended   ? "Drop ended" :
-                  (total != null && left != null ? `${left}/${total} left${base ? " — " + base : ""}` : base);
-
-                const key =
-                  soldOut ? "soldout" :
-                  ended   ? "ended"   : "active";
-
-                const showBuy = !ended && !soldOut && !!p.priceUrl;
+                const st = productStatus(p);
+                const showBuy = !st.ended && !st.soldOut && !!p.priceUrl;
                 const buyHref = `/api/products/buy?productId=${encodeURIComponent(p.id)}${
                   slug ? `&slug=${encodeURIComponent(slug)}` : ""
                 }`;
 
                 return (
-                  <article key={p.id} className="relative rounded-2xl border border-neutral-800 overflow-hidden" aria-labelledby={`prod-${p.id}-title`}>
+                  <article
+                    key={p.id}
+                    className="relative rounded-2xl border border-neutral-800 overflow-hidden"
+                    aria-labelledby={`prod-${p.id}-title`}
+                  >
                     <div className="relative">
                       {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.title || "Product image"} className="w-full aspect-[4/3] object-cover" loading="lazy" />
+                        <img
+                          src={p.imageUrl}
+                          alt={p.title || "Product image"}
+                          className="w-full aspect-[4/3] object-cover"
+                          loading="lazy"
+                        />
                       ) : (
                         <div className="w-full aspect-[4/3] bg-neutral-900" />
                       )}
                       <div className="absolute left-3 top-3">
-                        <span className={`inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm ${
-                          key === "active" ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
-                          : key === "soldout" ? "bg-rose-500/20 border-rose-400/40 text-rose-200"
-                          : "bg-amber-500/20 border-amber-400/40 text-amber-200"
-                        }`} aria-live="polite">
-                          {label || "Live"}
+                        <span
+                          className={
+                            "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
+                            (badgeClass[st.key] || badgeClass.active)
+                          }
+                          aria-live="polite"
+                        >
+                          {st.label || (st.key === "active" ? "Live" : "")}
                         </span>
                       </div>
                     </div>
@@ -393,6 +400,18 @@ export default function PublicSlugPage() {
                       <h2 id={`prod-${p.id}-title`} className="text-xl font-semibold mb-1">
                         {p.title || "Untitled"}
                       </h2>
+
+                      {/* Status line (secondary) */}
+                      {st.label ? (
+                        <div
+                          className={
+                            "text-sm mb-3 " +
+                            (st.soldOut || st.ended ? "text-rose-300" : "text-emerald-300")
+                          }
+                        >
+                          {st.label}
+                        </div>
+                      ) : null}
 
                       {showBuy ? (
                         <a
@@ -403,13 +422,19 @@ export default function PublicSlugPage() {
                             try {
                               navigator.sendBeacon(
                                 "/api/track",
-                                new Blob([JSON.stringify({
-                                  type: "buy_click",
-                                  productId: p.id,
-                                  publicSlug: slug || null,
-                                  ts: Date.now(),
-                                  ref: typeof window !== "undefined" ? window.location.href : "",
-                                })], { type: "application/json" })
+                                new Blob(
+                                  [
+                                    JSON.stringify({
+                                      type: "buy_click",
+                                      productId: p.id,
+                                      publicSlug: slug || null,
+                                      ts: Date.now(),
+                                      ref:
+                                        typeof window !== "undefined" ? window.location.href : "",
+                                    }),
+                                  ],
+                                  { type: "application/json" }
+                                )
                               );
                             } catch {}
                           }}
@@ -417,8 +442,13 @@ export default function PublicSlugPage() {
                           Buy <span className="text-xs opacity-70">→</span>
                         </a>
                       ) : (
-                        <div className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400" aria-disabled="true" role="button" tabIndex={-1}>
-                          {soldOut ? "Sold out" : ended ? "Drop ended" : "Unavailable"}
+                        <div
+                          className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
+                          aria-disabled="true"
+                          role="button"
+                          tabIndex={-1}
+                        >
+                          {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : "Unavailable"}
                         </div>
                       )}
                     </div>

@@ -1,6 +1,19 @@
 // pages/pricing.js
 import { useEffect, useState, useMemo } from "react";
 
+// simple client-side email validator (matches what we use elsewhere)
+function isValidEmail(email) {
+  if (typeof email !== "string") return false;
+  const s = email.trim();
+  if (!s || s.includes(" ")) return false;
+  const at = s.indexOf("@");
+  if (at <= 0) return false;
+  const dot = s.indexOf(".", at + 2);
+  if (dot <= at + 1) return false;
+  if (dot >= s.length - 1) return false;
+  return true;
+}
+
 export default function PricingPage() {
   // UI state
   const [email, setEmail] = useState("");
@@ -67,15 +80,17 @@ export default function PricingPage() {
         body: JSON.stringify({
           priceKey,
           editToken,
-          email: email || undefined,
-          refCode,                       // triggers referral logic server-side
+          email: email || undefined, // still optional for paid tiers
+          refCode, // triggers referral logic server-side
           applyStarter6mo: isStarterPlus, // 6M path
           applyReferral3m: !!refCode && !isStarterPlus, // 3M path
         }),
       });
       const j = await r.json();
       if (!r.ok || !j?.url) {
-        throw new Error(j?.error || "Internal error creating Checkout Session.");
+        throw new Error(
+          j?.error || "Internal error creating Checkout Session."
+        );
       }
       window.location.href = j.url;
     } catch (e) {
@@ -86,16 +101,23 @@ export default function PricingPage() {
   }
 
   async function startFree() {
-    setBusy(true);
+    // Free requires an email (lightweight signup)
     setError("");
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email to start your Free profile.");
+      return;
+    }
+
+    setBusy(true);
     try {
       const r = await fetch("/api/free/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ editToken, email: email || undefined }),
+        body: JSON.stringify({ editToken, email: email.trim() }),
       });
       const j = await r.json();
-      if (!r.ok || !j?.ok) throw new Error(j?.error || "Could not start Free profile.");
+      if (!r.ok || !j?.ok)
+        throw new Error(j?.error || "Could not start Free profile.");
       if (typeof window !== "undefined" && j.editToken) {
         window.localStorage.setItem("editToken", j.editToken);
       }
@@ -110,13 +132,21 @@ export default function PricingPage() {
   }
 
   // Labels with safe fallbacks
-  const starterMonthlyLabel   = prices?.STARTER_MONTHLY    || "$9.95 / month";
-  const starterLifetimeLabel  = prices?.STARTER_LIFETIME   || "$89.95";
-  const proMonthlyLabel       = prices?.PRO_MONTHLY        || "$19.95 / month";
-  const proLifetimeLabel      = prices?.PRO_LIFETIME       || "$199.95";
-  const bizMonthlyLabel       = prices?.BUSINESS_MONTHLY   || "$29.95 / month";
-  const bizLifetimeLabel      = prices?.BUSINESS_LIFETIME  || "$299.95";
-  const starterTag            = bannerMonths ? ` · ${bannerMonths} months free` : "";
+  const starterMonthlyLabel =
+    prices?.STARTER_MONTHLY || "$9.95 / month";
+  const starterLifetimeLabel =
+    prices?.STARTER_LIFETIME || "$89.95";
+  const proMonthlyLabel =
+    prices?.PRO_MONTHLY || "$19.95 / month";
+  const proLifetimeLabel =
+    prices?.PRO_LIFETIME || "$199.95";
+  const bizMonthlyLabel =
+    prices?.BUSINESS_MONTHLY || "$29.95 / month";
+  const bizLifetimeLabel =
+    prices?.BUSINESS_LIFETIME || "$299.95";
+  const starterTag = bannerMonths
+    ? ` · ${bannerMonths} months free`
+    : "";
 
   return (
     <div className="min-h-screen text-white bg-neutral-950">
@@ -128,9 +158,16 @@ export default function PricingPage() {
 
         {bannerMonths ? (
           <div className="mb-6 rounded-xl border border-green-600/40 bg-green-900/20 text-green-200 p-4">
-            <b>{isStarterPlus ? "Starter+ referral applied" : "Referral applied"}:</b>{" "}
-            both you and your friend get <b>{bannerMonths} months free</b> on Starter
-            (card required to activate). Lifetime and non-Starter plans won’t apply the referral.
+            <b>
+              {isStarterPlus
+                ? "Starter+ referral applied"
+                : "Referral applied"}
+              :
+            </b>{" "}
+            both you and your friend get{" "}
+            <b>{bannerMonths} months free</b> on Starter (card
+            required to activate). Lifetime and non-Starter plans
+            won’t apply the referral.
           </div>
         ) : null}
 
@@ -144,7 +181,7 @@ export default function PricingPage() {
           />
           <input
             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-4 py-3 outline-none"
-            placeholder="you@example.com (optional)"
+            placeholder="you@example.com (required for Free)"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -161,8 +198,9 @@ export default function PricingPage() {
           <div className="rounded-2xl border border-neutral-800 p-6">
             <div className="text-2xl font-semibold mb-2">Free</div>
             <p className="text-neutral-400 mb-6">
-              Create your page, add links, collect emails, and try products with basic limits.
-              You’re on Free until you upgrade.
+              Create your page, add links, and try products with basic
+              limits. Email capture, timers, and scarcity unlock on
+              Starter and above.
             </p>
             <button
               onClick={startFree}
@@ -178,14 +216,19 @@ export default function PricingPage() {
             <div className="text-2xl font-semibold mb-2">Starter</div>
             <div className="space-y-3">
               <button
-                onClick={() => gotoCheckout("STRIPE_PRICE_STARTER_MONTHLY")}
+                onClick={() =>
+                  gotoCheckout("STRIPE_PRICE_STARTER_MONTHLY")
+                }
                 disabled={busy}
                 className="w-full rounded-xl border border-neutral-700 px-4 py-3 hover:bg-neutral-800 disabled:opacity-60"
               >
-                Monthly — {starterMonthlyLabel}{starterTag}
+                Monthly — {starterMonthlyLabel}
+                {starterTag}
               </button>
               <button
-                onClick={() => gotoCheckout("STRIPE_PRICE_STARTER_LIFETIME")}
+                onClick={() =>
+                  gotoCheckout("STRIPE_PRICE_STARTER_LIFETIME")
+                }
                 disabled={busy}
                 className="w-full rounded-xl border border-neutral-700 px-4 py-3 hover:bg-neutral-800 disabled:opacity-60"
               >
@@ -199,14 +242,18 @@ export default function PricingPage() {
             <div className="text-2xl font-semibold mb-2">Pro</div>
             <div className="space-y-3">
               <button
-                onClick={() => gotoCheckout("STRIPE_PRICE_PRO_MONTHLY")}
+                onClick={() =>
+                  gotoCheckout("STRIPE_PRICE_PRO_MONTHLY")
+                }
                 disabled={busy}
                 className="w-full rounded-xl border border-neutral-700 px-4 py-3 hover:bg-neutral-800 disabled:opacity-60"
               >
                 Monthly — {proMonthlyLabel}
               </button>
               <button
-                onClick={() => gotoCheckout("STRIPE_PRICE_PRO_LIFETIME")}
+                onClick={() =>
+                  gotoCheckout("STRIPE_PRICE_PRO_LIFETIME")
+                }
                 disabled={busy}
                 className="w-full rounded-xl border border-neutral-700 px-4 py-3 hover:bg-neutral-800 disabled:opacity-60"
               >
@@ -222,14 +269,18 @@ export default function PricingPage() {
             <div className="text-2xl font-semibold mb-2">Business</div>
             <div className="space-y-3">
               <button
-                onClick={() => gotoCheckout("STRIPE_PRICE_BUSINESS_MONTHLY")}
+                onClick={() =>
+                  gotoCheckout("STRIPE_PRICE_BUSINESS_MONTHLY")
+                }
                 disabled={busy}
                 className="w-full rounded-xl border border-neutral-700 px-4 py-3 hover:bg-neutral-800 disabled:opacity-60"
               >
                 Monthly — {bizMonthlyLabel}
               </button>
               <button
-                onClick={() => gotoCheckout("STRIPE_PRICE_BUSINESS_LIFETIME")}
+                onClick={() =>
+                  gotoCheckout("STRIPE_PRICE_BUSINESS_LIFETIME")
+                }
                 disabled={busy}
                 className="w-full rounded-xl border border-neutral-700 px-4 py-3 hover:bg-neutral-800 disabled:opacity-60"
               >

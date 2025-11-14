@@ -53,7 +53,10 @@ export default function EditorPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const u = new URL(window.location.href);
-    const t = u.searchParams.get("editToken") || window.localStorage.getItem("editToken") || "";
+    const t =
+      u.searchParams.get("editToken") ||
+      window.localStorage.getItem("editToken") ||
+      "";
     setEditToken(t);
     if (t) window.localStorage.setItem("editToken", t);
   }, []);
@@ -70,12 +73,18 @@ export default function EditorPage() {
       try {
         setLoading(true);
         // Profile
-        const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(editToken)}`, { cache: "no-store" });
+        const pr = await fetch(
+          `/api/profile/get?editToken=${encodeURIComponent(editToken)}`,
+          { cache: "no-store" }
+        );
         const pj = await pr.json();
         if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
 
         // Products
-        const r = await fetch(`/api/products?editToken=${encodeURIComponent(editToken)}`, { cache: "no-store" });
+        const r = await fetch(
+          `/api/products?editToken=${encodeURIComponent(editToken)}`,
+          { cache: "no-store" }
+        );
         const j = await r.json();
         if (!j?.ok) throw new Error(j?.error || "Failed to load products");
 
@@ -92,6 +101,11 @@ export default function EditorPage() {
           (Array.isArray(j.products) ? j.products : []).map((p) => ({
             ...p,
             dropEndsAt: p.dropEndsAt ? isoToLocal(p.dropEndsAt) : "",
+            // default flags if missing
+            showTimer:
+              typeof p.showTimer === "boolean" ? p.showTimer : false,
+            showInventory:
+              typeof p.showInventory === "boolean" ? p.showInventory : true,
           }))
         );
         setLoadError("");
@@ -107,8 +121,12 @@ export default function EditorPage() {
     };
   }, [editToken]);
 
-  const planLabel = useMemo(() => normalizePlan(profile?.plan || "free"), [profile]);
-  const maxAllowed = MAX_PRODUCTS_BY_PLAN[planLabel] ?? MAX_PRODUCTS_BY_PLAN.free;
+  const planLabel = useMemo(
+    () => normalizePlan(profile?.plan || "free"),
+    [profile]
+  );
+  const maxAllowed =
+    MAX_PRODUCTS_BY_PLAN[planLabel] ?? MAX_PRODUCTS_BY_PLAN.free;
 
   function onProdChange(idx, key, val) {
     setProducts((prev) => {
@@ -122,7 +140,11 @@ export default function EditorPage() {
     // Client-side gate: block if adding would exceed plan limit
     const currentCount = products.length;
     if (currentCount >= maxAllowed) {
-      setSaveError(`Your plan (${planLabel}) allows up to ${maxAllowed} product${maxAllowed === 1 ? "" : "s"}.`);
+      setSaveError(
+        `Your plan (${planLabel}) allows up to ${maxAllowed} product${
+          maxAllowed === 1 ? "" : "s"
+        }.`
+      );
       setSaveMsg("");
       return;
     }
@@ -138,6 +160,8 @@ export default function EditorPage() {
         unitsTotal: "",
         unitsLeft: "",
         published: false,
+        showTimer: false,
+        showInventory: true,
       },
     ]);
     // Clear any prior error if we successfully add
@@ -156,7 +180,11 @@ export default function EditorPage() {
 
       // Second line of defense: prevent save if already over client limit
       if (products.length > maxAllowed) {
-        setSaveError(`Your plan (${planLabel}) allows up to ${maxAllowed} product${maxAllowed === 1 ? "" : "s"}.`);
+        setSaveError(
+          `Your plan (${planLabel}) allows up to ${maxAllowed} product${
+            maxAllowed === 1 ? "" : "s"
+          }.`
+        );
         return;
       }
 
@@ -168,10 +196,16 @@ export default function EditorPage() {
         imageUrl: String(p.imageUrl || "").slice(0, 2000),
         dropEndsAt: p.dropEndsAt ? localToIso(p.dropEndsAt) : "",
         unitsTotal:
-          p.unitsTotal === "" || p.unitsTotal === null ? "" : Math.max(0, parseInt(p.unitsTotal, 10) || 0),
+          p.unitsTotal === "" || p.unitsTotal === null
+            ? ""
+            : Math.max(0, parseInt(p.unitsTotal, 10) || 0),
         unitsLeft:
-          p.unitsLeft === "" || p.unitsLeft === null ? "" : Math.max(0, parseInt(p.unitsLeft, 10) || 0),
+          p.unitsLeft === "" || p.unitsLeft === null
+            ? ""
+            : Math.max(0, parseInt(p.unitsLeft, 10) || 0),
         published: !!p.published,
+        showTimer: !!p.showTimer,
+        showInventory: !!p.showInventory,
       }));
 
       const resp = await fetch("/api/products", {
@@ -194,13 +228,20 @@ export default function EditorPage() {
       setSaveError("");
 
       // Refresh from server (to reflect any server-side normalization)
-      const r2 = await fetch(`/api/products?editToken=${encodeURIComponent(editToken)}`, { cache: "no-store" });
+      const r2 = await fetch(
+        `/api/products?editToken=${encodeURIComponent(editToken)}`,
+        { cache: "no-store" }
+      );
       const j2 = await r2.json();
       if (j2?.ok && Array.isArray(j2.products)) {
         setProducts(
           j2.products.map((p) => ({
             ...p,
             dropEndsAt: p.dropEndsAt ? isoToLocal(p.dropEndsAt) : "",
+            showTimer:
+              typeof p.showTimer === "boolean" ? p.showTimer : false,
+            showInventory:
+              typeof p.showInventory === "boolean" ? p.showInventory : true,
           }))
         );
       }
@@ -230,7 +271,9 @@ export default function EditorPage() {
 
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json?.ok) {
-        const msg = (json && (json.error || json.message)) || `Save failed (${resp.status})`;
+        const msg =
+          (json && (json.error || json.message)) ||
+          `Save failed (${resp.status})`;
         setSaveProfError(msg);
         return;
       }
@@ -272,7 +315,8 @@ export default function EditorPage() {
           <div>
             <h1 className="text-3xl font-bold">Launch6 — Editor</h1>
             <div className="text-sm opacity-70">
-              Plan: <span className="uppercase">{planLabel}</span> · Limit: {maxAllowed}
+              Plan: <span className="uppercase">{planLabel}</span> · Limit:{" "}
+              {maxAllowed}
             </div>
           </div>
           <code className="text-xs opacity-70">editToken: {editToken}</code>
@@ -304,7 +348,8 @@ export default function EditorPage() {
                 {profile?.publicSlug || profile?.slug || "(not set)"}
               </div>
               <div>
-                <span className="opacity-60">Status:</span> {String(profile?.status ?? "active")}
+                <span className="opacity-60">Status:</span>{" "}
+                {String(profile?.status ?? "active")}
               </div>
             </div>
           </div>
@@ -374,21 +419,30 @@ export default function EditorPage() {
           </div>
 
           {products.length === 0 ? (
-            <div className="opacity-70 text-sm">No products yet. Click “Add product”.</div>
+            <div className="opacity-70 text-sm">
+              No products yet. Click “Add product”.
+            </div>
           ) : (
             <div className="space-y-6">
               {products.map((p, idx) => {
                 return (
-                  <div key={p.id || idx} className="rounded-xl border border-neutral-800 p-4">
+                  <div
+                    key={p.id || idx}
+                    className="rounded-xl border border-neutral-800 p-4"
+                  >
                     <div className="flex items-center justify-between mb-3">
-                      <div className="font-semibold">{p.title || "Untitled"}</div>
+                      <div className="font-semibold">
+                        {p.title || "Untitled"}
+                      </div>
                       <div className="flex items-center gap-3">
                         <label className="text-sm opacity-80">
                           <input
                             type="checkbox"
                             className="mr-2 align-middle"
                             checked={!!p.published}
-                            onChange={(e) => onProdChange(idx, "published", e.target.checked)}
+                            onChange={(e) =>
+                              onProdChange(idx, "published", e.target.checked)
+                            }
                           />
                           Published
                         </label>
@@ -408,27 +462,37 @@ export default function EditorPage() {
                           <input
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.title || ""}
-                            onChange={(e) => onProdChange(idx, "title", e.target.value)}
+                            onChange={(e) =>
+                              onProdChange(idx, "title", e.target.value)
+                            }
                             placeholder="e.g., Sunset Study — 12x16 Print"
                           />
                         </div>
 
                         <div>
-                          <div className="text-xs opacity-70 mb-1">Stripe Checkout URL</div>
+                          <div className="text-xs opacity-70 mb-1">
+                            Stripe Checkout URL
+                          </div>
                           <input
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.priceUrl || ""}
-                            onChange={(e) => onProdChange(idx, "priceUrl", e.target.value)}
+                            onChange={(e) =>
+                              onProdChange(idx, "priceUrl", e.target.value)
+                            }
                             placeholder="https://buy.stripe.com/..."
                           />
                         </div>
 
                         <div>
-                          <div className="text-xs opacity-70 mb-1">Image URL</div>
+                          <div className="text-xs opacity-70 mb-1">
+                            Image URL
+                          </div>
                           <input
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.imageUrl || ""}
-                            onChange={(e) => onProdChange(idx, "imageUrl", e.target.value)}
+                            onChange={(e) =>
+                              onProdChange(idx, "imageUrl", e.target.value)
+                            }
                             placeholder="https://…/image.jpg"
                           />
                         </div>
@@ -436,45 +500,99 @@ export default function EditorPage() {
 
                       <div className="space-y-3">
                         <div>
-                          <div className="text-xs opacity-70 mb-1">Drop ends (timer)</div>
+                          <div className="text-xs opacity-70 mb-1">
+                            Drop ends (timer)
+                          </div>
                           <input
                             type="datetime-local"
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.dropEndsAt || ""}
-                            onChange={(e) => onProdChange(idx, "dropEndsAt", e.target.value)}
+                            onChange={(e) =>
+                              onProdChange(idx, "dropEndsAt", e.target.value)
+                            }
                           />
                           <div className="text-xs opacity-60 mt-1">
-                            If set, the public page shows a countdown and hides “Buy” after expiry.
+                            If set and timer is enabled, the public page shows a
+                            countdown and hides “Buy” after expiry.
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <div className="text-xs opacity-70 mb-1">Total units</div>
+                            <div className="text-xs opacity-70 mb-1">
+                              Total units
+                            </div>
                             <input
                               type="number"
                               min="0"
                               className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                               value={p.unitsTotal ?? ""}
-                              onChange={(e) => onProdChange(idx, "unitsTotal", e.target.value)}
+                              onChange={(e) =>
+                                onProdChange(
+                                  idx,
+                                  "unitsTotal",
+                                  e.target.value
+                                )
+                              }
                               placeholder="e.g., 10"
                             />
                           </div>
                           <div>
-                            <div className="text-xs opacity-70 mb-1">Units left</div>
+                            <div className="text-xs opacity-70 mb-1">
+                              Units left
+                            </div>
                             <input
                               type="number"
                               min="0"
                               className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                               value={p.unitsLeft ?? ""}
-                              onChange={(e) => onProdChange(idx, "unitsLeft", e.target.value)}
+                              onChange={(e) =>
+                                onProdChange(idx, "unitsLeft", e.target.value)
+                              }
                               placeholder="e.g., 5"
                             />
                           </div>
                         </div>
 
                         <div className="text-xs opacity-70">
-                          If <b>Units left</b> hits 0, the public page shows “Sold out” and hides “Buy”.
+                          If <b>Units left</b> hits 0, the public page shows
+                          “Sold out” and hides “Buy”.
+                        </div>
+
+                        <div className="mt-3 space-y-1 text-sm">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="align-middle"
+                              checked={!!p.showTimer}
+                              onChange={(e) =>
+                                onProdChange(
+                                  idx,
+                                  "showTimer",
+                                  e.target.checked
+                                )
+                              }
+                            />
+                            <span>Show timer on public page</span>
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="align-middle"
+                              checked={!!p.showInventory}
+                              onChange={(e) =>
+                                onProdChange(
+                                  idx,
+                                  "showInventory",
+                                  e.target.checked
+                                )
+                              }
+                            />
+                            <span>Show “X/Y left” on public page</span>
+                          </label>
+                          <div className="text-xs opacity-60">
+                            Timer uses “Drop ends”; inventory uses Total/Left.
+                          </div>
                         </div>
                       </div>
                     </div>

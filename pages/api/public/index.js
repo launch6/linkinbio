@@ -47,12 +47,12 @@ export default async function handler(req, res) {
     const db = client.db(MONGODB_DB);
     const Profiles = db.collection("profiles");
 
-    // Only expose public-safe fields (but allow for old / new shapes).
+    // Only expose public-safe fields
     const doc = await Profiles.findOne(
       {
         $or: [
           { publicSlug: slug },
-          { slug }, // legacy fallback, just in case
+          { slug }, // legacy fallback
         ],
       },
       {
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
           slug: 1,
           products: 1,
 
-          // socials (various possible shapes)
+          // socials – support both old and new shapes
           social: 1,
           socialLinks: 1,
           instagram: 1,
@@ -79,9 +79,6 @@ export default async function handler(req, res) {
 
           // custom links
           links: 1,
-
-          // optional hero for later
-          heroImageUrl: 1,
         },
       }
     );
@@ -94,28 +91,23 @@ export default async function handler(req, res) {
       ? doc.products.filter((p) => !!p?.published)
       : [];
 
-    const socialRaw = doc.social || doc.socialLinks || {};
-
+    // Normalize socials into profile.social
+    const rawSocial = doc.social || doc.socialLinks || {};
     const social = {
-      instagram: socialRaw.instagram || doc.instagram || "",
-      tiktok: socialRaw.tiktok || doc.tiktok || "",
-      youtube: socialRaw.youtube || doc.youtube || "",
-      twitter:
-        socialRaw.twitter ||
-        socialRaw.x ||
-        doc.twitter ||
-        doc.x ||
-        "",
-      facebook: socialRaw.facebook || doc.facebook || "",
-      website: socialRaw.website || doc.website || "",
+      instagram: rawSocial.instagram || doc.instagram || "",
+      facebook: rawSocial.facebook || doc.facebook || "",
+      tiktok: rawSocial.tiktok || doc.tiktok || "",
+      youtube: rawSocial.youtube || doc.youtube || "",
+      x: rawSocial.x || rawSocial.twitter || doc.twitter || "",
+      website: rawSocial.website || doc.website || "",
     };
 
-    const links = Array.isArray(doc.links) ? doc.links : [];
-    const normalizedLinks = links.map((l) => ({
+    // Normalize links into profile.links
+    const rawLinks = Array.isArray(doc.links) ? doc.links : [];
+    const links = rawLinks.map((l) => ({
       id: String(l?.id || "").trim() || `link_${Math.random().toString(36).slice(2, 10)}`,
       label: String(l?.label || "").trim() || String(l?.url || ""),
       url: String(l?.url || "").trim(),
-      published: l?.published !== false, // default: true
     }));
 
     return send(res, 200, {
@@ -126,8 +118,7 @@ export default async function handler(req, res) {
         collectEmail: !!doc.collectEmail,
         publicSlug: doc.publicSlug || doc.slug || slug,
         social,
-        links: normalizedLinks,
-        heroImageUrl: doc.heroImageUrl || "",
+        links,
       },
       products: published,
     });

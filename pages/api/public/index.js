@@ -105,7 +105,7 @@ export default async function handler(req, res) {
     // Normalize links into profile.links
     const rawLinks = Array.isArray(doc.links) ? doc.links : [];
     const links = rawLinks.map((l) => ({
-      id: String(l?.id || "").trim() || `link_${Math.random().toString(36).slice(0, 8)}`,
+      id: String(l?.id || "").trim() || `link_${Math.random().toString(36).slice(2, 10)}`,
       label: String(l?.label || "").trim() || String(l?.url || ""),
       url: String(l?.url || "").trim(),
     }));

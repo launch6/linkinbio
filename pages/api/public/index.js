@@ -31,10 +31,9 @@ function send(res, status, body) {
  * Returns a public-safe payload for the profile + published products.
  */
 export default async function handler(req, res) {
-  noStore(res);
-
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
+    noStore(res);
     return res.status(405).end("Method Not Allowed");
   }
 
@@ -48,19 +47,41 @@ export default async function handler(req, res) {
     const db = client.db(MONGODB_DB);
     const Profiles = db.collection("profiles");
 
-    // Only expose public-safe fields
+    // Only expose public-safe fields (but allow for old / new shapes).
     const doc = await Profiles.findOne(
-      { publicSlug: slug },
+      {
+        $or: [
+          { publicSlug: slug },
+          { slug }, // legacy fallback, just in case
+        ],
+      },
       {
         projection: {
           _id: 0,
           displayName: 1,
+          name: 1,
           bio: 1,
+          description: 1,
           collectEmail: 1,
           publicSlug: 1,
+          slug: 1,
           products: 1,
-          links: 1,
+
+          // socials (various possible shapes)
           social: 1,
+          socialLinks: 1,
+          instagram: 1,
+          tiktok: 1,
+          youtube: 1,
+          twitter: 1,
+          facebook: 1,
+          website: 1,
+
+          // custom links
+          links: 1,
+
+          // optional hero for later
+          heroImageUrl: 1,
         },
       }
     );
@@ -73,24 +94,40 @@ export default async function handler(req, res) {
       ? doc.products.filter((p) => !!p?.published)
       : [];
 
-    const links = Array.isArray(doc.links)
-      ? doc.links.filter(
-          (l) =>
-            l &&
-            typeof l.url === "string" &&
-            l.url.trim().length > 0
-        )
-      : [];
+    const socialRaw = doc.social || doc.socialLinks || {};
+
+    const social = {
+      instagram: socialRaw.instagram || doc.instagram || "",
+      tiktok: socialRaw.tiktok || doc.tiktok || "",
+      youtube: socialRaw.youtube || doc.youtube || "",
+      twitter:
+        socialRaw.twitter ||
+        socialRaw.x ||
+        doc.twitter ||
+        doc.x ||
+        "",
+      facebook: socialRaw.facebook || doc.facebook || "",
+      website: socialRaw.website || doc.website || "",
+    };
+
+    const links = Array.isArray(doc.links) ? doc.links : [];
+    const normalizedLinks = links.map((l) => ({
+      id: String(l?.id || "").trim() || `link_${Math.random().toString(36).slice(2, 10)}`,
+      label: String(l?.label || "").trim() || String(l?.url || ""),
+      url: String(l?.url || "").trim(),
+      published: l?.published !== false, // default: true
+    }));
 
     return send(res, 200, {
       ok: true,
       profile: {
-        displayName: doc.displayName || "",
-        bio: doc.bio || "",
+        displayName: doc.displayName || doc.name || "",
+        bio: doc.bio || doc.description || "",
         collectEmail: !!doc.collectEmail,
-        publicSlug: doc.publicSlug || slug,
-        links,
-        social: doc.social || {},
+        publicSlug: doc.publicSlug || doc.slug || slug,
+        social,
+        links: normalizedLinks,
+        heroImageUrl: doc.heroImageUrl || "",
       },
       products: published,
     });

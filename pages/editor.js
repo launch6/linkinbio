@@ -78,7 +78,8 @@ export default function EditorPage() {
           { cache: "no-store" }
         );
         const pj = await pr.json();
-        if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
+        if (!pj?.ok)
+          throw new Error(pj?.error || "Failed to load profile");
 
         // Products
         const r = await fetch(
@@ -86,7 +87,8 @@ export default function EditorPage() {
           { cache: "no-store" }
         );
         const j = await r.json();
-        if (!j?.ok) throw new Error(j?.error || "Failed to load products");
+        if (!j?.ok)
+          throw new Error(j?.error || "Failed to load products");
 
         if (!alive) return;
 
@@ -101,11 +103,17 @@ export default function EditorPage() {
           (Array.isArray(j.products) ? j.products : []).map((p) => ({
             ...p,
             dropEndsAt: p.dropEndsAt ? isoToLocal(p.dropEndsAt) : "",
-            // default flags if missing
-            showTimer:
-              typeof p.showTimer === "boolean" ? p.showTimer : false,
+            unitsTotal:
+              p.unitsTotal === null || p.unitsTotal === undefined
+                ? ""
+                : p.unitsTotal,
+            unitsLeft:
+              p.unitsLeft === null || p.unitsLeft === undefined
+                ? ""
+                : p.unitsLeft,
+            showTimer: !!p.showTimer,
             showInventory:
-              typeof p.showInventory === "boolean" ? p.showInventory : true,
+              "showInventory" in p ? !!p.showInventory : true,
           }))
         );
         setLoadError("");
@@ -127,7 +135,7 @@ export default function EditorPage() {
   );
   const maxAllowed =
     MAX_PRODUCTS_BY_PLAN[planLabel] ?? MAX_PRODUCTS_BY_PLAN.free;
-  const isAtProductLimit = products.length >= maxAllowed;
+  const isFree = planLabel === "free";
 
   function onProdChange(idx, key, val) {
     setProducts((prev) => {
@@ -160,9 +168,9 @@ export default function EditorPage() {
         dropEndsAt: "",
         unitsTotal: "",
         unitsLeft: "",
-        published: false,
         showTimer: false,
         showInventory: true,
+        published: false,
       },
     ]);
     // Clear any prior error if we successfully add
@@ -239,10 +247,17 @@ export default function EditorPage() {
           j2.products.map((p) => ({
             ...p,
             dropEndsAt: p.dropEndsAt ? isoToLocal(p.dropEndsAt) : "",
-            showTimer:
-              typeof p.showTimer === "boolean" ? p.showTimer : false,
+            unitsTotal:
+              p.unitsTotal === null || p.unitsTotal === undefined
+                ? ""
+                : p.unitsTotal,
+            unitsLeft:
+              p.unitsLeft === null || p.unitsLeft === undefined
+                ? ""
+                : p.unitsLeft,
+            showTimer: !!p.showTimer,
             showInventory:
-              typeof p.showInventory === "boolean" ? p.showInventory : true,
+              "showInventory" in p ? !!p.showInventory : true,
           }))
         );
       }
@@ -278,6 +293,10 @@ export default function EditorPage() {
         setSaveProfError(msg);
         return;
       }
+
+      // Reflect any server-side gating (e.g., Free forcing collectEmail=false)
+      setCollectEmail(!!json.collectEmail);
+      setKlaviyoListId(String(json.klaviyoListId || ""));
 
       setSaveProfMsg("Settings saved!");
       setSaveProfError("");
@@ -316,11 +335,13 @@ export default function EditorPage() {
           <div>
             <h1 className="text-3xl font-bold">Launch6 — Editor</h1>
             <div className="text-sm opacity-70">
-              Plan: <span className="uppercase">{planLabel}</span> · Limit:{" "}
-              {maxAllowed}
+              Plan: <span className="uppercase">{planLabel}</span> ·
+              Limit: {maxAllowed}
             </div>
           </div>
-          <code className="text-xs opacity-70">editToken: {editToken}</code>
+          <code className="text-xs opacity-70">
+            editToken: {editToken}
+          </code>
         </div>
 
         {/* Inline save error / success for products */}
@@ -335,18 +356,22 @@ export default function EditorPage() {
           </div>
         ) : null}
 
-        {/* Profile summary */}
+        {/* Profile summary + Email capture */}
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 rounded-2xl border border-neutral-800 p-6">
             <div className="text-xl font-semibold mb-2">Profile</div>
             <div className="space-y-2 text-sm">
               <div>
                 <span className="opacity-60">Display name:</span>{" "}
-                {profile?.displayName || profile?.name || "New Creator"}
+                {profile?.displayName ||
+                  profile?.name ||
+                  "New Creator"}
               </div>
               <div>
                 <span className="opacity-60">Public slug:</span>{" "}
-                {profile?.publicSlug || profile?.slug || "(not set)"}
+                {profile?.publicSlug ||
+                  profile?.slug ||
+                  "(not set)"}
               </div>
               <div>
                 <span className="opacity-60">Status:</span>{" "}
@@ -355,60 +380,76 @@ export default function EditorPage() {
             </div>
           </div>
 
-          {/* Email capture settings */}
+          {/* Email capture settings / upsell */}
           <div className="rounded-2xl border border-neutral-800 p-6">
-            <div className="text-xl font-semibold mb-2">Email Capture</div>
+            <div className="text-xl font-semibold mb-2">
+              Email Capture
+            </div>
 
-            {saveProfError ? (
-              <div className="mb-3 rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
-                {saveProfError}
+            {isFree ? (
+              <div className="text-sm text-neutral-300">
+                Email capture and Klaviyo list sync are available on{" "}
+                <span className="font-semibold">Starter</span> and
+                above. Upgrade to start building your list from your
+                drops.
               </div>
-            ) : null}
-            {saveProfMsg ? (
-              <div className="mb-3 rounded-md border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
-                {saveProfMsg}
-              </div>
-            ) : null}
+            ) : (
+              <>
+                {saveProfError ? (
+                  <div className="mb-3 rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
+                    {saveProfError}
+                  </div>
+                ) : null}
+                {saveProfMsg ? (
+                  <div className="mb-3 rounded-md border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
+                    {saveProfMsg}
+                  </div>
+                ) : null}
 
-            <label className="flex items-center gap-2 text-sm mb-3">
-              <input
-                type="checkbox"
-                className="align-middle"
-                checked={collectEmail}
-                onChange={(e) => setCollectEmail(e.target.checked)}
-              />
-              Enable email capture on public page
-            </label>
+                <label className="flex items-center gap-2 text-sm mb-3">
+                  <input
+                    type="checkbox"
+                    className="align-middle"
+                    checked={collectEmail}
+                    onChange={(e) =>
+                      setCollectEmail(e.target.checked)
+                    }
+                  />
+                  Enable email capture on public page
+                </label>
 
-            <div className="text-xs opacity-70 mb-1">Klaviyo List ID</div>
-            <input
-              className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none mb-3"
-              value={klaviyoListId}
-              onChange={(e) => setKlaviyoListId(e.target.value)}
-              placeholder="e.g., Vd9H2a"
-            />
+                <div className="text-xs opacity-70 mb-1">
+                  Klaviyo List ID
+                </div>
+                <input
+                  className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none mb-3"
+                  value={klaviyoListId}
+                  onChange={(e) =>
+                    setKlaviyoListId(e.target.value)
+                  }
+                  placeholder="e.g., Vd9H2a"
+                />
 
-            <button
-              onClick={saveProfileSettings}
-              disabled={savingProf}
-              className="rounded-md border border-neutral-700 px-3 py-2 hover:bg-neutral-800 disabled:opacity-60 text-sm"
-            >
-              {savingProf ? "Saving…" : "Save Settings"}
-            </button>
+                <button
+                  onClick={saveProfileSettings}
+                  disabled={savingProf}
+                  className="rounded-md border border-neutral-700 px-3 py-2 hover:bg-neutral-800 disabled:opacity-60 text-sm"
+                >
+                  {savingProf ? "Saving…" : "Save Settings"}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         {/* Products Editor */}
         <div className="rounded-2xl border border-neutral-800 p-6">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-2">
+          <div className="flex items-center justify-between mb-4">
             <div className="text-xl font-semibold">Products</div>
             <div className="flex items-center gap-2">
               <button
                 onClick={addProduct}
-                disabled={isAtProductLimit}
-                className={
-                  "rounded-lg border border-neutral-700 px-3 py-2 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                }
+                className="rounded-lg border border-neutral-700 px-3 py-2 hover:bg-neutral-800"
               >
                 + Add product
               </button>
@@ -421,15 +462,6 @@ export default function EditorPage() {
               </button>
             </div>
           </div>
-
-          {isAtProductLimit ? (
-            <div className="mb-4 text-xs text-rose-300">
-              You’ve reached your <span className="uppercase">{planLabel}</span>{" "}
-              plan limit of {maxAllowed} product
-              {maxAllowed === 1 ? "" : "s"}. Upgrade on the pricing page to add
-              more drops and unlock additional capacity.
-            </div>
-          ) : null}
 
           {products.length === 0 ? (
             <div className="opacity-70 text-sm">
@@ -454,7 +486,11 @@ export default function EditorPage() {
                             className="mr-2 align-middle"
                             checked={!!p.published}
                             onChange={(e) =>
-                              onProdChange(idx, "published", e.target.checked)
+                              onProdChange(
+                                idx,
+                                "published",
+                                e.target.checked
+                              )
                             }
                           />
                           Published
@@ -471,12 +507,18 @@ export default function EditorPage() {
                     <div className="grid md:grid-cols-2 gap-3">
                       <div className="space-y-3">
                         <div>
-                          <div className="text-xs opacity-70 mb-1">Title</div>
+                          <div className="text-xs opacity-70 mb-1">
+                            Title
+                          </div>
                           <input
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.title || ""}
                             onChange={(e) =>
-                              onProdChange(idx, "title", e.target.value)
+                              onProdChange(
+                                idx,
+                                "title",
+                                e.target.value
+                              )
                             }
                             placeholder="e.g., Sunset Study — 12x16 Print"
                           />
@@ -490,7 +532,11 @@ export default function EditorPage() {
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.priceUrl || ""}
                             onChange={(e) =>
-                              onProdChange(idx, "priceUrl", e.target.value)
+                              onProdChange(
+                                idx,
+                                "priceUrl",
+                                e.target.value
+                              )
                             }
                             placeholder="https://buy.stripe.com/..."
                           />
@@ -504,7 +550,11 @@ export default function EditorPage() {
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.imageUrl || ""}
                             onChange={(e) =>
-                              onProdChange(idx, "imageUrl", e.target.value)
+                              onProdChange(
+                                idx,
+                                "imageUrl",
+                                e.target.value
+                              )
                             }
                             placeholder="https://…/image.jpg"
                           />
@@ -521,12 +571,16 @@ export default function EditorPage() {
                             className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                             value={p.dropEndsAt || ""}
                             onChange={(e) =>
-                              onProdChange(idx, "dropEndsAt", e.target.value)
+                              onProdChange(
+                                idx,
+                                "dropEndsAt",
+                                e.target.value
+                              )
                             }
                           />
                           <div className="text-xs opacity-60 mt-1">
-                            If set and timer is enabled, the public page shows a
-                            countdown and hides “Buy” after expiry.
+                            If set, the public page can show a
+                            countdown and hide “Buy” after expiry.
                           </div>
                         </div>
 
@@ -560,7 +614,11 @@ export default function EditorPage() {
                               className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none"
                               value={p.unitsLeft ?? ""}
                               onChange={(e) =>
-                                onProdChange(idx, "unitsLeft", e.target.value)
+                                onProdChange(
+                                  idx,
+                                  "unitsLeft",
+                                  e.target.value
+                                )
                               }
                               placeholder="e.g., 5"
                             />
@@ -568,11 +626,12 @@ export default function EditorPage() {
                         </div>
 
                         <div className="text-xs opacity-70">
-                          If <b>Units left</b> hits 0, the public page shows
-                          “Sold out” and hides “Buy”.
+                          If <b>Units left</b> hits 0, the public page
+                          shows “Sold out” and hides “Buy”.
                         </div>
 
-                        <div className="mt-3 space-y-1 text-sm">
+                        {/* Timer + inventory toggles */}
+                        <div className="mt-3 space-y-2 text-sm">
                           <label className="flex items-center gap-2">
                             <input
                               type="checkbox"
@@ -586,7 +645,7 @@ export default function EditorPage() {
                                 )
                               }
                             />
-                            <span>Show timer on public page</span>
+                            Show countdown timer on public page
                           </label>
                           <label className="flex items-center gap-2">
                             <input
@@ -601,10 +660,11 @@ export default function EditorPage() {
                                 )
                               }
                             />
-                            <span>Show “X/Y left” on public page</span>
+                            Show “X/Y left” on public page
                           </label>
                           <div className="text-xs opacity-60">
-                            Timer uses “Drop ends”; inventory uses Total/Left.
+                            Combine timer + “X/Y left” for
+                            Instagram/TikTok-style drops.
                           </div>
                         </div>
                       </div>

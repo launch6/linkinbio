@@ -56,6 +56,7 @@ export default function PublicSlugPage() {
 
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
+  const justBoughtHandledRef = useRef(false);
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -74,7 +75,9 @@ export default function PublicSlugPage() {
     }
 
     setProfile(j.profile || null);
-    setProducts(Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []);
+    setProducts(
+      Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []
+    );
   }
 
   // initial + periodic refresh
@@ -108,10 +111,24 @@ export default function PublicSlugPage() {
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
-      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+      if (refreshIntervalRef.current)
+        clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, [slug]);
+
+  // extra refresh after Stripe success (?justBought=1)
+  useEffect(() => {
+    if (!slug) return;
+    if (!router.isReady) return;
+    if (justBoughtHandledRef.current) return;
+
+    const justBought = router.query?.justBought;
+    if (!justBought) return;
+
+    justBoughtHandledRef.current = true;
+    fetchAll(slug).catch(() => {});
+  }, [slug, router.isReady, router.query?.justBought]);
 
   // track page_view (slug-based)
   useEffect(() => {
@@ -123,7 +140,9 @@ export default function PublicSlugPage() {
         ref: typeof window !== "undefined" ? window.location.href : "",
         publicSlug: slug,
       };
-      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(payload)], {
+        type: "application/json",
+      });
       navigator.sendBeacon("/api/track", blob);
     } catch {}
   }, [slug]);
@@ -163,8 +182,20 @@ export default function PublicSlugPage() {
     const ended = rem === 0;
     const soldOut = left !== null && left <= 0;
 
-    if (soldOut) return { key: "soldout", label: "Sold out", ended: false, soldOut: true };
-    if (ended) return { key: "ended", label: "Drop ended", ended: true, soldOut: false };
+    if (soldOut)
+      return {
+        key: "soldout",
+        label: "Sold out",
+        ended: false,
+        soldOut: true,
+      };
+    if (ended)
+      return {
+        key: "ended",
+        label: "Drop ended",
+        ended: true,
+        soldOut: false,
+      };
 
     const parts = [];
 
@@ -188,11 +219,16 @@ export default function PublicSlugPage() {
 
   function humanReason(r) {
     switch ((r || "").toLowerCase()) {
-      case "expired": return "This drop has ended.";
-      case "soldout": return "This item is sold out.";
-      case "unpublished": return "This product isn’t available right now.";
-      case "noprice": return "This product doesn’t have a checkout set yet.";
-      default: return "";
+      case "expired":
+        return "This drop has ended.";
+      case "soldout":
+        return "This item is sold out.";
+      case "unpublished":
+        return "This product isn’t available right now.";
+      case "noprice":
+        return "This product doesn’t have a checkout set yet.";
+      default:
+        return "";
     }
   }
 
@@ -218,7 +254,8 @@ export default function PublicSlugPage() {
         body: JSON.stringify({
           publicSlug: slug,
           email,
-          ref: typeof window !== "undefined" ? window.location.href : "",
+          ref:
+            typeof window !== "undefined" ? window.location.href : "",
         }),
       });
       const json = await resp.json().catch(() => ({}));
@@ -286,20 +323,30 @@ export default function PublicSlugPage() {
       <Head>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
-        <meta name="robots" content="index,follow,max-image-preview:large" />
+        <meta
+          name="robots"
+          content="index,follow,max-image-preview:large"
+        />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
-        {firstImage ? <meta property="og:image" content={firstImage} /> : null}
+        {firstImage ? (
+          <meta property="og:image" content={firstImage} />
+        ) : null}
 
         {/* Twitter */}
-        <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
+        <meta
+          name="twitter:card"
+          content={firstImage ? "summary_large_image" : "summary"}
+        />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDesc} />
-        {firstImage ? <meta name="twitter:image" content={firstImage} /> : null}
+        {firstImage ? (
+          <meta name="twitter:image" content={firstImage} />
+        ) : null}
         <link rel="canonical" href={pageUrl} />
       </Head>
 
@@ -307,15 +354,22 @@ export default function PublicSlugPage() {
         <div className="max-w-5xl mx-auto px-6 py-10">
           <header className="mb-8">
             <h1 className="text-4xl font-bold">{title}</h1>
-            {bio ? <p className="text-neutral-400 mt-2">{bio}</p> : null}
+            {bio ? (
+              <p className="text-neutral-400 mt-2">{bio}</p>
+            ) : null}
           </header>
 
           {/* Email capture (slug flow) */}
           {canCollectEmail && (
             <div className="mb-8 rounded-2xl border border-neutral-800 p-5">
-              <div className="text-lg font-semibold mb-2">Get first dibs on drops</div>
+              <div className="text-lg font-semibold mb-2">
+                Get first dibs on drops
+              </div>
               {!subscribed ? (
-                <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 items-stretch">
+                <form
+                  onSubmit={handleSubscribe}
+                  className="flex flex-col sm:flex-row gap-3 items-stretch"
+                >
                   <input
                     type="email"
                     inputMode="email"
@@ -328,7 +382,9 @@ export default function PublicSlugPage() {
                       if (emailErr) setEmailErr("");
                     }}
                     aria-invalid={!!emailErr}
-                    aria-describedby={emailErr ? "email-error" : undefined}
+                    aria-describedby={
+                      emailErr ? "email-error" : undefined
+                    }
                   />
                   <button
                     type="submit"
@@ -356,15 +412,18 @@ export default function PublicSlugPage() {
 
           {/* Products */}
           {products.length === 0 ? (
-            <div className="opacity-70">No products are published yet.</div>
+            <div className="opacity-70">
+              No products are published yet.
+            </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
               {products.map((p) => {
                 const st = productStatus(p);
-                const showBuy = !st.ended && !st.soldOut && !!p.priceUrl;
-                const buyHref = `/api/products/buy?productId=${encodeURIComponent(p.id)}${
-                  slug ? `&slug=${encodeURIComponent(slug)}` : ""
-                }`;
+                const showBuy =
+                  !st.ended && !st.soldOut && !!p.priceUrl;
+                const buyHref = `/api/products/buy?productId=${encodeURIComponent(
+                  p.id
+                )}${slug ? `&slug=${encodeURIComponent(slug)}` : ""}`;
 
                 return (
                   <article
@@ -397,7 +456,10 @@ export default function PublicSlugPage() {
                     </div>
 
                     <div className="p-5">
-                      <h2 id={`prod-${p.id}-title`} className="text-xl font-semibold mb-1">
+                      <h2
+                        id={`prod-${p.id}-title`}
+                        className="text-xl font-semibold mb-1"
+                      >
                         {p.title || "Untitled"}
                       </h2>
 
@@ -406,7 +468,9 @@ export default function PublicSlugPage() {
                         <div
                           className={
                             "text-sm mb-3 " +
-                            (st.soldOut || st.ended ? "text-rose-300" : "text-emerald-300")
+                            (st.soldOut || st.ended
+                              ? "text-rose-300"
+                              : "text-emerald-300")
                           }
                         >
                           {st.label}
@@ -417,7 +481,9 @@ export default function PublicSlugPage() {
                         <a
                           href={buyHref}
                           className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          aria-label={`Buy ${p.title || "this product"}`}
+                          aria-label={`Buy ${
+                            p.title || "this product"
+                          }`}
                           onClick={() => {
                             try {
                               navigator.sendBeacon(
@@ -430,7 +496,10 @@ export default function PublicSlugPage() {
                                       publicSlug: slug || null,
                                       ts: Date.now(),
                                       ref:
-                                        typeof window !== "undefined" ? window.location.href : "",
+                                        typeof window !==
+                                        "undefined"
+                                          ? window.location.href
+                                          : "",
                                     }),
                                   ],
                                   { type: "application/json" }
@@ -439,7 +508,10 @@ export default function PublicSlugPage() {
                             } catch {}
                           }}
                         >
-                          Buy <span className="text-xs opacity-70">→</span>
+                          Buy{" "}
+                          <span className="text-xs opacity-70">
+                            →
+                          </span>
                         </a>
                       ) : (
                         <div
@@ -448,7 +520,11 @@ export default function PublicSlugPage() {
                           role="button"
                           tabIndex={-1}
                         >
-                          {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : "Unavailable"}
+                          {st.soldOut
+                            ? "Sold out"
+                            : st.ended
+                            ? "Drop ended"
+                            : "Unavailable"}
                         </div>
                       )}
                     </div>

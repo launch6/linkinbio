@@ -56,7 +56,6 @@ export default function PublicSlugPage() {
 
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
-  const justBoughtHandledRef = useRef(false);
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -76,7 +75,9 @@ export default function PublicSlugPage() {
 
     setProfile(j.profile || null);
     setProducts(
-      Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []
+      Array.isArray(j.products)
+        ? j.products.filter((p) => !!p.published)
+        : []
     );
   }
 
@@ -117,19 +118,6 @@ export default function PublicSlugPage() {
     };
   }, [slug]);
 
-  // extra refresh after Stripe success (?justBought=1)
-  useEffect(() => {
-    if (!slug) return;
-    if (!router.isReady) return;
-    if (justBoughtHandledRef.current) return;
-
-    const justBought = router.query?.justBought;
-    if (!justBought) return;
-
-    justBoughtHandledRef.current = true;
-    fetchAll(slug).catch(() => {});
-  }, [slug, router.isReady, router.query?.justBought]);
-
   // track page_view (slug-based)
   useEffect(() => {
     if (!slug) return;
@@ -137,7 +125,10 @@ export default function PublicSlugPage() {
       const payload = {
         type: "page_view",
         ts: Date.now(),
-        ref: typeof window !== "undefined" ? window.location.href : "",
+        ref:
+          typeof window !== "undefined"
+            ? window.location.href
+            : "",
         publicSlug: slug,
       };
       const blob = new Blob([JSON.stringify(payload)], {
@@ -200,7 +191,11 @@ export default function PublicSlugPage() {
     const parts = [];
 
     // only show X/Y when showInventory is true and both numbers exist
-    if (p.showInventory && total !== null && left !== null) {
+    if (
+      p.showInventory &&
+      total !== null &&
+      left !== null
+    ) {
       parts.push(`${left}/${total} left`);
     }
 
@@ -233,9 +228,12 @@ export default function PublicSlugPage() {
   }
 
   const badgeClass = {
-    active: "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
-    soldout: "bg-rose-500/20 border-rose-400/40 text-rose-200",
-    ended: "bg-amber-500/20 border-amber-400/40 text-amber-200",
+    active:
+      "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
+    soldout:
+      "bg-rose-500/20 border-rose-400/40 text-rose-200",
+    ended:
+      "bg-amber-500/20 border-amber-400/40 text-amber-200",
   };
 
   // handle slug-based subscribe
@@ -243,7 +241,9 @@ export default function PublicSlugPage() {
     e.preventDefault();
     setEmailErr("");
     if (!isValidEmail(email)) {
-      setEmailErr("Please enter a valid email (e.g., name@example.com).");
+      setEmailErr(
+        "Please enter a valid email (e.g., name@example.com)."
+      );
       return;
     }
     try {
@@ -255,7 +255,9 @@ export default function PublicSlugPage() {
           publicSlug: slug,
           email,
           ref:
-            typeof window !== "undefined" ? window.location.href : "",
+            typeof window !== "undefined"
+              ? window.location.href
+              : "",
         }),
       });
       const json = await resp.json().catch(() => ({}));
@@ -279,25 +281,40 @@ export default function PublicSlugPage() {
     }
   }
 
-  const title = profile?.displayName || profile?.name || "Artist";
+  const title =
+    profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
   const canCollectEmail = !!profile?.collectEmail;
+
+  const links = Array.isArray(profile?.links)
+    ? profile.links.filter(
+        (l) =>
+          l &&
+          typeof l.url === "string" &&
+          l.url.trim().length > 0
+      )
+    : [];
 
   // --- SEO / Social ---
   const firstImage = products?.[0]?.imageUrl || "";
   const site = "https://linkinbio-tau-pink.vercel.app";
-  const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
+  const pageUrl = slug
+    ? `${site}/${encodeURIComponent(slug)}`
+    : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
   const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
   const leftPart =
-    products?.[0]?.showInventory && left0 != null && total0 != null
+    products?.[0]?.showInventory &&
+    left0 != null &&
+    total0 != null
       ? ` • ${left0}/${total0} left`
       : "";
   const seoDesc =
     (products?.[0]?.title
       ? `${products[0].title}${leftPart}`
-      : "Limited releases and timed drops.") + (bio ? ` — ${bio}` : "");
+      : "Limited releases and timed drops.") +
+    (bio ? ` — ${bio}` : "");
 
   if (loading) {
     return (
@@ -400,12 +417,16 @@ export default function PublicSlugPage() {
                 </div>
               )}
               {emailErr ? (
-                <div id="email-error" className="mt-2 text-sm text-rose-300">
+                <div
+                  id="email-error"
+                  className="mt-2 text-sm text-rose-300"
+                >
                   {emailErr}
                 </div>
               ) : null}
               <div className="mt-2 text-xs text-neutral-500">
-                We’ll only email you about releases. Unsubscribe anytime.
+                We’ll only email you about releases. Unsubscribe
+                anytime.
               </div>
             </div>
           )}
@@ -423,7 +444,11 @@ export default function PublicSlugPage() {
                   !st.ended && !st.soldOut && !!p.priceUrl;
                 const buyHref = `/api/products/buy?productId=${encodeURIComponent(
                   p.id
-                )}${slug ? `&slug=${encodeURIComponent(slug)}` : ""}`;
+                )}${
+                  slug
+                    ? `&slug=${encodeURIComponent(slug)}`
+                    : ""
+                }`;
 
                 return (
                   <article
@@ -446,11 +471,13 @@ export default function PublicSlugPage() {
                         <span
                           className={
                             "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
-                            (badgeClass[st.key] || badgeClass.active)
+                            (badgeClass[st.key] ||
+                              badgeClass.active)
                           }
                           aria-live="polite"
                         >
-                          {st.label || (st.key === "active" ? "Live" : "")}
+                          {st.label ||
+                            (st.key === "active" ? "Live" : "")}
                         </span>
                       </div>
                     </div>
@@ -493,16 +520,20 @@ export default function PublicSlugPage() {
                                     JSON.stringify({
                                       type: "buy_click",
                                       productId: p.id,
-                                      publicSlug: slug || null,
+                                      publicSlug:
+                                        slug || null,
                                       ts: Date.now(),
                                       ref:
                                         typeof window !==
                                         "undefined"
-                                          ? window.location.href
+                                          ? window.location
+                                              .href
                                           : "",
                                     }),
                                   ],
-                                  { type: "application/json" }
+                                  {
+                                    type: "application/json",
+                                  }
                                 )
                               );
                             } catch {}
@@ -531,6 +562,35 @@ export default function PublicSlugPage() {
                   </article>
                 );
               })}
+            </div>
+          )}
+
+          {/* Links */}
+          {links.length > 0 && (
+            <div className="mt-10">
+              <h2 className="text-lg font-semibold mb-3">
+                Links
+              </h2>
+              <div className="space-y-3">
+                {links.map((l) => {
+                  const label =
+                    l.label || l.url || "Link";
+                  return (
+                    <a
+                      key={l.id || l.url}
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors"
+                    >
+                      <span>{label}</span>
+                      <span className="text-xs opacity-60">
+                        ↗
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

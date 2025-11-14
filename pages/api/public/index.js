@@ -31,9 +31,10 @@ function send(res, status, body) {
  * Returns a public-safe payload for the profile + published products.
  */
 export default async function handler(req, res) {
+  noStore(res);
+
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
-    noStore(res);
     return res.status(405).end("Method Not Allowed");
   }
 
@@ -58,6 +59,7 @@ export default async function handler(req, res) {
           collectEmail: 1,
           publicSlug: 1,
           products: 1,
+          links: 1,
         },
       }
     );
@@ -70,6 +72,15 @@ export default async function handler(req, res) {
       ? doc.products.filter((p) => !!p?.published)
       : [];
 
+    const links = Array.isArray(doc.links)
+      ? doc.links.filter(
+          (l) =>
+            l &&
+            typeof l.url === "string" &&
+            l.url.trim().length > 0
+        )
+      : [];
+
     return send(res, 200, {
       ok: true,
       profile: {
@@ -77,6 +88,7 @@ export default async function handler(req, res) {
         bio: doc.bio || "",
         collectEmail: !!doc.collectEmail,
         publicSlug: doc.publicSlug || slug,
+        links,
       },
       products: published,
     });

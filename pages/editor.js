@@ -49,6 +49,12 @@ export default function EditorPage() {
   const [saveProfError, setSaveProfError] = useState("");
   const [savingProf, setSavingProf] = useState(false);
 
+  // links editor state
+  const [links, setLinks] = useState([]);
+  const [savingLinks, setSavingLinks] = useState(false);
+  const [saveLinksMsg, setSaveLinksMsg] = useState("");
+  const [saveLinksError, setSaveLinksError] = useState("");
+
   // Read editToken from URL (client-only)
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -74,7 +80,9 @@ export default function EditorPage() {
         setLoading(true);
         // Profile
         const pr = await fetch(
-          `/api/profile/get?editToken=${encodeURIComponent(editToken)}`,
+          `/api/profile/get?editToken=${encodeURIComponent(
+            editToken
+          )}`,
           { cache: "no-store" }
         );
         const pj = await pr.json();
@@ -83,7 +91,9 @@ export default function EditorPage() {
 
         // Products
         const r = await fetch(
-          `/api/products?editToken=${encodeURIComponent(editToken)}`,
+          `/api/products?editToken=${encodeURIComponent(
+            editToken
+          )}`,
           { cache: "no-store" }
         );
         const j = await r.json();
@@ -97,6 +107,19 @@ export default function EditorPage() {
         // initialize email capture fields from profile
         setCollectEmail(!!pj.profile?.collectEmail);
         setKlaviyoListId(String(pj.profile?.klaviyoListId || ""));
+
+        // links
+        setLinks(
+          Array.isArray(pj.profile?.links)
+            ? pj.profile.links.map((l) => ({
+                id:
+                  (l && l.id) ||
+                  `l_${Math.random().toString(36).slice(2, 9)}`,
+                label: String(l?.label || "").slice(0, 200),
+                url: String(l?.url || "").slice(0, 2000),
+              }))
+            : []
+        );
 
         // products
         setProducts(
@@ -238,7 +261,9 @@ export default function EditorPage() {
 
       // Refresh from server (to reflect any server-side normalization)
       const r2 = await fetch(
-        `/api/products?editToken=${encodeURIComponent(editToken)}`,
+        `/api/products?editToken=${encodeURIComponent(
+          editToken
+        )}`,
         { cache: "no-store" }
       );
       const j2 = await r2.json();
@@ -305,6 +330,82 @@ export default function EditorPage() {
     } finally {
       setSavingProf(false);
       setTimeout(() => setSaveProfMsg(""), 2000);
+    }
+  }
+
+  // Links helpers
+  function onLinkChange(idx, key, val) {
+    setLinks((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [key]: val };
+      return next;
+    });
+  }
+
+  function addLinkRow() {
+    setLinks((prev) => [
+      ...prev,
+      {
+        id: `l_${Math.random().toString(36).slice(2, 9)}`,
+        label: "New link",
+        url: "",
+      },
+    ]);
+    setSaveLinksError("");
+    setSaveLinksMsg("");
+  }
+
+  function removeLinkRow(idx) {
+    setLinks((prev) => prev.filter((_, i) => i !== idx));
+    setSaveLinksError("");
+    setSaveLinksMsg("");
+  }
+
+  async function saveLinks() {
+    try {
+      setSavingLinks(true);
+      setSaveLinksMsg("");
+      setSaveLinksError("");
+
+      const shaped = links
+        .map((l) => ({
+          id: l.id || `l_${Math.random().toString(36).slice(2, 9)}`,
+          label: String(l.label || "").slice(0, 200),
+          url: String(l.url || "").slice(0, 2000),
+        }))
+        .filter((l) => l.label || l.url);
+
+      const resp = await fetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editToken, links: shaped }),
+      });
+
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok || !json?.ok) {
+        const msg =
+          (json && (json.error || json.message)) ||
+          `Save failed (${resp.status})`;
+        setSaveLinksError(msg);
+        return;
+      }
+
+      setLinks(
+        Array.isArray(json.links)
+          ? json.links.map((l) => ({
+              id: l.id || `l_${Math.random().toString(36).slice(2, 9)}`,
+              label: String(l.label || "").slice(0, 200),
+              url: String(l.url || "").slice(0, 2000),
+            }))
+          : shaped
+      );
+
+      setSaveLinksMsg("Links saved!");
+    } catch (e) {
+      setSaveLinksError(e.message || "Failed to save links");
+    } finally {
+      setSavingLinks(false);
+      setTimeout(() => setSaveLinksMsg(""), 2000);
     }
   }
 
@@ -440,6 +541,93 @@ export default function EditorPage() {
               </>
             )}
           </div>
+        </div>
+
+        {/* Links Editor */}
+        <div className="rounded-2xl border border-neutral-800 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-xl font-semibold">Links</div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={addLinkRow}
+                className="rounded-lg border border-neutral-700 px-3 py-2 hover:bg-neutral-800"
+              >
+                + Add link
+              </button>
+              <button
+                onClick={saveLinks}
+                disabled={savingLinks}
+                className="rounded-lg border border-green-700 px-3 py-2 hover:bg-green-900/20 disabled:opacity-60"
+              >
+                {savingLinks ? "Saving…" : "Save Links"}
+              </button>
+            </div>
+          </div>
+
+          {saveLinksError ? (
+            <div className="mb-3 rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
+              {saveLinksError}
+            </div>
+          ) : null}
+          {saveLinksMsg ? (
+            <div className="mb-3 rounded-md border border-green-600/40 bg-green-900/20 text-green-200 px-3 py-2 text-sm">
+              {saveLinksMsg}
+            </div>
+          ) : null}
+
+          {links.length === 0 ? (
+            <div className="opacity-70 text-sm">
+              No links yet. Click “Add link”.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {links.map((l, idx) => (
+                <div
+                  key={l.id || idx}
+                  className="grid md:grid-cols-12 gap-3 items-center"
+                >
+                  <div className="md:col-span-4">
+                    <div className="text-xs opacity-70 mb-1">
+                      Label
+                    </div>
+                    <input
+                      className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none text-sm"
+                      value={l.label || ""}
+                      onChange={(e) =>
+                        onLinkChange(
+                          idx,
+                          "label",
+                          e.target.value
+                        )
+                      }
+                      placeholder="e.g., Shop, Podcast, Gallery show"
+                    />
+                  </div>
+                  <div className="md:col-span-7">
+                    <div className="text-xs opacity-70 mb-1">
+                      URL
+                    </div>
+                    <input
+                      className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 outline-none text-sm"
+                      value={l.url || ""}
+                      onChange={(e) =>
+                        onLinkChange(idx, "url", e.target.value)
+                      }
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div className="md:col-span-1 flex md:justify-end">
+                    <button
+                      onClick={() => removeLinkRow(idx)}
+                      className="mt-5 text-xs rounded-md border border-neutral-700 px-2 py-1 hover:bg-neutral-800"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Products Editor */}

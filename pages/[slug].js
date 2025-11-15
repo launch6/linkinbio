@@ -221,51 +221,6 @@ export default function PublicSlugPage() {
       "bg-amber-500/20 border-amber-400/40 text-amber-200",
   };
 
-  // handle slug-based subscribe
-  async function handleSubscribe(e) {
-    e.preventDefault();
-    setEmailErr("");
-    if (!isValidEmail(email)) {
-      setEmailErr(
-        "Please enter a valid email (e.g., name@example.com)."
-      );
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const resp = await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          publicSlug: slug,
-          email,
-          ref:
-            typeof window !== "undefined"
-              ? window.location.href
-              : "",
-        }),
-      });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok || !json?.ok) {
-        if (json?.error === "email_collection_disabled") {
-          setEmailErr("Email signup is unavailable right now.");
-        } else if (json?.error === "invalid_email") {
-          setEmailErr("Please enter a valid email.");
-        } else if (json?.error === "profile_not_found") {
-          setEmailErr("Creator not found.");
-        } else {
-          setEmailErr("Subscribe failed. Please try again.");
-        }
-        return;
-      }
-      setSubscribed(true);
-    } catch {
-      setEmailErr("Network error. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   const title =
     profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
@@ -283,7 +238,7 @@ export default function PublicSlugPage() {
   const social = profile?.social || {};
   const hasSocialRow =
     social.instagram ||
-    social.facebook || // NEW
+    social.facebook ||
     social.tiktok ||
     social.youtube ||
     social.x ||
@@ -310,6 +265,7 @@ export default function PublicSlugPage() {
       : "Limited releases and timed drops.") +
     (bio ? ` — ${bio}` : "");
 
+  // Loading / error states
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
@@ -363,14 +319,17 @@ export default function PublicSlugPage() {
 
       <div className="min-h-screen bg-neutral-950 text-white">
         <div className="max-w-5xl mx-auto px-6 py-10">
-          <header className="mb-8">
+          {/* HEADER */}
+          <header className="mb-10">
             <h1 className="text-4xl font-bold">{title}</h1>
             {bio ? (
-              <p className="text-neutral-400 mt-2">{bio}</p>
+              <p className="text-neutral-400 mt-2 max-w-2xl">
+                {bio}
+              </p>
             ) : null}
 
             {hasSocialRow && (
-              <div className="flex flex-wrap gap-2 mt-4 text-xs">
+              <div className="flex flex-wrap gap-3 mt-4 text-xs">
                 {social.instagram && (
                   <a
                     href={social.instagram}
@@ -490,13 +449,13 @@ export default function PublicSlugPage() {
             </div>
           )}
 
-          {/* Products */}
+          {/* PRODUCTS */}
           {products.length === 0 ? (
             <div className="opacity-70">
               No products are published yet.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-8">
               {products.map((p) => {
                 const st = productStatus(p);
                 const showBuy =
@@ -512,7 +471,7 @@ export default function PublicSlugPage() {
                 return (
                   <article
                     key={p.id}
-                    className="relative rounded-2xl border border-neutral-800 overflow-hidden"
+                    className="relative max-w-xl mx-auto w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
                     <div className="relative">
@@ -624,9 +583,9 @@ export default function PublicSlugPage() {
             </div>
           )}
 
-          {/* Links */}
+          {/* LINKS */}
           {links.length > 0 && (
-            <div className="mt-10">
+            <div className="mt-10 max-w-xl mx-auto">
               <h2 className="text-lg font-semibold mb-3">
                 Links
               </h2>

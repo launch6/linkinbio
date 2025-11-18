@@ -221,9 +221,7 @@ export default function PublicSlugPage() {
     e.preventDefault();
     setEmailErr("");
     if (!isValidEmail(email)) {
-      setEmailErr(
-        "Please enter a valid email (e.g., name@example.com)."
-      );
+      setEmailErr("Please enter a valid email (e.g., name@example.com).");
       return;
     }
     try {
@@ -261,8 +259,7 @@ export default function PublicSlugPage() {
     }
   }
 
-  const title =
-    profile?.displayName || profile?.name || "Artist";
+  const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
   const canCollectEmail = !!profile?.collectEmail;
 
@@ -287,16 +284,12 @@ export default function PublicSlugPage() {
   // --- SEO / Social ---
   const firstImage = products?.[0]?.imageUrl || "";
   const site = "https://linkinbio-tau-pink.vercel.app";
-  const pageUrl = slug
-    ? `${site}/${encodeURIComponent(slug)}`
-    : site;
+  const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
   const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
   const leftPart =
-    products?.[0]?.showInventory &&
-    left0 != null &&
-    total0 != null
+    products?.[0]?.showInventory && left0 != null && total0 != null
       ? ` • ${left0}/${total0} left`
       : "";
   const seoDesc =
@@ -304,6 +297,9 @@ export default function PublicSlugPage() {
       ? `${products[0].title}${leftPart}`
       : "Limited releases and timed drops.") +
     (bio ? ` — ${bio}` : "");
+
+  const avatarInitial =
+    (title && title.trim().charAt(0).toUpperCase()) || "L";
 
   if (loading) {
     return (
@@ -357,30 +353,35 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        <div className="max-w-5xl mx-auto px-6 py-10 flex flex-col items-center">
+        <div className="max-w-4xl mx-auto px-6 py-10 flex flex-col gap-10">
           {/* HEADER */}
-          <header className="mb-8 flex flex-col items-center text-center w-full">
-            <h1 className="text-4xl font-bold">
-              {title ? `@${title}` : "Artist"}
-            </h1>
-            {bio ? (
-              <p className="text-neutral-400 mt-2 max-w-xl text-sm">
-                {bio}
-              </p>
-            ) : null}
+          <header className="flex flex-col items-center text-center gap-4">
+            {/* logo / avatar */}
+            <div className="flex items-center justify-center">
+              <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
+                {avatarInitial}
+              </div>
+            </div>
 
+            {/* handle */}
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold">
+                {title ? `@${title}` : "Artist"}
+              </h1>
+            </div>
+
+            {/* socials */}
             {hasSocialRow && (
-              <div className="flex flex-wrap justify-center gap-3 mt-4 text-xs">
+              <div className="flex flex-wrap justify-center gap-3 text-sm">
                 {social.instagram && (
                   <a
                     href={social.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="Instagram"
                   >
-                    <span role="img" aria-label="Instagram">
-                      📸
-                    </span>
+                    📸
                   </a>
                 )}
                 {social.facebook && (
@@ -388,11 +389,10 @@ export default function PublicSlugPage() {
                     href={social.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="Facebook"
                   >
-                    <span role="img" aria-label="Facebook">
-                      📘
-                    </span>
+                    📘
                   </a>
                 )}
                 {social.tiktok && (
@@ -400,11 +400,10 @@ export default function PublicSlugPage() {
                     href={social.tiktok}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="TikTok"
                   >
-                    <span role="img" aria-label="TikTok">
-                      🎵
-                    </span>
+                    🎵
                   </a>
                 )}
                 {social.youtube && (
@@ -412,11 +411,10 @@ export default function PublicSlugPage() {
                     href={social.youtube}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="YouTube"
                   >
-                    <span role="img" aria-label="YouTube">
-                      ▶️
-                    </span>
+                    ▶️
                   </a>
                 )}
                 {social.x && (
@@ -424,11 +422,10 @@ export default function PublicSlugPage() {
                     href={social.x}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="X"
                   >
-                    <span role="img" aria-label="X">
-                      ✖️
-                    </span>
+                    ✖️
                   </a>
                 )}
                 {social.website && (
@@ -436,21 +433,27 @@ export default function PublicSlugPage() {
                     href={social.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="Website"
                   >
-                    <span role="img" aria-label="Website">
-                      🌐
-                    </span>
+                    🌐
                   </a>
                 )}
               </div>
             )}
+
+            {/* bio */}
+            {bio ? (
+              <p className="text-neutral-400 max-w-xl text-sm sm:text-base">
+                {bio}
+              </p>
+            ) : null}
           </header>
 
-          {/* Email capture (slug flow) */}
+          {/* EMAIL CAPTURE */}
           {canCollectEmail && (
-            <div className="mb-8 rounded-2xl border border-neutral-800 p-5 w-full max-w-xl">
-              <div className="text-lg font-semibold mb-2 text-center">
+            <div className="mb-2 rounded-2xl border border-neutral-800 p-5 max-w-xl mx-auto">
+              <div className="text-lg font-semibold mb-2">
                 Get first dibs on drops
               </div>
               {!subscribed ? (
@@ -462,7 +465,7 @@ export default function PublicSlugPage() {
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none"
+                    className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => {
@@ -477,7 +480,7 @@ export default function PublicSlugPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="rounded-lg border border-emerald-600 px-4 py-2 hover:bg-emerald-900/20 disabled:opacity-60"
+                    className="rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-900/20 disabled:opacity-60"
                   >
                     {submitting ? "Joining…" : "Join"}
                   </button>
@@ -495,20 +498,19 @@ export default function PublicSlugPage() {
                   {emailErr}
                 </div>
               ) : null}
-              <div className="mt-2 text-xs text-neutral-500 text-center">
-                We’ll only email you about releases. Unsubscribe
-                anytime.
+              <div className="mt-2 text-xs text-neutral-500">
+                We’ll only email you about releases. Unsubscribe anytime.
               </div>
             </div>
           )}
 
-          {/* Products */}
+          {/* PRODUCTS (DROP CARDS) */}
           {products.length === 0 ? (
-            <div className="opacity-70 mt-8 text-center">
+            <div className="opacity-70 text-center">
               No products are published yet.
             </div>
           ) : (
-            <div className="w-full flex flex-col items-center gap-6 mt-4">
+            <div className="flex flex-col gap-8">
               {products.map((p) => {
                 const st = productStatus(p);
                 const showBuy =
@@ -524,17 +526,20 @@ export default function PublicSlugPage() {
                 return (
                   <article
                     key={p.id}
-                    className="relative w-full max-w-md rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60"
+                    className="relative max-w-xl mx-auto w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60 shadow-lg"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
+                    {/* HERO IMAGE */}
                     <div className="relative">
                       {p.imageUrl ? (
-                        <img
-                          src={p.imageUrl}
-                          alt={p.title || "Product image"}
-                          className="w-full h-auto max-h-[480px] object-cover"
-                          loading="lazy"
-                        />
+                        <div className="w-full aspect-[4/5] sm:aspect-[4/3] overflow-hidden">
+                          <img
+                            src={p.imageUrl}
+                            alt={p.title || "Product image"}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
                       ) : (
                         <div className="w-full aspect-[4/3] bg-neutral-900" />
                       )}
@@ -553,19 +558,22 @@ export default function PublicSlugPage() {
                       </div>
                     </div>
 
-                    <div className="p-5">
-                      <h2
-                        id={`prod-${p.id}-title`}
-                        className="text-xl font-semibold mb-1"
-                      >
-                        {p.title || "Untitled"}
-                      </h2>
+                    {/* BODY */}
+                    <div className="p-5 flex flex-col gap-3">
+                      <div>
+                        <h2
+                          id={`prod-${p.id}-title`}
+                          className="text-xl font-semibold"
+                        >
+                          {p.title || "Untitled"}
+                        </h2>
+                      </div>
 
-                      {/* Status line (secondary) */}
+                      {/* Status line */}
                       {st.label ? (
                         <div
                           className={
-                            "text-sm mb-3 " +
+                            "text-sm " +
                             (st.soldOut || st.ended
                               ? "text-rose-300"
                               : "text-emerald-300")
@@ -575,60 +583,60 @@ export default function PublicSlugPage() {
                         </div>
                       ) : null}
 
-                      {showBuy ? (
-                        <a
-                          href={buyHref}
-                          className="inline-flex items-center justify-center gap-2 w-full rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          aria-label={`Buy ${
-                            p.title || "this product"
-                          }`}
-                          onClick={() => {
-                            try {
-                              navigator.sendBeacon(
-                                "/api/track",
-                                new Blob(
-                                  [
-                                    JSON.stringify({
-                                      type: "buy_click",
-                                      productId: p.id,
-                                      publicSlug:
-                                        slug || null,
-                                      ts: Date.now(),
-                                      ref:
-                                        typeof window !==
-                                        "undefined"
-                                          ? window.location
-                                              .href
-                                          : "",
-                                    }),
-                                  ],
-                                  {
-                                    type: "application/json",
-                                  }
-                                )
-                              );
-                            } catch {}
-                          }}
-                        >
-                          Buy{" "}
-                          <span className="text-xs opacity-70">
-                            →
-                          </span>
-                        </a>
-                      ) : (
-                        <div
-                          className="inline-flex items-center justify-center w-full rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
-                          aria-disabled="true"
-                          role="button"
-                          tabIndex={-1}
-                        >
-                          {st.soldOut
-                            ? "Sold out"
-                            : st.ended
-                            ? "Drop ended"
-                            : "Unavailable"}
-                        </div>
-                      )}
+                      {/* CTA */}
+                      <div className="mt-2">
+                        {showBuy ? (
+                          <a
+                            href={buyHref}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500 bg-emerald-600/80 px-6 py-3 text-sm font-semibold tracking-wide hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                            aria-label={`Buy ${
+                              p.title || "this product"
+                            }`}
+                            onClick={() => {
+                              try {
+                                navigator.sendBeacon(
+                                  "/api/track",
+                                  new Blob(
+                                    [
+                                      JSON.stringify({
+                                        type: "buy_click",
+                                        productId: p.id,
+                                        publicSlug:
+                                          slug || null,
+                                        ts: Date.now(),
+                                        ref:
+                                          typeof window !==
+                                          "undefined"
+                                            ? window.location
+                                                .href
+                                            : "",
+                                      }),
+                                    ],
+                                    {
+                                      type: "application/json",
+                                    }
+                                  )
+                                );
+                              } catch {}
+                            }}
+                          >
+                            Buy now
+                          </a>
+                        ) : (
+                          <div
+                            className="inline-flex w-full items-center justify-center rounded-full border border-neutral-800 px-6 py-3 text-sm text-neutral-400"
+                            aria-disabled="true"
+                            role="button"
+                            tabIndex={-1}
+                          >
+                            {st.soldOut
+                              ? "Sold out"
+                              : st.ended
+                              ? "Drop ended"
+                              : "Unavailable"}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </article>
                 );
@@ -636,9 +644,9 @@ export default function PublicSlugPage() {
             </div>
           )}
 
-          {/* Links */}
+          {/* LINKS */}
           {links.length > 0 && (
-            <div className="mt-10 w-full max-w-md">
+            <div className="mt-4 max-w-xl mx-auto w-full">
               <h2 className="text-lg font-semibold mb-3 text-center">
                 Links
               </h2>
@@ -654,15 +662,31 @@ export default function PublicSlugPage() {
                       className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors"
                     >
                       <span>{label}</span>
-                      <span className="text-xs opacity-60">
-                        ↗
-                      </span>
+                      <span className="text-xs opacity-60">↗</span>
                     </a>
                   );
                 })}
               </div>
             </div>
           )}
+
+          {/* FOOTER */}
+          <footer className="mt-10 pb-6 text-xs text-neutral-500 text-center space-y-1">
+            <div>
+              Made with <span className="font-semibold">Launch6</span>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button className="underline underline-offset-2 decoration-neutral-600/80">
+                Cookie preferences
+              </button>
+              <button className="underline underline-offset-2 decoration-neutral-600/80">
+                Report page
+              </button>
+              <button className="underline underline-offset-2 decoration-neutral-600/80">
+                Privacy
+              </button>
+            </div>
+          </footer>
         </div>
       </div>
     </>

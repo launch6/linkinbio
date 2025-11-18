@@ -112,8 +112,7 @@ export default function PublicSlugPage() {
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
-      if (refreshIntervalRef.current)
-        clearInterval(refreshIntervalRef.current);
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, [slug]);
@@ -221,6 +220,51 @@ export default function PublicSlugPage() {
       "bg-amber-500/20 border-amber-400/40 text-amber-200",
   };
 
+  // handle slug-based subscribe
+  async function handleSubscribe(e) {
+    e.preventDefault();
+    setEmailErr("");
+    if (!isValidEmail(email)) {
+      setEmailErr(
+        "Please enter a valid email (e.g., name@example.com)."
+      );
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const resp = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicSlug: slug,
+          email,
+          ref:
+            typeof window !== "undefined"
+              ? window.location.href
+              : "",
+        }),
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok || !json?.ok) {
+        if (json?.error === "email_collection_disabled") {
+          setEmailErr("Email signup is unavailable right now.");
+        } else if (json?.error === "invalid_email") {
+          setEmailErr("Please enter a valid email.");
+        } else if (json?.error === "profile_not_found") {
+          setEmailErr("Creator not found.");
+        } else {
+          setEmailErr("Subscribe failed. Please try again.");
+        }
+        return;
+      }
+      setSubscribed(true);
+    } catch {
+      setEmailErr("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const title =
     profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
@@ -265,7 +309,6 @@ export default function PublicSlugPage() {
       : "Limited releases and timed drops.") +
     (bio ? ` — ${bio}` : "");
 
-  // Loading / error states
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
@@ -319,13 +362,10 @@ export default function PublicSlugPage() {
 
       <div className="min-h-screen bg-neutral-950 text-white">
         <div className="max-w-5xl mx-auto px-6 py-10">
-          {/* HEADER */}
-          <header className="mb-10">
+          <header className="mb-8">
             <h1 className="text-4xl font-bold">{title}</h1>
             {bio ? (
-              <p className="text-neutral-400 mt-2 max-w-2xl">
-                {bio}
-              </p>
+              <p className="text-neutral-400 mt-2">{bio}</p>
             ) : null}
 
             {hasSocialRow && (
@@ -335,9 +375,12 @@ export default function PublicSlugPage() {
                     href={social.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
                   >
-                    IG
+                    <span role="img" aria-label="Instagram">
+                      📸
+                    </span>
+                    <span>Instagram</span>
                   </a>
                 )}
                 {social.facebook && (
@@ -345,9 +388,12 @@ export default function PublicSlugPage() {
                     href={social.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
                   >
-                    FB
+                    <span role="img" aria-label="Facebook">
+                      📘
+                    </span>
+                    <span>Facebook</span>
                   </a>
                 )}
                 {social.tiktok && (
@@ -355,9 +401,12 @@ export default function PublicSlugPage() {
                     href={social.tiktok}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
                   >
-                    TikTok
+                    <span role="img" aria-label="TikTok">
+                      🎵
+                    </span>
+                    <span>TikTok</span>
                   </a>
                 )}
                 {social.youtube && (
@@ -365,9 +414,12 @@ export default function PublicSlugPage() {
                     href={social.youtube}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
                   >
-                    YouTube
+                    <span role="img" aria-label="YouTube">
+                      ▶️
+                    </span>
+                    <span>YouTube</span>
                   </a>
                 )}
                 {social.x && (
@@ -375,9 +427,12 @@ export default function PublicSlugPage() {
                     href={social.x}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
                   >
-                    X
+                    <span role="img" aria-label="X">
+                      ❌
+                    </span>
+                    <span>X</span>
                   </a>
                 )}
                 {social.website && (
@@ -385,9 +440,12 @@ export default function PublicSlugPage() {
                     href={social.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
+                    className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
                   >
-                    Website
+                    <span role="img" aria-label="Website">
+                      🌐
+                    </span>
+                    <span>Website</span>
                   </a>
                 )}
               </div>
@@ -449,13 +507,13 @@ export default function PublicSlugPage() {
             </div>
           )}
 
-          {/* PRODUCTS */}
+          {/* Products */}
           {products.length === 0 ? (
             <div className="opacity-70">
               No products are published yet.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 gap-6">
               {products.map((p) => {
                 const st = productStatus(p);
                 const showBuy =
@@ -479,7 +537,7 @@ export default function PublicSlugPage() {
                         <img
                           src={p.imageUrl}
                           alt={p.title || "Product image"}
-                          className="w-full aspect-[4/3] object-cover"
+                          className="w-full h-auto max-h-80 object-cover"
                           loading="lazy"
                         />
                       ) : (
@@ -583,9 +641,9 @@ export default function PublicSlugPage() {
             </div>
           )}
 
-          {/* LINKS */}
+          {/* Links */}
           {links.length > 0 && (
-            <div className="mt-10 max-w-xl mx-auto">
+            <div className="mt-10">
               <h2 className="text-lg font-semibold mb-3">
                 Links
               </h2>

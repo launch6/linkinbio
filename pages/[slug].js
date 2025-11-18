@@ -362,14 +362,19 @@ export default function PublicSlugPage() {
 
       <div className="min-h-screen bg-neutral-950 text-white">
         <div className="max-w-5xl mx-auto px-6 py-10">
-          <header className="mb-8">
-            <h1 className="text-4xl font-bold">{title}</h1>
+          {/* Header */}
+          <header className="mb-8 text-center">
+            <h1 className="text-4xl font-bold">
+              {title ? `@${title}` : "Artist"}
+            </h1>
             {bio ? (
-              <p className="text-neutral-400 mt-2">{bio}</p>
+              <p className="text-neutral-400 mt-2 max-w-xl mx-auto text-sm">
+                {bio}
+              </p>
             ) : null}
 
             {hasSocialRow && (
-              <div className="flex flex-wrap gap-3 mt-4 text-xs">
+              <div className="flex flex-wrap justify-center gap-3 mt-4 text-xs">
                 {social.instagram && (
                   <a
                     href={social.instagram}
@@ -380,7 +385,6 @@ export default function PublicSlugPage() {
                     <span role="img" aria-label="Instagram">
                       📸
                     </span>
-                    <span>Instagram</span>
                   </a>
                 )}
                 {social.facebook && (
@@ -393,7 +397,6 @@ export default function PublicSlugPage() {
                     <span role="img" aria-label="Facebook">
                       📘
                     </span>
-                    <span>Facebook</span>
                   </a>
                 )}
                 {social.tiktok && (
@@ -406,7 +409,6 @@ export default function PublicSlugPage() {
                     <span role="img" aria-label="TikTok">
                       🎵
                     </span>
-                    <span>TikTok</span>
                   </a>
                 )}
                 {social.youtube && (
@@ -419,7 +421,6 @@ export default function PublicSlugPage() {
                     <span role="img" aria-label="YouTube">
                       ▶️
                     </span>
-                    <span>YouTube</span>
                   </a>
                 )}
                 {social.x && (
@@ -430,9 +431,8 @@ export default function PublicSlugPage() {
                     className="inline-flex items-center gap-1 rounded-full border border-neutral-700 px-3 py-1 bg-neutral-900/70 hover:bg-neutral-800"
                   >
                     <span role="img" aria-label="X">
-                      ❌
+                      ✖️
                     </span>
-                    <span>X</span>
                   </a>
                 )}
                 {social.website && (
@@ -445,7 +445,6 @@ export default function PublicSlugPage() {
                     <span role="img" aria-label="Website">
                       🌐
                     </span>
-                    <span>Website</span>
                   </a>
                 )}
               </div>
@@ -537,7 +536,7 @@ export default function PublicSlugPage() {
                         <img
                           src={p.imageUrl}
                           alt={p.title || "Product image"}
-                          className="w-full h-auto max-h-80 object-cover"
+                          className="w-full max-h-[70vh] object-contain mx-auto"
                           loading="lazy"
                         />
                       ) : (

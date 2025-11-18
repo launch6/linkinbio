@@ -190,11 +190,7 @@ export default function PublicSlugPage() {
     const parts = [];
 
     // only show X/Y when showInventory is true and both numbers exist
-    if (
-      p.showInventory &&
-      total !== null &&
-      left !== null
-    ) {
+    if (p.showInventory && total !== null && left !== null) {
       parts.push(`${left}/${total} left`);
     }
 
@@ -361,14 +357,14 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        <div className="max-w-5xl mx-auto px-6 py-10">
-          {/* Header */}
-          <header className="mb-8 text-center">
+        <div className="max-w-5xl mx-auto px-6 py-10 flex flex-col items-center">
+          {/* HEADER */}
+          <header className="mb-8 flex flex-col items-center text-center w-full">
             <h1 className="text-4xl font-bold">
               {title ? `@${title}` : "Artist"}
             </h1>
             {bio ? (
-              <p className="text-neutral-400 mt-2 max-w-xl mx-auto text-sm">
+              <p className="text-neutral-400 mt-2 max-w-xl text-sm">
                 {bio}
               </p>
             ) : null}
@@ -453,8 +449,8 @@ export default function PublicSlugPage() {
 
           {/* Email capture (slug flow) */}
           {canCollectEmail && (
-            <div className="mb-8 rounded-2xl border border-neutral-800 p-5">
-              <div className="text-lg font-semibold mb-2">
+            <div className="mb-8 rounded-2xl border border-neutral-800 p-5 w-full max-w-xl">
+              <div className="text-lg font-semibold mb-2 text-center">
                 Get first dibs on drops
               </div>
               {!subscribed ? (
@@ -499,7 +495,7 @@ export default function PublicSlugPage() {
                   {emailErr}
                 </div>
               ) : null}
-              <div className="mt-2 text-xs text-neutral-500">
+              <div className="mt-2 text-xs text-neutral-500 text-center">
                 We’ll only email you about releases. Unsubscribe
                 anytime.
               </div>
@@ -508,11 +504,11 @@ export default function PublicSlugPage() {
 
           {/* Products */}
           {products.length === 0 ? (
-            <div className="opacity-70">
+            <div className="opacity-70 mt-8 text-center">
               No products are published yet.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="w-full flex flex-col items-center gap-6 mt-4">
               {products.map((p) => {
                 const st = productStatus(p);
                 const showBuy =
@@ -528,7 +524,7 @@ export default function PublicSlugPage() {
                 return (
                   <article
                     key={p.id}
-                    className="relative max-w-xl mx-auto w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60"
+                    className="relative w-full max-w-md rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
                     <div className="relative">
@@ -536,7 +532,7 @@ export default function PublicSlugPage() {
                         <img
                           src={p.imageUrl}
                           alt={p.title || "Product image"}
-                          className="w-full max-h-[70vh] object-contain mx-auto"
+                          className="w-full h-auto max-h-[480px] object-cover"
                           loading="lazy"
                         />
                       ) : (
@@ -582,7 +578,7 @@ export default function PublicSlugPage() {
                       {showBuy ? (
                         <a
                           href={buyHref}
-                          className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="inline-flex items-center justify-center gap-2 w-full rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           aria-label={`Buy ${
                             p.title || "this product"
                           }`}
@@ -621,7 +617,7 @@ export default function PublicSlugPage() {
                         </a>
                       ) : (
                         <div
-                          className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
+                          className="inline-flex items-center justify-center w-full rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
                           aria-disabled="true"
                           role="button"
                           tabIndex={-1}
@@ -642,14 +638,13 @@ export default function PublicSlugPage() {
 
           {/* Links */}
           {links.length > 0 && (
-            <div className="mt-10">
-              <h2 className="text-lg font-semibold mb-3">
+            <div className="mt-10 w-full max-w-md">
+              <h2 className="text-lg font-semibold mb-3 text-center">
                 Links
               </h2>
               <div className="space-y-3">
                 {links.map((l) => {
-                  const label =
-                    l.label || l.url || "Link";
+                  const label = l.label || l.url || "Link";
                   return (
                     <a
                       key={l.id || l.url}

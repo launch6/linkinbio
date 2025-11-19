@@ -530,18 +530,16 @@ export default function PublicSlugPage() {
                     aria-labelledby={`prod-${p.id}-title`}
                   >
                     {/* HERO IMAGE */}
-                    <div className="relative">
+                    <div className="relative w-full bg-neutral-900 flex items-center justify-center">
                       {p.imageUrl ? (
-                        <div className="w-full aspect-[4/5] sm:aspect-[4/3] overflow-hidden">
-                          <img
-                            src={p.imageUrl}
-                            alt={p.title || "Product image"}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        </div>
+                        <img
+                          src={p.imageUrl}
+                          alt={p.title || "Product image"}
+                          className="w-full max-h-[60vh] object-contain"
+                          loading="lazy"
+                        />
                       ) : (
-                        <div className="w-full aspect-[4/3] bg-neutral-900" />
+                        <div className="w-full max-h-[60vh] bg-neutral-900" />
                       )}
                       <div className="absolute left-3 top-3">
                         <span

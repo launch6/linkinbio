@@ -353,9 +353,10 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        <div className="max-w-4xl mx-auto px-6 py-10 flex flex-col gap-10">
+        {/* SUPER TIGHT CENTERED COLUMN */}
+        <div className="max-w-md mx-auto px-4 py-10 flex flex-col gap-8 items-stretch text-center">
           {/* HEADER */}
-          <header className="flex flex-col items-center text-center gap-4">
+          <header className="flex flex-col items-center gap-4">
             {/* logo / avatar */}
             <div className="flex items-center justify-center">
               <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
@@ -444,7 +445,7 @@ export default function PublicSlugPage() {
 
             {/* bio */}
             {bio ? (
-              <p className="text-neutral-400 max-w-xl text-sm sm:text-base">
+              <p className="text-neutral-400 text-sm sm:text-base">
                 {bio}
               </p>
             ) : null}
@@ -452,14 +453,14 @@ export default function PublicSlugPage() {
 
           {/* EMAIL CAPTURE */}
           {canCollectEmail && (
-            <div className="mb-2 rounded-2xl border border-neutral-800 p-5 max-w-xl mx-auto">
+            <div className="rounded-2xl border border-neutral-800 p-5">
               <div className="text-lg font-semibold mb-2">
                 Get first dibs on drops
               </div>
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}
-                  className="flex flex-col sm:flex-row gap-3 items-stretch"
+                  className="flex flex-col sm:flex-row gap-3 items-stretch text-left sm:text-left"
                 >
                   <input
                     type="email"
@@ -493,12 +494,12 @@ export default function PublicSlugPage() {
               {emailErr ? (
                 <div
                   id="email-error"
-                  className="mt-2 text-sm text-rose-300"
+                  className="mt-2 text-sm text-rose-300 text-left"
                 >
                   {emailErr}
                 </div>
               ) : null}
-              <div className="mt-2 text-xs text-neutral-500">
+              <div className="mt-2 text-xs text-neutral-500 text-left">
                 We’ll only email you about releases. Unsubscribe anytime.
               </div>
             </div>
@@ -506,7 +507,7 @@ export default function PublicSlugPage() {
 
           {/* PRODUCTS (DROP CARDS) */}
           {products.length === 0 ? (
-            <div className="opacity-70 text-center">
+            <div className="opacity-70">
               No products are published yet.
             </div>
           ) : (
@@ -526,24 +527,24 @@ export default function PublicSlugPage() {
                 return (
                   <article
                     key={p.id}
-                    className="relative max-w-xl mx-auto w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60 shadow-lg"
+                    className="relative w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60 shadow-lg flex flex-col items-center"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
                     {/* HERO IMAGE - CENTERED & MAX WIDTH */}
-                    <div className="relative flex justify-center pt-4 px-4">
+                    <div className="relative flex justify-center pt-4 px-4 w-full">
                       {p.imageUrl ? (
-                        <div className="w-full max-w-xs sm:max-w-sm md:max-w-md rounded-2xl overflow-hidden">
+                        <div className="w-full flex justify-center">
                           <img
                             src={p.imageUrl}
                             alt={p.title || "Product image"}
-                            className="w-full h-auto object-cover"
+                            className="w-full h-auto max-w-xs sm:max-w-sm object-cover rounded-2xl"
                             loading="lazy"
                           />
                         </div>
                       ) : (
-                        <div className="w-full max-w-xs sm:max-w-sm md:max-w-md aspect-[4/3] bg-neutral-900 rounded-2xl" />
+                        <div className="w-full max-w-xs sm:max-w-sm aspect-[4/3] bg-neutral-900 rounded-2xl" />
                       )}
-                      <div className="absolute left-6 top-6">
+                      <div className="absolute left-4 top-4">
                         <span
                           className={
                             "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
@@ -559,11 +560,11 @@ export default function PublicSlugPage() {
                     </div>
 
                     {/* BODY */}
-                    <div className="p-5 flex flex-col gap-3">
+                    <div className="p-5 flex flex-col gap-3 w-full">
                       <div>
                         <h2
                           id={`prod-${p.id}-title`}
-                          className="text-xl font-semibold text-center"
+                          className="text-xl font-semibold"
                         >
                           {p.title || "Untitled"}
                         </h2>
@@ -573,7 +574,7 @@ export default function PublicSlugPage() {
                       {st.label ? (
                         <div
                           className={
-                            "text-sm text-center " +
+                            "text-sm " +
                             (st.soldOut || st.ended
                               ? "text-rose-300"
                               : "text-emerald-300")
@@ -646,8 +647,8 @@ export default function PublicSlugPage() {
 
           {/* LINKS */}
           {links.length > 0 && (
-            <div className="mt-4 max-w-xl mx-auto w-full">
-              <h2 className="text-lg font-semibold mb-3 text-center">
+            <div className="mt-2 w-full">
+              <h2 className="text-lg font-semibold mb-3">
                 Links
               </h2>
               <div className="space-y-3">
@@ -659,7 +660,7 @@ export default function PublicSlugPage() {
                       href={l.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors"
+                      className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors text-left"
                     >
                       <span>{label}</span>
                       <span className="text-xs opacity-60">↗</span>
@@ -671,7 +672,7 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer className="mt-10 pb-6 text-xs text-neutral-500 text-center space-y-1">
+          <footer className="mt-8 pb-6 text-xs text-neutral-500 space-y-1">
             <div>
               Made with <span className="font-semibold">Launch6</span>
             </div>

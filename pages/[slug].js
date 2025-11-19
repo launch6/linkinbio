@@ -529,21 +529,21 @@ export default function PublicSlugPage() {
                     className="relative max-w-xl mx-auto w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60 shadow-lg"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    {/* HERO IMAGE (max width, centered, fits all devices) */}
-                    <div className="relative w-full bg-neutral-900 flex items-center justify-center">
-                      <div className="w-full max-w-sm sm:max-w-md mx-auto">
-                        {p.imageUrl ? (
+                    {/* HERO IMAGE - CENTERED & MAX WIDTH */}
+                    <div className="relative flex justify-center pt-4 px-4">
+                      {p.imageUrl ? (
+                        <div className="w-full max-w-xs sm:max-w-sm md:max-w-md rounded-2xl overflow-hidden">
                           <img
                             src={p.imageUrl}
                             alt={p.title || "Product image"}
-                            className="w-full h-auto object-contain"
+                            className="w-full h-auto object-cover"
                             loading="lazy"
                           />
-                        ) : (
-                          <div className="w-full aspect-square bg-neutral-900" />
-                        )}
-                      </div>
-                      <div className="absolute left-3 top-3">
+                        </div>
+                      ) : (
+                        <div className="w-full max-w-xs sm:max-w-sm md:max-w-md aspect-[4/3] bg-neutral-900 rounded-2xl" />
+                      )}
+                      <div className="absolute left-6 top-6">
                         <span
                           className={
                             "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
@@ -563,7 +563,7 @@ export default function PublicSlugPage() {
                       <div>
                         <h2
                           id={`prod-${p.id}-title`}
-                          className="text-xl font-semibold"
+                          className="text-xl font-semibold text-center"
                         >
                           {p.title || "Untitled"}
                         </h2>
@@ -573,7 +573,7 @@ export default function PublicSlugPage() {
                       {st.label ? (
                         <div
                           className={
-                            "text-sm " +
+                            "text-sm text-center " +
                             (st.soldOut || st.ended
                               ? "text-rose-300"
                               : "text-emerald-300")

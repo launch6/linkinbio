@@ -529,18 +529,20 @@ export default function PublicSlugPage() {
                     className="relative max-w-xl mx-auto w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60 shadow-lg"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    {/* HERO IMAGE */}
+                    {/* HERO IMAGE (max width, centered, fits all devices) */}
                     <div className="relative w-full bg-neutral-900 flex items-center justify-center">
-                      {p.imageUrl ? (
-                        <img
-                          src={p.imageUrl}
-                          alt={p.title || "Product image"}
-                          className="w-full max-h-[60vh] object-contain"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full max-h-[60vh] bg-neutral-900" />
-                      )}
+                      <div className="w-full max-w-sm sm:max-w-md mx-auto">
+                        {p.imageUrl ? (
+                          <img
+                            src={p.imageUrl}
+                            alt={p.title || "Product image"}
+                            className="w-full h-auto object-contain"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full aspect-square bg-neutral-900" />
+                        )}
+                      </div>
                       <div className="absolute left-3 top-3">
                         <span
                           className={

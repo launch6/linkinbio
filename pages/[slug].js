@@ -353,10 +353,10 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        {/* SUPER TIGHT CENTERED COLUMN */}
-        <div className="max-w-md mx-auto px-4 py-10 flex flex-col gap-8 items-stretch text-center">
+        {/* NARROW, HARD-CENTERED COLUMN */}
+        <div className="max-w-md mx-auto px-4 py-10 flex flex-col gap-8 items-center text-center">
           {/* HEADER */}
-          <header className="flex flex-col items-center gap-4">
+          <header className="flex flex-col items-center gap-4 w-full">
             {/* logo / avatar */}
             <div className="flex items-center justify-center">
               <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
@@ -453,20 +453,20 @@ export default function PublicSlugPage() {
 
           {/* EMAIL CAPTURE */}
           {canCollectEmail && (
-            <div className="rounded-2xl border border-neutral-800 p-5">
+            <div className="rounded-2xl border border-neutral-800 p-5 w-full">
               <div className="text-lg font-semibold mb-2">
                 Get first dibs on drops
               </div>
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}
-                  className="flex flex-col sm:flex-row gap-3 items-stretch text-left sm:text-left"
+                  className="flex flex-col sm:flex-row gap-3 items-stretch"
                 >
                   <input
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm"
+                    className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm text-left"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => {
@@ -511,7 +511,7 @@ export default function PublicSlugPage() {
               No products are published yet.
             </div>
           ) : (
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-8 w-full">
               {products.map((p) => {
                 const st = productStatus(p);
                 const showBuy =
@@ -530,14 +530,14 @@ export default function PublicSlugPage() {
                     className="relative w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60 shadow-lg flex flex-col items-center"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    {/* HERO IMAGE - CENTERED & MAX WIDTH */}
+                    {/* HERO IMAGE - CENTERED & CONSTRAINED */}
                     <div className="relative flex justify-center pt-4 px-4 w-full">
                       {p.imageUrl ? (
-                        <div className="w-full flex justify-center">
+                        <div className="flex justify-center w-full">
                           <img
                             src={p.imageUrl}
                             alt={p.title || "Product image"}
-                            className="w-full h-auto max-w-xs sm:max-w-sm object-cover rounded-2xl"
+                            className="max-w-xs sm:max-w-sm w-full h-auto max-h-96 object-contain rounded-2xl"
                             loading="lazy"
                           />
                         </div>
@@ -564,7 +564,7 @@ export default function PublicSlugPage() {
                       <div>
                         <h2
                           id={`prod-${p.id}-title`}
-                          className="text-xl font-semibold"
+                          className="text-xl font-semibold text-center"
                         >
                           {p.title || "Untitled"}
                         </h2>
@@ -574,7 +574,7 @@ export default function PublicSlugPage() {
                       {st.label ? (
                         <div
                           className={
-                            "text-sm " +
+                            "text-sm text-center " +
                             (st.soldOut || st.ended
                               ? "text-rose-300"
                               : "text-emerald-300")
@@ -672,7 +672,7 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer className="mt-8 pb-6 text-xs text-neutral-500 space-y-1">
+          <footer className="mt-8 pb-6 text-xs text-neutral-500 space-y-1 text-center w-full">
             <div>
               Made with <span className="font-semibold">Launch6</span>
             </div>

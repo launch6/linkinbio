@@ -57,6 +57,8 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
+  const debugLabel = "DEBUG-PUBLIC-V3";
+
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
     const url = `/api/public?slug=${encodeURIComponent(slugVal)}`;
@@ -354,9 +356,9 @@ export default function PublicSlugPage() {
 
       <div className="min-h-screen bg-neutral-950 text-white">
         {/* SUPER TIGHT CENTERED COLUMN */}
-        <div className="min-h-screen max-w-md mx-auto px-4 py-10 flex flex-col gap-8 items-stretch text-center">
+        <div className="max-w-md mx-auto px-4 py-10 flex flex-col gap-8 items-stretch text-center">
           {/* HEADER */}
-          <header className="flex flex-col items-center gap-4">
+          <header className="flex flex-col items-center gap-3">
             {/* logo / avatar */}
             <div className="flex items-center justify-center">
               <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
@@ -366,13 +368,12 @@ export default function PublicSlugPage() {
 
             {/* handle */}
             <div>
-              
               <h1 className="text-3xl sm:text-4xl font-bold">
-  {title ? `@${title}` : "Artist"}
-</h1>
-<div className="mt-1 text-xs text-pink-400">
-  DEBUG-PUBLIC-V1
-</div>
+                {title ? `@${title}` : "Artist"}
+              </h1>
+              <div className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 mt-1">
+                {debugLabel}
+              </div>
             </div>
 
             {/* socials */}
@@ -511,7 +512,7 @@ export default function PublicSlugPage() {
 
           {/* PRODUCTS (DROP CARDS) */}
           {products.length === 0 ? (
-            <div className="opacity-70 text-center">
+            <div className="opacity-70">
               No products are published yet.
             </div>
           ) : (
@@ -534,15 +535,17 @@ export default function PublicSlugPage() {
                     className="relative w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60 shadow-lg flex flex-col items-center"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    {/* HERO IMAGE - CENTERED & SAFE SIZE */}
-                    <div className="relative w-full flex justify-center pt-4 px-4">
+                    {/* HERO IMAGE - CENTERED & MAX WIDTH */}
+                    <div className="relative w-full flex justify-center pt-4 px-4 pb-2">
                       {p.imageUrl ? (
-                        <img
-                          src={p.imageUrl}
-                          alt={p.title || "Product image"}
-                          className="w-full h-auto max-w-sm max-h-[70vh] object-contain rounded-2xl"
-                          loading="lazy"
-                        />
+                        <div className="w-full flex justify-center">
+                          <img
+                            src={p.imageUrl}
+                            alt={p.title || "Product image"}
+                            className="w-full max-w-sm h-auto object-contain rounded-2xl"
+                            loading="lazy"
+                          />
+                        </div>
                       ) : (
                         <div className="w-full max-w-sm aspect-[4/3] bg-neutral-900 rounded-2xl" />
                       )}
@@ -649,7 +652,7 @@ export default function PublicSlugPage() {
 
           {/* LINKS */}
           {links.length > 0 && (
-            <div className="mt-2 w-full">
+            <div className="mt-2 w-full text-left">
               <h2 className="text-lg font-semibold mb-3 text-center">
                 Links
               </h2>
@@ -662,7 +665,7 @@ export default function PublicSlugPage() {
                       href={l.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors text-left"
+                      className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors"
                     >
                       <span>{label}</span>
                       <span className="text-xs opacity-60">↗</span>
@@ -674,7 +677,7 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer className="mt-8 pb-6 text-xs text-neutral-500 space-y-1 text-center">
+          <footer className="mt-8 pb-6 text-xs text-neutral-500 space-y-1">
             <div>
               Made with <span className="font-semibold">Launch6</span>
             </div>

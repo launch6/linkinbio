@@ -57,7 +57,7 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  const debugLabel = "DEBUG-PUBLIC-V3";
+  const debugLabel = "DEBUG-PUBLIC-V4";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -355,10 +355,14 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        {/* SUPER TIGHT CENTERED COLUMN */}
+        {/* Narrow centered column */}
         <div className="max-w-md mx-auto px-4 py-10 flex flex-col gap-8 items-stretch text-center">
           {/* HEADER */}
           <header className="flex flex-col items-center gap-3">
+            <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-500">
+              {debugLabel}
+            </div>
+
             {/* logo / avatar */}
             <div className="flex items-center justify-center">
               <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
@@ -371,9 +375,6 @@ export default function PublicSlugPage() {
               <h1 className="text-3xl sm:text-4xl font-bold">
                 {title ? `@${title}` : "Artist"}
               </h1>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 mt-1">
-                {debugLabel}
-              </div>
             </div>
 
             {/* socials */}
@@ -536,18 +537,18 @@ export default function PublicSlugPage() {
                     aria-labelledby={`prod-${p.id}-title`}
                   >
                     {/* HERO IMAGE - CENTERED & MAX WIDTH */}
-                    <div className="relative w-full flex justify-center pt-4 px-4 pb-2">
+                    <div className="relative w-full flex justify-center pt-4 px-4">
                       {p.imageUrl ? (
                         <div className="w-full flex justify-center">
                           <img
                             src={p.imageUrl}
                             alt={p.title || "Product image"}
-                            className="w-full max-w-sm h-auto object-contain rounded-2xl"
+                            className="w-full h-auto max-w-xs sm:max-w-sm md:max-w-md object-cover rounded-2xl"
                             loading="lazy"
                           />
                         </div>
                       ) : (
-                        <div className="w-full max-w-sm aspect-[4/3] bg-neutral-900 rounded-2xl" />
+                        <div className="w-full max-w-xs sm:max-w-sm md:max-w-md aspect-[4/3] bg-neutral-900 rounded-2xl" />
                       )}
                       <div className="absolute left-4 top-4">
                         <span

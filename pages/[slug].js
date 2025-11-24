@@ -57,7 +57,8 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  const debugLabel = "DEBUG-PUBLIC-V4";
+  // bump this when we want to confirm a new build
+  const debugLabel = "DEBUG-PUBLIC-V5";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -136,7 +137,9 @@ export default function PublicSlugPage() {
         type: "application/json",
       });
       navigator.sendBeacon("/api/track", blob);
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [slug]);
 
   // countdown ticker
@@ -355,14 +358,14 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        {/* Narrow centered column */}
-        <div className="max-w-md mx-auto px-4 py-10 flex flex-col gap-8 items-stretch text-center">
-          {/* HEADER */}
-          <header className="flex flex-col items-center gap-3">
-            <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-500">
-              {debugLabel}
-            </div>
+        <main className="max-w-xl mx-auto px-4 py-8 flex flex-col gap-8 items-stretch text-center">
+          {/* DEBUG LABEL */}
+          <div className="text-[10px] uppercase tracking-[0.25em] text-neutral-500">
+            {debugLabel}
+          </div>
 
+          {/* HEADER */}
+          <header className="flex flex-col items-center gap-4">
             {/* logo / avatar */}
             <div className="flex items-center justify-center">
               <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
@@ -371,11 +374,9 @@ export default function PublicSlugPage() {
             </div>
 
             {/* handle */}
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold">
-                {title ? `@${title}` : "Artist"}
-              </h1>
-            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold">
+              {title ? `@${title}` : "Artist"}
+            </h1>
 
             {/* socials */}
             {hasSocialRow && (
@@ -451,7 +452,7 @@ export default function PublicSlugPage() {
 
             {/* bio */}
             {bio ? (
-              <p className="text-neutral-400 text-sm sm:text-base">
+              <p className="text-neutral-400 text-sm sm:text-base max-w-md">
                 {bio}
               </p>
             ) : null}
@@ -480,9 +481,7 @@ export default function PublicSlugPage() {
                       if (emailErr) setEmailErr("");
                     }}
                     aria-invalid={!!emailErr}
-                    aria-describedby={
-                      emailErr ? "email-error" : undefined
-                    }
+                    aria-describedby={emailErr ? "email-error" : undefined}
                   />
                   <button
                     type="submit"
@@ -513,9 +512,7 @@ export default function PublicSlugPage() {
 
           {/* PRODUCTS (DROP CARDS) */}
           {products.length === 0 ? (
-            <div className="opacity-70">
-              No products are published yet.
-            </div>
+            <div className="opacity-70">No products are published yet.</div>
           ) : (
             <div className="flex flex-col gap-8">
               {products.map((p) => {
@@ -533,29 +530,28 @@ export default function PublicSlugPage() {
                 return (
                   <article
                     key={p.id}
-                    className="relative w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/60 shadow-lg flex flex-col items-center"
+                    className="relative w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/70 shadow-lg"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    {/* HERO IMAGE - CENTERED & MAX WIDTH */}
-                    <div className="relative w-full flex justify-center pt-4 px-4">
-                      {p.imageUrl ? (
-                        <div className="w-full flex justify-center">
+                    {/* HERO IMAGE - STRICTLY CONSTRAINED */}
+                    <div className="relative bg-black">
+                      <div className="flex justify-center items-center py-4 px-4">
+                        {p.imageUrl ? (
                           <img
                             src={p.imageUrl}
                             alt={p.title || "Product image"}
-                            className="w-full h-auto max-w-xs sm:max-w-sm md:max-w-md object-cover rounded-2xl"
+                            className="max-h-[420px] w-auto max-w-full rounded-xl object-contain"
                             loading="lazy"
                           />
-                        </div>
-                      ) : (
-                        <div className="w-full max-w-xs sm:max-w-sm md:max-w-md aspect-[4/3] bg-neutral-900 rounded-2xl" />
-                      )}
+                        ) : (
+                          <div className="h-[260px] w-full bg-neutral-900" />
+                        )}
+                      </div>
                       <div className="absolute left-4 top-4">
                         <span
                           className={
                             "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
-                            (badgeClass[st.key] ||
-                              badgeClass.active)
+                            (badgeClass[st.key] || badgeClass.active)
                           }
                           aria-live="polite"
                         >
@@ -566,15 +562,13 @@ export default function PublicSlugPage() {
                     </div>
 
                     {/* BODY */}
-                    <div className="p-5 flex flex-col gap-3 w-full text-left">
-                      <div>
-                        <h2
-                          id={`prod-${p.id}-title`}
-                          className="text-xl font-semibold"
-                        >
-                          {p.title || "Untitled"}
-                        </h2>
-                      </div>
+                    <div className="p-5 flex flex-col gap-3 text-left">
+                      <h2
+                        id={`prod-${p.id}-title`}
+                        className="text-xl font-semibold"
+                      >
+                        {p.title || "Untitled"}
+                      </h2>
 
                       {/* Status line */}
                       {st.label ? (
@@ -596,9 +590,7 @@ export default function PublicSlugPage() {
                           <a
                             href={buyHref}
                             className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500 bg-emerald-600/80 px-6 py-3 text-sm font-semibold tracking-wide hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                            aria-label={`Buy ${
-                              p.title || "this product"
-                            }`}
+                            aria-label={`Buy ${p.title || "this product"}`}
                             onClick={() => {
                               try {
                                 navigator.sendBeacon(
@@ -608,14 +600,11 @@ export default function PublicSlugPage() {
                                       JSON.stringify({
                                         type: "buy_click",
                                         productId: p.id,
-                                        publicSlug:
-                                          slug || null,
+                                        publicSlug: slug || null,
                                         ts: Date.now(),
                                         ref:
-                                          typeof window !==
-                                          "undefined"
-                                            ? window.location
-                                                .href
+                                          typeof window !== "undefined"
+                                            ? window.location.href
                                             : "",
                                       }),
                                     ],
@@ -624,7 +613,9 @@ export default function PublicSlugPage() {
                                     }
                                   )
                                 );
-                              } catch {}
+                              } catch {
+                                // ignore
+                              }
                             }}
                           >
                             Buy now
@@ -653,11 +644,9 @@ export default function PublicSlugPage() {
 
           {/* LINKS */}
           {links.length > 0 && (
-            <div className="mt-2 w-full text-left">
-              <h2 className="text-lg font-semibold mb-3 text-center">
-                Links
-              </h2>
-              <div className="space-y-3">
+            <div className="w-full">
+              <h2 className="text-lg font-semibold mb-3">Links</h2>
+              <div className="space-y-3 text-left">
                 {links.map((l) => {
                   const label = l.label || l.url || "Link";
                   return (
@@ -678,7 +667,7 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer className="mt-8 pb-6 text-xs text-neutral-500 space-y-1">
+          <footer className="mt-6 pb-6 text-xs text-neutral-500 space-y-1">
             <div>
               Made with <span className="font-semibold">Launch6</span>
             </div>
@@ -694,7 +683,7 @@ export default function PublicSlugPage() {
               </button>
             </div>
           </footer>
-        </div>
+        </main>
       </div>
     </>
   );

@@ -57,8 +57,8 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  // bump this when we want to confirm a new build
-  const debugLabel = "DEBUG-PUBLIC-V5";
+  // bump when we want to visually confirm new builds
+  const debugLabel = "DEBUG-PUBLIC-V6";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -530,39 +530,39 @@ export default function PublicSlugPage() {
                 return (
                   <article
                     key={p.id}
-                    className="relative w-full rounded-2xl border border-neutral-800 overflow-hidden bg-neutral-900/70 shadow-lg"
+                    className="relative w-full rounded-3xl border border-neutral-800 bg-neutral-900/70 shadow-xl px-5 pt-5 pb-6 flex flex-col gap-4 items-stretch text-left"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    {/* HERO IMAGE - STRICTLY CONSTRAINED */}
-                    <div className="relative bg-black">
-                      <div className="flex justify-center items-center py-4 px-4">
+                    {/* HERO IMAGE - SMALLER, CENTERED CARD */}
+                    <div className="flex justify-center mb-2">
+                      <div className="relative w-full max-w-sm rounded-2xl overflow-hidden bg-black">
                         {p.imageUrl ? (
                           <img
                             src={p.imageUrl}
                             alt={p.title || "Product image"}
-                            className="max-h-[420px] w-auto max-w-full rounded-xl object-contain"
+                            className="w-full h-auto max-h-[260px] object-cover"
                             loading="lazy"
                           />
                         ) : (
-                          <div className="h-[260px] w-full bg-neutral-900" />
+                          <div className="h-[220px] w-full bg-neutral-900" />
                         )}
-                      </div>
-                      <div className="absolute left-4 top-4">
-                        <span
-                          className={
-                            "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
-                            (badgeClass[st.key] || badgeClass.active)
-                          }
-                          aria-live="polite"
-                        >
-                          {st.label ||
-                            (st.key === "active" ? "Live" : "")}
-                        </span>
+                        <div className="absolute left-3 top-3">
+                          <span
+                            className={
+                              "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
+                              (badgeClass[st.key] || badgeClass.active)
+                            }
+                            aria-live="polite"
+                          >
+                            {st.label ||
+                              (st.key === "active" ? "Live" : "")}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     {/* BODY */}
-                    <div className="p-5 flex flex-col gap-3 text-left">
+                    <div className="space-y-3">
                       <h2
                         id={`prod-${p.id}-title`}
                         className="text-xl font-semibold"
@@ -585,7 +585,7 @@ export default function PublicSlugPage() {
                       ) : null}
 
                       {/* CTA */}
-                      <div className="mt-2">
+                      <div className="pt-1">
                         {showBuy ? (
                           <a
                             href={buyHref}

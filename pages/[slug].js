@@ -38,6 +38,74 @@ function isValidEmail(email) {
   return true;
 }
 
+// Small inline SVG icons for socials
+function SocialIcon({ type }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  };
+
+  if (type === "instagram") {
+    return (
+      <svg {...common}>
+        <rect x="4" y="4" width="16" height="16" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17" cy="7" r="1.2" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+
+  if (type === "facebook") {
+    return (
+      <svg {...common}>
+        <path d="M14 8h2V4h-2a4 4 0 0 0-4 4v2H8v4h2v6h4v-6h2v-4h-2V8a1 1 0 0 1 1-1z" />
+      </svg>
+    );
+  }
+
+  if (type === "tiktok") {
+    return (
+      <svg {...common}>
+        <path d="M15 5c.4 1.3 1.4 2.3 2.7 2.7L19 8.1V11c-1 0-2-.3-3-.9v3.2a5 5 0 1 1-4.5-5V10a2.1 2.1 0 0 0-1.5-.1A2 2 0 1 0 13 12V5h2z" />
+      </svg>
+    );
+  }
+
+  if (type === "youtube") {
+    return (
+      <svg {...common} fill="currentColor" stroke="none">
+        <path d="M21.8 8.3a2 2 0 0 0-1.4-1.4C19 6.5 12 6.5 12 6.5s-7 0-8.4.4A2 2 0 0 0 2.2 8.3C1.8 9.7 1.8 12 1.8 12s0 2.3.4 3.7a2 2 0 0 0 1.4 1.4c1.4.4 8.4.4 8.4.4s7 0 8.4-.4a2 2 0 0 0 1.4-1.4c.4-1.4.4-3.7.4-3.7s0-2.3-.4-3.7zM10.5 14.7V9.3L15 12l-4.5 2.7z" />
+      </svg>
+    );
+  }
+
+  if (type === "x") {
+    return (
+      <svg {...common}>
+        <path d="M6 5l5.2 6.1L6 19h2.2L12 12.9 15.8 19H18l-5.2-7.9L18 5h-2.2L12 10.1 8.2 5H6z" />
+      </svg>
+    );
+  }
+
+  if (type === "website") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18" />
+        <path d="M12 3a12 12 0 0 1 3 9 12 12 0 0 1-3 9 12 12 0 0 1-3-9 12 12 0 0 1 3-9z" />
+      </svg>
+    );
+  }
+
+  return null;
+}
+
 export default function PublicSlugPage() {
   const router = useRouter();
   const { slug } = router.query;
@@ -57,7 +125,7 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  const debugLabel = "DEBUG-PUBLIC-V10";
+  const debugLabel = "DEBUG-PUBLIC-V11";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -171,7 +239,7 @@ export default function PublicSlugPage() {
     const left = toNumberOrNull(p.unitsLeft);
     const total = toNumberOrNull(p.unitsTotal);
     const rem = remaining[p.id]; // ms or null
-    const ended = rem === 0;
+       const ended = rem === 0;
     const soldOut = left !== null && left <= 0;
 
     if (soldOut)
@@ -322,9 +390,9 @@ export default function PublicSlugPage() {
 
   // INLINE STYLES to force centering no matter what global CSS does
   const mainStyle = {
-    maxWidth: "500px", // wider, Linktree-ish
+    maxWidth: "500px", // Linktree-ish width
     margin: "0 auto",
-    padding: "2.25rem 1.5rem 2.5rem",
+    padding: "2.25rem 1.5rem 2.75rem",
     textAlign: "center",
     display: "flex",
     flexDirection: "column",
@@ -441,8 +509,7 @@ export default function PublicSlugPage() {
                   style={{
                     display: "flex",
                     justifyContent: "center",
-                    gap: "0.85rem",
-                    fontSize: "1.1rem",
+                    gap: "0.75rem",
                   }}
                 >
                   {social.instagram && (
@@ -451,9 +518,20 @@ export default function PublicSlugPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Instagram"
-                      style={{ textDecoration: "none" }}
+                      style={{
+                        height: "2.4rem",
+                        width: "2.4rem",
+                        borderRadius: "999px",
+                        border: "1px solid #27272a",
+                        backgroundColor: "rgba(24,24,27,0.9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#f9fafb",
+                        textDecoration: "none",
+                      }}
                     >
-                      📸
+                      <SocialIcon type="instagram" />
                     </a>
                   )}
                   {social.facebook && (
@@ -462,9 +540,20 @@ export default function PublicSlugPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Facebook"
-                      style={{ textDecoration: "none" }}
+                      style={{
+                        height: "2.4rem",
+                        width: "2.4rem",
+                        borderRadius: "999px",
+                        border: "1px solid #27272a",
+                        backgroundColor: "rgba(24,24,27,0.9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#f9fafb",
+                        textDecoration: "none",
+                      }}
                     >
-                      📘
+                      <SocialIcon type="facebook" />
                     </a>
                   )}
                   {social.tiktok && (
@@ -473,9 +562,20 @@ export default function PublicSlugPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="TikTok"
-                      style={{ textDecoration: "none" }}
+                      style={{
+                        height: "2.4rem",
+                        width: "2.4rem",
+                        borderRadius: "999px",
+                        border: "1px solid #27272a",
+                        backgroundColor: "rgba(24,24,27,0.9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#f9fafb",
+                        textDecoration: "none",
+                      }}
                     >
-                      🎵
+                      <SocialIcon type="tiktok" />
                     </a>
                   )}
                   {social.youtube && (
@@ -484,9 +584,20 @@ export default function PublicSlugPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="YouTube"
-                      style={{ textDecoration: "none" }}
+                      style={{
+                        height: "2.4rem",
+                        width: "2.4rem",
+                        borderRadius: "999px",
+                        border: "1px solid #27272a",
+                        backgroundColor: "rgba(24,24,27,0.9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#f9fafb",
+                        textDecoration: "none",
+                      }}
                     >
-                      ▶️
+                      <SocialIcon type="youtube" />
                     </a>
                   )}
                   {social.x && (
@@ -495,9 +606,20 @@ export default function PublicSlugPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="X"
-                      style={{ textDecoration: "none" }}
+                      style={{
+                        height: "2.4rem",
+                        width: "2.4rem",
+                        borderRadius: "999px",
+                        border: "1px solid #27272a",
+                        backgroundColor: "rgba(24,24,27,0.9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#f9fafb",
+                        textDecoration: "none",
+                      }}
                     >
-                      ✖️
+                      <SocialIcon type="x" />
                     </a>
                   )}
                   {social.website && (
@@ -506,9 +628,20 @@ export default function PublicSlugPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Website"
-                      style={{ textDecoration: "none" }}
+                      style={{
+                        height: "2.4rem",
+                        width: "2.4rem",
+                        borderRadius: "999px",
+                        border: "1px solid #27272a",
+                        backgroundColor: "rgba(24,24,27,0.9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#f9fafb",
+                        textDecoration: "none",
+                      }}
                     >
-                      🌐
+                      <SocialIcon type="website" />
                     </a>
                   )}
                 </div>
@@ -678,7 +811,7 @@ export default function PublicSlugPage() {
                         <div
                           style={{
                             width: "100%",
-                            maxWidth: "460px", // cap size on desktop/laptop
+                            maxWidth: "460px",
                             borderRadius: "0.75rem",
                             overflow: "hidden",
                             backgroundColor: "#09090b",
@@ -833,14 +966,19 @@ export default function PublicSlugPage() {
           {/* FOOTER */}
           <footer
             style={{
-              fontSize: "0.8rem",
-              color: "#737373",
-              paddingBottom: "1.75rem",
+              fontSize: "0.9rem",
+              color: "#a3a3a3",
+              paddingBottom: "2.25rem",
               width: "100%",
-              marginTop: "1.5rem",
+              marginTop: "2.25rem",
             }}
           >
-            <div style={{ marginBottom: "0.4rem" }}>
+            <div
+              style={{
+                marginBottom: "0.9rem",
+                lineHeight: 1.4,
+              }}
+            >
               Join{" "}
               <a
                 href="https://launch6.com"
@@ -850,6 +988,7 @@ export default function PublicSlugPage() {
                   fontWeight: 600,
                   textDecoration: "underline",
                   textUnderlineOffset: "2px",
+                  color: "#e5e5e5",
                 }}
               >
                 Launch6
@@ -861,7 +1000,7 @@ export default function PublicSlugPage() {
                 display: "flex",
                 flexWrap: "wrap",
                 justifyContent: "center",
-                gap: "0.75rem",
+                gap: "0.9rem",
               }}
             >
               <button style={{ textDecoration: "underline" }}>

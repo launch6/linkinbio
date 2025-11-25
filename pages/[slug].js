@@ -57,7 +57,8 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  const debugLabel = "DEBUG-PUBLIC-V8";
+  // bump this when we want to visually confirm latest file
+  const debugLabel = "DEBUG-PUBLIC-V9";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -211,11 +212,11 @@ export default function PublicSlugPage() {
 
   const badgeClass = {
     active:
-      "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
+      "bg-emerald-500/15 border-emerald-400/40 text-emerald-200",
     soldout:
-      "bg-rose-500/20 border-rose-400/40 text-rose-200",
+      "bg-rose-500/15 border-rose-400/40 text-rose-200",
     ended:
-      "bg-amber-500/20 border-amber-400/40 text-amber-200",
+      "bg-amber-500/15 border-amber-400/40 text-amber-200",
   };
 
   // handle slug-based subscribe
@@ -322,22 +323,6 @@ export default function PublicSlugPage() {
     );
   }
 
-  // INLINE STYLES to force centering no matter what global CSS does
-  const mainStyle = {
-    maxWidth: "420px",
-    margin: "0 auto",
-    padding: "2.5rem 1.5rem",
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "2rem",
-    alignItems: "center",
-  };
-
-  const fullWidthSection = {
-    width: "100%",
-  };
-
   return (
     <>
       <Head>
@@ -371,81 +356,106 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        {/* DEBUG MARKER */}
-        <div
-          style={{
-            position: "fixed",
-            top: 4,
-            left: 4,
-            fontSize: 12,
-            opacity: 0.7,
-            pointerEvents: "none",
-            zIndex: 50,
-          }}
-        >
-          {debugLabel}
-        </div>
+        {/* tiny debug breadcrumb in top-left */}
+        {debugLabel ? (
+          <div className="fixed top-0 left-0 px-2 py-1 text-[10px] text-neutral-500">
+            {debugLabel}
+          </div>
+        ) : null}
 
-        <main style={mainStyle}>
+        {/* SUPER TIGHT CENTERED COLUMN */}
+        <main className="max-w-md mx-auto px-4 py-10 flex flex-col gap-8 items-center text-center">
           {/* HEADER */}
-          <header style={{ width: "100%" }}>
-            <div style={{ marginBottom: "0.75rem" }}>B</div>
-
-            <div
-              style={{
-                height: "3.5rem",
-                width: "3.5rem",
-                borderRadius: "9999px",
-                backgroundColor: "#111827",
-                border: "1px solid #374151",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.5rem",
-                fontWeight: 700,
-                margin: "0 auto 0.75rem auto",
-              }}
-            >
-              {avatarInitial}
+          <header className="flex flex-col items-center gap-4">
+            {/* logo / avatar */}
+            <div className="flex items-center justify-center">
+              <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
+                {avatarInitial}
+              </div>
             </div>
 
-            <h1
-              style={{
-                fontSize: "2rem",
-                fontWeight: 700,
-                marginBottom: "0.5rem",
-              }}
-            >
-              {title ? `@${title}` : "Artist"}
-            </h1>
+            {/* handle */}
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold">
+                {title ? `@${title}` : "Artist"}
+              </h1>
+            </div>
 
+            {/* socials */}
             {hasSocialRow && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "0.75rem",
-                  fontSize: "1.1rem",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                {social.instagram && <span>📸</span>}
-                {social.facebook && <span>📘</span>}
-                {social.tiktok && <span>🎵</span>}
-                {social.youtube && <span>▶️</span>}
-                {social.x && <span>✖️</span>}
-                {social.website && <span>🌐</span>}
+              <div className="flex flex-wrap justify-center gap-3 text-sm">
+                {social.instagram && (
+                  <a
+                    href={social.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="Instagram"
+                  >
+                    📸
+                  </a>
+                )}
+                {social.facebook && (
+                  <a
+                    href={social.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="Facebook"
+                  >
+                    📘
+                  </a>
+                )}
+                {social.tiktok && (
+                  <a
+                    href={social.tiktok}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="TikTok"
+                  >
+                    🎵
+                  </a>
+                )}
+                {social.youtube && (
+                  <a
+                    href={social.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="YouTube"
+                  >
+                    ▶️
+                  </a>
+                )}
+                {social.x && (
+                  <a
+                    href={social.x}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="X"
+                  >
+                    ✖️
+                  </a>
+                )}
+                {social.website && (
+                  <a
+                    href={social.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/80 hover:bg-neutral-800"
+                    aria-label="Website"
+                  >
+                    🌐
+                  </a>
+                )}
               </div>
             )}
 
+            {/* bio */}
             {bio ? (
-              <p
-                style={{
-                  color: "#d1d5db",
-                  fontSize: "0.9rem",
-                  marginBottom: "0.5rem",
-                }}
-              >
+              <p className="text-neutral-400 text-sm sm:text-base">
                 {bio}
               </p>
             ) : null}
@@ -453,45 +463,20 @@ export default function PublicSlugPage() {
 
           {/* EMAIL CAPTURE */}
           {canCollectEmail && (
-            <section
-              style={{
-                ...fullWidthSection,
-                borderRadius: "1rem",
-                border: "1px solid #27272a",
-                padding: "1.25rem",
-                textAlign: "left",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "1.05rem",
-                  fontWeight: 600,
-                  marginBottom: "0.5rem",
-                }}
-              >
+            <section className="w-full rounded-2xl border border-neutral-800 p-5 text-left">
+              <div className="text-lg font-semibold mb-2">
                 Get first dibs on drops
               </div>
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem",
-                  }}
+                  className="flex flex-col sm:flex-row gap-3 items-stretch"
                 >
                   <input
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    style={{
-                      borderRadius: "0.5rem",
-                      backgroundColor: "#020617",
-                      border: "1px solid #3f3f46",
-                      padding: "0.5rem 0.75rem",
-                      fontSize: "0.9rem",
-                      color: "white",
-                    }}
+                    className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => {
@@ -506,64 +491,35 @@ export default function PublicSlugPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    style={{
-                      borderRadius: "0.5rem",
-                      border: "1px solid #059669",
-                      padding: "0.5rem 0.75rem",
-                      fontSize: "0.9rem",
-                      fontWeight: 600,
-                      backgroundColor: "transparent",
-                      color: "white",
-                      cursor: "pointer",
-                      opacity: submitting ? 0.6 : 1,
-                    }}
+                    className="rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-900/20 disabled:opacity-60"
                   >
                     {submitting ? "Joining…" : "Join"}
                   </button>
                 </form>
               ) : (
-                <div
-                  style={{
-                    borderRadius: "0.5rem",
-                    border: "1px solid rgba(16,185,129,0.5)",
-                    backgroundColor: "rgba(6,95,70,0.3)",
-                    padding: "0.5rem 0.75rem",
-                    fontSize: "0.85rem",
-                    color: "#a7f3d0",
-                  }}
-                >
+                <div className="rounded-lg border border-emerald-600/40 bg-emerald-900/20 text-emerald-200 px-3 py-2 text-sm">
                   You’re in! We’ll let you know about new drops.
                 </div>
               )}
               {emailErr ? (
                 <div
                   id="email-error"
-                  style={{
-                    marginTop: "0.35rem",
-                    fontSize: "0.8rem",
-                    color: "#fecaca",
-                  }}
+                  className="mt-2 text-sm text-rose-300"
                 >
                   {emailErr}
                 </div>
               ) : null}
-              <div
-                style={{
-                  marginTop: "0.35rem",
-                  fontSize: "0.75rem",
-                  color: "#737373",
-                }}
-              >
+              <div className="mt-2 text-xs text-neutral-500">
                 We’ll only email you about releases. Unsubscribe anytime.
               </div>
             </section>
           )}
 
-          {/* PRODUCTS (NO IMAGE FOR NOW) */}
+          {/* PRODUCTS (DROP CARDS) */}
           {products.length === 0 ? (
-            <div style={{ opacity: 0.7 }}>No products are published yet.</div>
+            <div className="opacity-70">No products are published yet.</div>
           ) : (
-            <section style={fullWidthSection}>
+            <section className="w-full flex flex-col gap-8">
               {products.map((p) => {
                 const st = productStatus(p);
                 const showBuy =
@@ -579,123 +535,105 @@ export default function PublicSlugPage() {
                 return (
                   <article
                     key={p.id}
-                    style={{
-                      borderRadius: "1rem",
-                      border: "1px solid #27272a",
-                      backgroundColor: "rgba(24,24,27,0.85)",
-                      padding: "1.25rem",
-                      marginBottom: "1.5rem",
-                    }}
+                    className="w-full max-w-md mx-auto rounded-2xl border border-neutral-800 bg-neutral-900/70 shadow-lg overflow-hidden text-center"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    <div
-                      style={{
-                        fontSize: "0.75rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                        color: "#a3a3a3",
-                        marginBottom: "0.35rem",
-                      }}
-                    >
+                    {/* TOP LABEL */}
+                    <div className="px-6 pt-4 pb-2 text-[11px] font-semibold tracking-[0.18em] uppercase text-neutral-500">
                       Drop
                     </div>
-                    <h2
-                      id={`prod-${p.id}-title`}
-                      style={{
-                        fontSize: "1.1rem",
-                        fontWeight: 600,
-                        marginBottom: "0.5rem",
-                      }}
-                    >
-                      {p.title || "Untitled"}
-                    </h2>
-                    {st.label ? (
-                      <div
-                        style={{
-                          fontSize: "0.85rem",
-                          marginBottom: "0.75rem",
-                          color:
-                            st.soldOut || st.ended
-                              ? "#fecaca"
-                              : "#6ee7b7",
-                        }}
-                      >
-                        {st.label}
-                      </div>
-                    ) : null}
 
-                    {showBuy ? (
-                      <a
-                        href={buyHref}
-                        style={{
-                          display: "inline-flex",
-                          width: "100%",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: "9999px",
-                          border: "1px solid #059669",
-                          backgroundColor: "#059669",
-                          padding: "0.65rem 1rem",
-                          fontSize: "0.95rem",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                        aria-label={`Buy ${
-                          p.title || "this product"
-                        }`}
-                        onClick={() => {
-                          try {
-                            navigator.sendBeacon(
-                              "/api/track",
-                              new Blob(
-                                [
-                                  JSON.stringify({
-                                    type: "buy_click",
-                                    productId: p.id,
-                                    publicSlug:
-                                      slug || null,
-                                    ts: Date.now(),
-                                    ref:
-                                      typeof window !==
-                                      "undefined"
-                                        ? window.location.href
-                                        : "",
-                                  }),
-                                ],
-                                {
-                                  type: "application/json",
-                                }
-                              )
-                            );
-                          } catch {}
-                        }}
-                      >
-                        Buy now
-                      </a>
-                    ) : (
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          width: "100%",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: "9999px",
-                          border: "1px solid #3f3f46",
-                          padding: "0.65rem 1rem",
-                          fontSize: "0.9rem",
-                          color: "#a3a3a3",
-                        }}
-                        aria-disabled="true"
-                        role="button"
-                        tabIndex={-1}
-                      >
-                        {st.soldOut
-                          ? "Sold out"
-                          : st.ended
-                          ? "Drop ended"
-                          : "Unavailable"}
+                    {/* HERO IMAGE – RESPONSIVE & CAPPED WIDTH */}
+                    {p.imageUrl && (
+                      <div className="px-6 pt-2 pb-2">
+                        <div className="w-full max-w-sm mx-auto overflow-hidden rounded-xl bg-neutral-900">
+                          <img
+                            src={p.imageUrl}
+                            alt={p.title || "Product image"}
+                            className="w-full h-auto object-cover"
+                            loading="lazy"
+                          />
+                        </div>
                       </div>
                     )}
+
+                    {/* BODY */}
+                    <div className="px-6 pt-3 pb-5 flex flex-col items-center gap-3">
+                      {/* Status pill */}
+                      {st.label ? (
+                        <span
+                          className={
+                            "inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium " +
+                            (badgeClass[st.key] || badgeClass.active)
+                          }
+                        >
+                          {st.label}
+                        </span>
+                      ) : null}
+
+                      {/* Title */}
+                      <h2
+                        id={`prod-${p.id}-title`}
+                        className="text-xl font-semibold"
+                      >
+                        {p.title || "Untitled"}
+                      </h2>
+
+                      {/* CTA */}
+                      <div className="w-full mt-2">
+                        {showBuy ? (
+                          <a
+                            href={buyHref}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500 bg-emerald-600/80 px-6 py-3 text-sm font-semibold tracking-wide hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                            aria-label={`Buy ${
+                              p.title || "this product"
+                            }`}
+                            onClick={() => {
+                              try {
+                                navigator.sendBeacon(
+                                  "/api/track",
+                                  new Blob(
+                                    [
+                                      JSON.stringify({
+                                        type: "buy_click",
+                                        productId: p.id,
+                                        publicSlug:
+                                          slug || null,
+                                        ts: Date.now(),
+                                        ref:
+                                          typeof window !==
+                                          "undefined"
+                                            ? window.location
+                                                .href
+                                            : "",
+                                      }),
+                                    ],
+                                    {
+                                      type: "application/json",
+                                    }
+                                  )
+                                );
+                              } catch {}
+                            }}
+                          >
+                            Buy now
+                          </a>
+                        ) : (
+                          <div
+                            className="inline-flex w-full items-center justify-center rounded-full border border-neutral-800 px-6 py-3 text-sm text-neutral-400"
+                            aria-disabled="true"
+                            role="button"
+                            tabIndex={-1}
+                          >
+                            {st.soldOut
+                              ? "Sold out"
+                              : st.ended
+                              ? "Drop ended"
+                              : "Unavailable"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </article>
                 );
               })}
@@ -704,17 +642,11 @@ export default function PublicSlugPage() {
 
           {/* LINKS */}
           {links.length > 0 && (
-            <section style={fullWidthSection}>
-              <h2
-                style={{
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  marginBottom: "0.75rem",
-                }}
-              >
+            <section className="mt-2 w-full">
+              <h2 className="text-lg font-semibold mb-3">
                 Links
               </h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <div className="space-y-3">
                 {links.map((l) => {
                   const label = l.label || l.url || "Link";
                   return (
@@ -723,22 +655,10 @@ export default function PublicSlugPage() {
                       href={l.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        borderRadius: "0.75rem",
-                        border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.85)",
-                        padding: "0.75rem 1rem",
-                        fontSize: "0.9rem",
-                        textAlign: "left",
-                      }}
+                      className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors text-left"
                     >
                       <span>{label}</span>
-                      <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>
-                        ↗
-                      </span>
+                      <span className="text-xs opacity-60">↗</span>
                     </a>
                   );
                 })}
@@ -747,32 +667,18 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer
-            style={{
-              fontSize: "0.75rem",
-              color: "#737373",
-              paddingBottom: "1.5rem",
-              width: "100%",
-            }}
-          >
-            <div style={{ marginBottom: "0.25rem" }}>
-              Made with <span style={{ fontWeight: 600 }}>Launch6</span>
+          <footer className="mt-8 pb-6 text-xs text-neutral-500 space-y-1">
+            <div>
+              Made with <span className="font-semibold">Launch6</span>
             </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "0.75rem",
-              }}
-            >
-              <button style={{ textDecoration: "underline" }}>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button className="underline underline-offset-2 decoration-neutral-600/80">
                 Cookie preferences
               </button>
-              <button style={{ textDecoration: "underline" }}>
+              <button className="underline underline-offset-2 decoration-neutral-600/80">
                 Report page
               </button>
-              <button style={{ textDecoration: "underline" }}>
+              <button className="underline underline-offset-2 decoration-neutral-600/80">
                 Privacy
               </button>
             </div>

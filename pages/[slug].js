@@ -393,70 +393,218 @@ export default function PublicSlugPage() {
           {debugLabel}
         </div>
 
-        <main style={mainStyle}>
-          {/* HEADER */}
-          <header style={{ width: "100%" }}>
-            <div style={{ marginBottom: "0.75rem" }}>B</div>
 
-            <div
+        <main style={mainStyle}>
+          
+          
+         {/* HEADER */}
+  <header
+    style={{
+      width: "100%",
+      display: "flex",
+      justifyContent: "center",
+      marginBottom: "1.75rem",
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: "32rem",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        gap: "1.5rem",
+      }}
+    >
+      {/* avatar */}
+      <div>
+        <div
+          style={{
+            height: "3rem",
+            width: "3rem",
+            borderRadius: "999px",
+            backgroundColor: "#18181b",
+            border: "1px solid #27272a",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 600,
+            fontSize: "1.25rem",
+          }}
+        >
+          {avatarInitial}
+        </div>
+      </div>
+
+      {/* handle */}
+      <div>
+        <h1
+          style={{
+            fontSize: "1.6rem",
+            lineHeight: 1.2,
+            fontWeight: 700,
+          }}
+        >
+          {title ? `@${title}` : "Artist"}
+        </h1>
+      </div>
+
+      {/* socials */}
+      {hasSocialRow && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "0.5rem",
+            fontSize: "0.9rem",
+          }}
+        >
+          {social.instagram && (
+            <a
+              href={social.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
-                height: "3.5rem",
-                width: "3.5rem",
-                borderRadius: "9999px",
-                backgroundColor: "#111827",
-                border: "1px solid #374151",
+                height: "2.25rem",
+                width: "2.25rem",
+                borderRadius: "999px",
+                border: "1px solid #27272a",
+                backgroundColor: "rgba(24,24,27,0.8)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "1.5rem",
-                fontWeight: 700,
-                margin: "0 auto 0.75rem auto",
+                textDecoration: "none",
               }}
+              aria-label="Instagram"
             >
-              {avatarInitial}
-            </div>
-
-            <h1
+              📸
+            </a>
+          )}
+          {social.facebook && (
+            <a
+              href={social.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
-                fontSize: "2rem",
-                fontWeight: 700,
-                marginBottom: "0.5rem",
+                height: "2.25rem",
+                width: "2.25rem",
+                borderRadius: "999px",
+                border: "1px solid #27272a",
+                backgroundColor: "rgba(24,24,27,0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
               }}
+              aria-label="Facebook"
             >
-              {title ? `@${title}` : "Artist"}
-            </h1>
+              📘
+            </a>
+          )}
+          {social.tiktok && (
+            <a
+              href={social.tiktok}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                height: "2.25rem",
+                width: "2.25rem",
+                borderRadius: "999px",
+                border: "1px solid #27272a",
+                backgroundColor: "rgba(24,24,27,0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+              }}
+              aria-label="TikTok"
+            >
+              🎵
+            </a>
+          )}
+          {social.youtube && (
+            <a
+              href={social.youtube}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                height: "2.25rem",
+                width: "2.25rem",
+                borderRadius: "999px",
+                border: "1px solid #27272a",
+                backgroundColor: "rgba(24,24,27,0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+              }}
+              aria-label="YouTube"
+            >
+              ▶️
+            </a>
+          )}
+          {social.x && (
+            <a
+              href={social.x}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                height: "2.25rem",
+                width: "2.25rem",
+                borderRadius: "999px",
+                border: "1px solid #27272a",
+                backgroundColor: "rgba(24,24,27,0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+              }}
+              aria-label="X"
+            >
+              ✖️
+            </a>
+          )}
+          {social.website && (
+            <a
+              href={social.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                height: "2.25rem",
+                width: "2.25rem",
+                borderRadius: "999px",
+                border: "1px solid #27272a",
+                backgroundColor: "rgba(24,24,27,0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+              }}
+              aria-label="Website"
+            >
+              🌐
+            </a>
+          )}
+        </div>
+      )}
 
-            {hasSocialRow && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "0.75rem",
-                  fontSize: "1.1rem",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                {social.instagram && <span>📸</span>}
-                {social.facebook && <span>📘</span>}
-                {social.tiktok && <span>🎵</span>}
-                {social.youtube && <span>▶️</span>}
-                {social.x && <span>✖️</span>}
-                {social.website && <span>🌐</span>}
-              </div>
-            )}
-
-            {bio ? (
-              <p
-                style={{
-                  color: "#d1d5db",
-                  fontSize: "0.9rem",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                {bio}
-              </p>
-            ) : null}
-          </header>
+      {/* bio */}
+      {bio ? (
+        <p
+          style={{
+            color: "#a3a3a3",
+            fontSize: "0.95rem",
+            lineHeight: 1.5,
+            maxWidth: "26rem",
+          }}
+        >
+          {bio}
+        </p>
+      ) : null}
+    </div>
+  </header>
 
           {/* EMAIL CAPTURE */}
           {canCollectEmail && (

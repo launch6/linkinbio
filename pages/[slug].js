@@ -57,8 +57,8 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  // bump when we want to visually confirm new builds
-  const debugLabel = "DEBUG-PUBLIC-V6";
+  // BIG MARKER SO WE KNOW THIS FILE RENDERED
+  const debugLabel = "DEBUG-PUBLIC-V7";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -137,9 +137,7 @@ export default function PublicSlugPage() {
         type: "application/json",
       });
       navigator.sendBeacon("/api/track", blob);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [slug]);
 
   // countdown ticker
@@ -194,12 +192,10 @@ export default function PublicSlugPage() {
 
     const parts = [];
 
-    // only show X/Y when showInventory is true and both numbers exist
     if (p.showInventory && total !== null && left !== null) {
       parts.push(`${left}/${total} left`);
     }
 
-    // only show countdown when showTimer is true and timer exists
     if (p.showTimer && rem !== null) {
       parts.push(`Ends in ${formatRemaining(rem)}`);
     }
@@ -335,7 +331,6 @@ export default function PublicSlugPage() {
           content="index,follow,max-image-preview:large"
         />
 
-        {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content={seoTitle} />
@@ -344,7 +339,6 @@ export default function PublicSlugPage() {
           <meta property="og:image" content={firstImage} />
         ) : null}
 
-        {/* Twitter */}
         <meta
           name="twitter:card"
           content={firstImage ? "summary_large_image" : "summary"}
@@ -366,19 +360,16 @@ export default function PublicSlugPage() {
 
           {/* HEADER */}
           <header className="flex flex-col items-center gap-4">
-            {/* logo / avatar */}
             <div className="flex items-center justify-center">
               <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
                 {avatarInitial}
               </div>
             </div>
 
-            {/* handle */}
             <h1 className="text-3xl sm:text-4xl font-bold">
               {title ? `@${title}` : "Artist"}
             </h1>
 
-            {/* socials */}
             {hasSocialRow && (
               <div className="flex flex-wrap justify-center gap-3 text-sm">
                 {social.instagram && (
@@ -450,7 +441,6 @@ export default function PublicSlugPage() {
               </div>
             )}
 
-            {/* bio */}
             {bio ? (
               <p className="text-neutral-400 text-sm sm:text-base max-w-md">
                 {bio}
@@ -510,7 +500,7 @@ export default function PublicSlugPage() {
             </div>
           )}
 
-          {/* PRODUCTS (DROP CARDS) */}
+          {/* PRODUCTS – IMAGE COMPLETELY REMOVED */}
           {products.length === 0 ? (
             <div className="opacity-70">No products are published yet.</div>
           ) : (
@@ -533,32 +523,28 @@ export default function PublicSlugPage() {
                     className="relative w-full rounded-3xl border border-neutral-800 bg-neutral-900/70 shadow-xl px-5 pt-5 pb-6 flex flex-col gap-4 items-stretch text-left"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    {/* HERO IMAGE - SMALLER, CENTERED CARD */}
-                    <div className="flex justify-center mb-2">
-                      <div className="relative w-full max-w-sm rounded-2xl overflow-hidden bg-black">
-                        {p.imageUrl ? (
-                          <img
-                            src={p.imageUrl}
-                            alt={p.title || "Product image"}
-                            className="w-full h-auto max-h-[260px] object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="h-[220px] w-full bg-neutral-900" />
-                        )}
-                        <div className="absolute left-3 top-3">
-                          <span
-                            className={
-                              "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
-                              (badgeClass[st.key] || badgeClass.active)
-                            }
-                            aria-live="polite"
-                          >
-                            {st.label ||
-                              (st.key === "active" ? "Live" : "")}
-                          </span>
-                        </div>
+                    {/* HERO TEST BLOCK — NO IMAGE */}
+                    <div className="flex justify-center mb-4">
+                      <div className="relative w-full max-w-xs rounded-2xl border border-emerald-500 bg-neutral-900 px-4 py-10 text-center text-xs leading-relaxed">
+                        HERO TEST BLOCK — NO IMAGE.
+                        <br />
+                        If you still see the big building photo, the browser
+                        is NOT using this file.
                       </div>
+                    </div>
+
+                    {/* STATUS BADGE */}
+                    <div className="mb-1">
+                      <span
+                        className={
+                          "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
+                          (badgeClass[st.key] || badgeClass.active)
+                        }
+                        aria-live="polite"
+                      >
+                        {st.label ||
+                          (st.key === "active" ? "Live" : "")}
+                      </span>
                     </div>
 
                     {/* BODY */}
@@ -570,7 +556,6 @@ export default function PublicSlugPage() {
                         {p.title || "Untitled"}
                       </h2>
 
-                      {/* Status line */}
                       {st.label ? (
                         <div
                           className={
@@ -584,39 +569,12 @@ export default function PublicSlugPage() {
                         </div>
                       ) : null}
 
-                      {/* CTA */}
                       <div className="pt-1">
                         {showBuy ? (
                           <a
                             href={buyHref}
                             className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500 bg-emerald-600/80 px-6 py-3 text-sm font-semibold tracking-wide hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                             aria-label={`Buy ${p.title || "this product"}`}
-                            onClick={() => {
-                              try {
-                                navigator.sendBeacon(
-                                  "/api/track",
-                                  new Blob(
-                                    [
-                                      JSON.stringify({
-                                        type: "buy_click",
-                                        productId: p.id,
-                                        publicSlug: slug || null,
-                                        ts: Date.now(),
-                                        ref:
-                                          typeof window !== "undefined"
-                                            ? window.location.href
-                                            : "",
-                                      }),
-                                    ],
-                                    {
-                                      type: "application/json",
-                                    }
-                                  )
-                                );
-                              } catch {
-                                // ignore
-                              }
-                            }}
                           >
                             Buy now
                           </a>
@@ -690,6 +648,5 @@ export default function PublicSlugPage() {
 }
 
 export async function getServerSideProps() {
-  // Force SSR so any slug resolves at request time.
   return { props: {} };
 }

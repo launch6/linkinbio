@@ -663,49 +663,67 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* LINKS */}
-          {links.length > 0 && (
-            <section style={fullWidthSection}>
-              <h2
-                style={{
-                  fontSize: "1rem",
-                  fontWeight: 600,
-                  marginBottom: "0.75rem",
-                }}
-              >
-                Links
-              </h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {links.map((l) => {
-                  const label = l.label || l.url || "Link";
-                  return (
-                    <a
-                      key={l.id || l.url}
-                      href={l.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        borderRadius: "0.75rem",
-                        border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.85)",
-                        padding: "0.75rem 1rem",
-                        fontSize: "0.9rem",
-                        textAlign: "left",
-                      }}
-                    >
-                      <span>{label}</span>
-                      <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>
-                        ↗
-                      </span>
-                    </a>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          
+    {/* LINKS */}
+{links.length > 0 && (
+  <div
+    style={{
+      marginTop: "24px",
+      width: "100%",
+      maxWidth: "420px",
+      marginLeft: "auto",
+      marginRight: "auto",
+    }}
+  >
+    <div
+      style={{
+        fontSize: "0.9rem",
+        fontWeight: 600,
+        textAlign: "center",
+        marginBottom: "12px",
+      }}
+    >
+      Links
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px",
+      }}
+    >
+      {links.map((l) => {
+        const label = l.label || l.url || "Link";
+        return (
+          <a
+            key={l.id || l.url}
+            href={l.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.9rem 1.1rem",
+              borderRadius: "999px",
+              background:
+                "linear-gradient(135deg, rgba(39,39,42,0.95), rgba(24,24,27,0.95))",
+              border: "1px solid #27272a",
+              textDecoration: "none",
+              color: "#f4f4f5",
+              fontSize: "0.95rem",
+            }}
+          >
+            <span>{label}</span>
+            <span style={{ fontSize: "0.8rem", opacity: 0.6 }}>↗</span>
+          </a>
+        );
+      })}
+    </div>
+  </div>
+)}
+
 
           {/* FOOTER */}
           <footer

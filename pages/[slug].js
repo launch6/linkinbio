@@ -330,8 +330,9 @@ export default function PublicSlugPage() {
   }
 
   // INLINE STYLES to force centering no matter what global CSS does
+  
   const mainStyle = {
-    maxWidth: "420px",
+    maxWidth: "32rem",        // <-- was 420px
     margin: "0 auto",
     padding: "2.5rem 1.5rem",
     textAlign: "center",
@@ -876,56 +877,6 @@ export default function PublicSlugPage() {
         );
       })}
     </div>
-  </div>
-)}
-
-{/* LINKS UNDER DROP CARD */}
-{links.length > 0 && (
-  <div
-    style={{
-      marginTop: "24px",
-      width: "100%",
-      maxWidth: "26rem",
-      marginLeft: "auto",
-      marginRight: "auto",
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-    }}
-  >
-    {links.map((l) => {
-      const label = l.label || l.url || "Link";
-      return (
-        <a
-          key={l.id || l.url}
-          href={l.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0.75rem 1rem",
-            borderRadius: "0.75rem",
-            border: "1px solid #27272a",
-            backgroundColor: "rgba(24,24,27,0.85)",
-            textDecoration: "none",
-            color: "#f9fafb",
-            fontSize: "0.95rem",
-          }}
-        >
-          <span>{label}</span>
-          <span
-            style={{
-              fontSize: "0.75rem",
-              opacity: 0.6,
-            }}
-          >
-            ↗
-          </span>
-        </a>
-      );
-    })}
   </div>
 )}
 

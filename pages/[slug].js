@@ -57,8 +57,8 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  // BIG MARKER SO WE KNOW THIS FILE RENDERED
-  const debugLabel = "DEBUG-PUBLIC-V7";
+  // debug label so we know this file is active
+  const debugLabel = "DEBUG-PUBLIC-V8";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -192,10 +192,12 @@ export default function PublicSlugPage() {
 
     const parts = [];
 
+    // only show X/Y when showInventory is true and both numbers exist
     if (p.showInventory && total !== null && left !== null) {
       parts.push(`${left}/${total} left`);
     }
 
+    // only show countdown when showTimer is true and timer exists
     if (p.showTimer && rem !== null) {
       parts.push(`Ends in ${formatRemaining(rem)}`);
     }
@@ -210,11 +212,11 @@ export default function PublicSlugPage() {
 
   const badgeClass = {
     active:
-      "bg-emerald-500/20 border-emerald-400/40 text-emerald-200",
+      "bg-emerald-500/15 border-emerald-400/40 text-emerald-200",
     soldout:
-      "bg-rose-500/20 border-rose-400/40 text-rose-200",
+      "bg-rose-500/15 border-rose-400/40 text-rose-200",
     ended:
-      "bg-amber-500/20 border-amber-400/40 text-amber-200",
+      "bg-amber-500/15 border-amber-400/40 text-amber-200",
   };
 
   // handle slug-based subscribe
@@ -313,7 +315,7 @@ export default function PublicSlugPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-xl w-full rounded-xl border border-red-600/40 bg-red-900/20 p-4">
+        <div className="max-w-xl w-full rounded-xl border border-red-600/40 bg-red-900/20 p-4 text-center">
           <div className="font-semibold mb-1">Can’t load page</div>
           <div className="text-sm opacity-80">{error}</div>
         </div>
@@ -331,6 +333,7 @@ export default function PublicSlugPage() {
           content="index,follow,max-image-preview:large"
         />
 
+        {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content={seoTitle} />
@@ -339,6 +342,7 @@ export default function PublicSlugPage() {
           <meta property="og:image" content={firstImage} />
         ) : null}
 
+        {/* Twitter */}
         <meta
           name="twitter:card"
           content={firstImage ? "summary_large_image" : "summary"}
@@ -352,24 +356,27 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        <main className="max-w-xl mx-auto px-4 py-8 flex flex-col gap-8 items-stretch text-center">
-          {/* DEBUG LABEL */}
-          <div className="text-[10px] uppercase tracking-[0.25em] text-neutral-500">
+        <main className="max-w-lg mx-auto px-4 py-10 flex flex-col items-center text-center gap-8">
+          {/* DEBUG TAG */}
+          <div className="text-xs uppercase tracking-[0.25em] text-neutral-500">
             {debugLabel}
           </div>
 
           {/* HEADER */}
-          <header className="flex flex-col items-center gap-4">
-            <div className="flex items-center justify-center">
-              <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
-                {avatarInitial}
-              </div>
+          <header className="flex flex-col items-center gap-4 w-full">
+            {/* logo / avatar */}
+            <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl font-bold">
+              {avatarInitial}
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold">
-              {title ? `@${title}` : "Artist"}
-            </h1>
+            {/* handle */}
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold">
+                {title ? `@${title}` : "Artist"}
+              </h1>
+            </div>
 
+            {/* socials */}
             {hasSocialRow && (
               <div className="flex flex-wrap justify-center gap-3 text-sm">
                 {social.instagram && (
@@ -441,6 +448,7 @@ export default function PublicSlugPage() {
               </div>
             )}
 
+            {/* bio */}
             {bio ? (
               <p className="text-neutral-400 text-sm sm:text-base max-w-md">
                 {bio}
@@ -450,10 +458,10 @@ export default function PublicSlugPage() {
 
           {/* EMAIL CAPTURE */}
           {canCollectEmail && (
-            <div className="rounded-2xl border border-neutral-800 p-5 text-left">
-              <div className="text-lg font-semibold mb-2">
+            <section className="w-full rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5">
+              <h2 className="text-lg font-semibold mb-2">
                 Get first dibs on drops
-              </div>
+              </h2>
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}
@@ -463,7 +471,7 @@ export default function PublicSlugPage() {
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm"
+                    className="flex-1 rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm text-left"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => {
@@ -471,12 +479,14 @@ export default function PublicSlugPage() {
                       if (emailErr) setEmailErr("");
                     }}
                     aria-invalid={!!emailErr}
-                    aria-describedby={emailErr ? "email-error" : undefined}
+                    aria-describedby={
+                      emailErr ? "email-error" : undefined
+                    }
                   />
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-900/20 disabled:opacity-60"
+                    className="rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-900/25 disabled:opacity-60"
                   >
                     {submitting ? "Joining…" : "Join"}
                   </button>
@@ -489,22 +499,24 @@ export default function PublicSlugPage() {
               {emailErr ? (
                 <div
                   id="email-error"
-                  className="mt-2 text-sm text-rose-300"
+                  className="mt-2 text-sm text-rose-300 text-left"
                 >
                   {emailErr}
                 </div>
               ) : null}
-              <div className="mt-2 text-xs text-neutral-500">
+              <div className="mt-2 text-xs text-neutral-500 text-left">
                 We’ll only email you about releases. Unsubscribe anytime.
               </div>
-            </div>
+            </section>
           )}
 
-          {/* PRODUCTS – IMAGE COMPLETELY REMOVED */}
+          {/* PRODUCTS (DROP CARDS) */}
           {products.length === 0 ? (
-            <div className="opacity-70">No products are published yet.</div>
+            <div className="opacity-70">
+              No products are published yet.
+            </div>
           ) : (
-            <div className="flex flex-col gap-8">
+            <section className="flex flex-col gap-8 w-full">
               {products.map((p) => {
                 const st = productStatus(p);
                 const showBuy =
@@ -520,91 +532,98 @@ export default function PublicSlugPage() {
                 return (
                   <article
                     key={p.id}
-                    className="relative w-full rounded-3xl border border-neutral-800 bg-neutral-900/70 shadow-xl px-5 pt-5 pb-6 flex flex-col gap-4 items-stretch text-left"
+                    className="w-full rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 flex flex-col items-center text-center gap-3"
                     aria-labelledby={`prod-${p.id}-title`}
                   >
-                    {/* HERO TEST BLOCK — NO IMAGE */}
-                    <div className="flex justify-center mb-4">
-                      <div className="relative w-full max-w-xs rounded-2xl border border-emerald-500 bg-neutral-900 px-4 py-10 text-center text-xs leading-relaxed">
-                        HERO TEST BLOCK — NO IMAGE.
-                        <br />
-                        If you still see the big building photo, the browser
-                        is NOT using this file.
-                      </div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                      Drop
                     </div>
 
-                    {/* STATUS BADGE */}
-                    <div className="mb-1">
-                      <span
+                    <h2
+                      id={`prod-${p.id}-title`}
+                      className="text-xl font-semibold"
+                    >
+                      {p.title || "Untitled"}
+                    </h2>
+
+                    {/* Status badge */}
+                    {st.label ? (
+                      <div
                         className={
-                          "inline-block rounded-md border px-2 py-1 text-xs font-medium shadow-sm " +
+                          "inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-medium " +
                           (badgeClass[st.key] || badgeClass.active)
                         }
-                        aria-live="polite"
                       >
-                        {st.label ||
-                          (st.key === "active" ? "Live" : "")}
-                      </span>
-                    </div>
-
-                    {/* BODY */}
-                    <div className="space-y-3">
-                      <h2
-                        id={`prod-${p.id}-title`}
-                        className="text-xl font-semibold"
-                      >
-                        {p.title || "Untitled"}
-                      </h2>
-
-                      {st.label ? (
-                        <div
-                          className={
-                            "text-sm " +
-                            (st.soldOut || st.ended
-                              ? "text-rose-300"
-                              : "text-emerald-300")
-                          }
-                        >
-                          {st.label}
-                        </div>
-                      ) : null}
-
-                      <div className="pt-1">
-                        {showBuy ? (
-                          <a
-                            href={buyHref}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500 bg-emerald-600/80 px-6 py-3 text-sm font-semibold tracking-wide hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                            aria-label={`Buy ${p.title || "this product"}`}
-                          >
-                            Buy now
-                          </a>
-                        ) : (
-                          <div
-                            className="inline-flex w-full items-center justify-center rounded-full border border-neutral-800 px-6 py-3 text-sm text-neutral-400"
-                            aria-disabled="true"
-                            role="button"
-                            tabIndex={-1}
-                          >
-                            {st.soldOut
-                              ? "Sold out"
-                              : st.ended
-                              ? "Drop ended"
-                              : "Unavailable"}
-                          </div>
-                        )}
+                        {st.label}
                       </div>
+                    ) : null}
+
+                    {/* CTA */}
+                    <div className="mt-2 w-full">
+                      {showBuy ? (
+                        <a
+                          href={buyHref}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500 bg-emerald-600/80 px-6 py-3 text-sm font-semibold tracking-wide hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                          aria-label={`Buy ${
+                            p.title || "this product"
+                          }`}
+                          onClick={() => {
+                            try {
+                              navigator.sendBeacon(
+                                "/api/track",
+                                new Blob(
+                                  [
+                                    JSON.stringify({
+                                      type: "buy_click",
+                                      productId: p.id,
+                                      publicSlug:
+                                        slug || null,
+                                      ts: Date.now(),
+                                      ref:
+                                        typeof window !==
+                                        "undefined"
+                                          ? window.location.href
+                                          : "",
+                                    }),
+                                  ],
+                                  {
+                                    type: "application/json",
+                                  }
+                                )
+                              );
+                            } catch {}
+                          }}
+                        >
+                          Buy now
+                        </a>
+                      ) : (
+                        <div
+                          className="inline-flex w-full items-center justify-center rounded-full border border-neutral-800 px-6 py-3 text-sm text-neutral-400"
+                          aria-disabled="true"
+                          role="button"
+                          tabIndex={-1}
+                        >
+                          {st.soldOut
+                            ? "Sold out"
+                            : st.ended
+                            ? "Drop ended"
+                            : "Unavailable"}
+                        </div>
+                      )}
                     </div>
                   </article>
                 );
               })}
-            </div>
+            </section>
           )}
 
           {/* LINKS */}
           {links.length > 0 && (
-            <div className="w-full">
-              <h2 className="text-lg font-semibold mb-3">Links</h2>
-              <div className="space-y-3 text-left">
+            <section className="w-full">
+              <h2 className="text-lg font-semibold mb-3">
+                Links
+              </h2>
+              <div className="space-y-3">
                 {links.map((l) => {
                   const label = l.label || l.url || "Link";
                   return (
@@ -613,7 +632,7 @@ export default function PublicSlugPage() {
                       href={l.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors"
+                      className="flex items-center justify-between rounded-xl border border-neutral-800 px-4 py-3 bg-neutral-900/60 hover:bg-neutral-800 transition-colors text-left"
                     >
                       <span>{label}</span>
                       <span className="text-xs opacity-60">↗</span>
@@ -621,11 +640,11 @@ export default function PublicSlugPage() {
                   );
                 })}
               </div>
-            </div>
+            </section>
           )}
 
           {/* FOOTER */}
-          <footer className="mt-6 pb-6 text-xs text-neutral-500 space-y-1">
+          <footer className="mt-4 pb-4 text-xs text-neutral-500 space-y-1 w-full">
             <div>
               Made with <span className="font-semibold">Launch6</span>
             </div>
@@ -648,5 +667,6 @@ export default function PublicSlugPage() {
 }
 
 export async function getServerSideProps() {
+  // Force SSR so any slug resolves at request time.
   return { props: {} };
 }

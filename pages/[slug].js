@@ -57,7 +57,7 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  const debugLabel = "DEBUG-PUBLIC-V8";
+  const debugLabel = "DEBUG-PUBLIC-V9";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -265,7 +265,6 @@ export default function PublicSlugPage() {
   const bio = profile?.bio || profile?.description || "";
   const canCollectEmail = !!profile?.collectEmail;
 
-
   const links = Array.isArray(profile?.links)
     ? profile.links.filter(
         (l) =>
@@ -274,7 +273,8 @@ export default function PublicSlugPage() {
           l.url.trim().length > 0
       )
     : [];
-  // TEMP: hard-coded test link so we can see the link UI
+
+  // TEMP dev link so link UI always visible
   links.push({
     id: "test-link",
     label: "Backyards of Key West Shop",
@@ -329,16 +329,15 @@ export default function PublicSlugPage() {
     );
   }
 
-  // INLINE STYLES to force centering no matter what global CSS does
-  
+  // INLINE STYLES: main layout & sections
   const mainStyle = {
-    maxWidth: "32rem",        // <-- was 420px
+    maxWidth: "500px",          // wider, closer to Linktree feel
     margin: "0 auto",
     padding: "2.5rem 1.5rem",
     textAlign: "center",
     display: "flex",
     flexDirection: "column",
-    gap: "2rem",
+    gap: "1.75rem",            // consistent space between sections
     alignItems: "center",
   };
 
@@ -394,218 +393,94 @@ export default function PublicSlugPage() {
           {debugLabel}
         </div>
 
-
         <main style={mainStyle}>
-          
-          
-         {/* HEADER */}
-  <header
-    style={{
-      width: "100%",
-      display: "flex",
-      justifyContent: "center",
-      marginBottom: "1.75rem",
-    }}
-  >
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "32rem",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        textAlign: "center",
-        gap: "1.5rem",
-      }}
-    >
-      {/* avatar */}
-      <div>
-        <div
-          style={{
-            height: "3rem",
-            width: "3rem",
-            borderRadius: "999px",
-            backgroundColor: "#18181b",
-            border: "1px solid #27272a",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 600,
-            fontSize: "1.25rem",
-          }}
-        >
-          {avatarInitial}
-        </div>
-      </div>
+          {/* HEADER */}
+          <header
+            style={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: "1rem",
+              }}
+            >
+              {/* avatar */}
+              <div>
+                <div
+                  style={{
+                    height: "3.25rem",
+                    width: "3.25rem",
+                    borderRadius: "999px",
+                    backgroundColor: "#18181b",
+                    border: "1px solid #27272a",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 600,
+                    fontSize: "1.4rem",
+                  }}
+                >
+                  {avatarInitial}
+                </div>
+              </div>
 
-      {/* handle */}
-      <div>
-        <h1
-          style={{
-            fontSize: "1.6rem",
-            lineHeight: 1.2,
-            fontWeight: 700,
-          }}
-        >
-          {title ? `@${title}` : "Artist"}
-        </h1>
-      </div>
+              {/* handle */}
+              <div>
+                <h1
+                  style={{
+                    fontSize: "1.9rem", // bigger, more Linktree-like
+                    lineHeight: 1.2,
+                    fontWeight: 700,
+                  }}
+                >
+                  {title ? `@${title}` : "Artist"}
+                </h1>
+              </div>
 
-      {/* socials */}
-      {hasSocialRow && (
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            gap: "0.5rem",
-            fontSize: "0.9rem",
-          }}
-        >
-          {social.instagram && (
-            <a
-              href={social.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                height: "2.25rem",
-                width: "2.25rem",
-                borderRadius: "999px",
-                border: "1px solid #27272a",
-                backgroundColor: "rgba(24,24,27,0.8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textDecoration: "none",
-              }}
-              aria-label="Instagram"
-            >
-              📸
-            </a>
-          )}
-          {social.facebook && (
-            <a
-              href={social.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                height: "2.25rem",
-                width: "2.25rem",
-                borderRadius: "999px",
-                border: "1px solid #27272a",
-                backgroundColor: "rgba(24,24,27,0.8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textDecoration: "none",
-              }}
-              aria-label="Facebook"
-            >
-              📘
-            </a>
-          )}
-          {social.tiktok && (
-            <a
-              href={social.tiktok}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                height: "2.25rem",
-                width: "2.25rem",
-                borderRadius: "999px",
-                border: "1px solid #27272a",
-                backgroundColor: "rgba(24,24,27,0.8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textDecoration: "none",
-              }}
-              aria-label="TikTok"
-            >
-              🎵
-            </a>
-          )}
-          {social.youtube && (
-            <a
-              href={social.youtube}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                height: "2.25rem",
-                width: "2.25rem",
-                borderRadius: "999px",
-                border: "1px solid #27272a",
-                backgroundColor: "rgba(24,24,27,0.8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textDecoration: "none",
-              }}
-              aria-label="YouTube"
-            >
-              ▶️
-            </a>
-          )}
-          {social.x && (
-            <a
-              href={social.x}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                height: "2.25rem",
-                width: "2.25rem",
-                borderRadius: "999px",
-                border: "1px solid #27272a",
-                backgroundColor: "rgba(24,24,27,0.8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textDecoration: "none",
-              }}
-              aria-label="X"
-            >
-              ✖️
-            </a>
-          )}
-          {social.website && (
-            <a
-              href={social.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                height: "2.25rem",
-                width: "2.25rem",
-                borderRadius: "999px",
-                border: "1px solid #27272a",
-                backgroundColor: "rgba(24,24,27,0.8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textDecoration: "none",
-              }}
-              aria-label="Website"
-            >
-              🌐
-            </a>
-          )}
-        </div>
-      )}
+              {/* socials (emoji for now) */}
+              {hasSocialRow && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    gap: "0.6rem",
+                    fontSize: "1.1rem",
+                  }}
+                >
+                  {social.instagram && <span>📸</span>}
+                  {social.facebook && <span>📘</span>}
+                  {social.tiktok && <span>🎵</span>}
+                  {social.youtube && <span>▶️</span>}
+                  {social.x && <span>✖️</span>}
+                  {social.website && <span>🌐</span>}
+                </div>
+              )}
 
-      {/* bio */}
-      {bio ? (
-        <p
-          style={{
-            color: "#a3a3a3",
-            fontSize: "0.95rem",
-            lineHeight: 1.5,
-            maxWidth: "26rem",
-          }}
-        >
-          {bio}
-        </p>
-      ) : null}
-    </div>
-  </header>
+              {/* bio */}
+              {bio ? (
+                <p
+                  style={{
+                    color: "#d4d4d8",
+                    fontSize: "1rem",      // bigger body text
+                    lineHeight: 1.5,
+                    maxWidth: "30rem",
+                    marginTop: "0.35rem",
+                  }}
+                >
+                  {bio}
+                </p>
+              ) : null}
+            </div>
+          </header>
 
           {/* EMAIL CAPTURE */}
           {canCollectEmail && (
@@ -644,8 +519,8 @@ export default function PublicSlugPage() {
                       borderRadius: "0.5rem",
                       backgroundColor: "#020617",
                       border: "1px solid #3f3f46",
-                      padding: "0.5rem 0.75rem",
-                      fontSize: "0.9rem",
+                      padding: "0.55rem 0.8rem",
+                      fontSize: "0.95rem",
                       color: "white",
                     }}
                     placeholder="you@example.com"
@@ -665,8 +540,8 @@ export default function PublicSlugPage() {
                     style={{
                       borderRadius: "0.5rem",
                       border: "1px solid #059669",
-                      padding: "0.5rem 0.75rem",
-                      fontSize: "0.9rem",
+                      padding: "0.55rem 0.8rem",
+                      fontSize: "0.95rem",
                       fontWeight: 600,
                       backgroundColor: "transparent",
                       color: "white",
@@ -706,7 +581,7 @@ export default function PublicSlugPage() {
               <div
                 style={{
                   marginTop: "0.35rem",
-                  fontSize: "0.75rem",
+                  fontSize: "0.78rem",
                   color: "#737373",
                 }}
               >
@@ -715,7 +590,7 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* PRODUCTS (NO IMAGE FOR NOW) */}
+          {/* PRODUCTS (DROP CARDS) */}
           {products.length === 0 ? (
             <div style={{ opacity: 0.7 }}>No products are published yet.</div>
           ) : (
@@ -733,214 +608,245 @@ export default function PublicSlugPage() {
                 }`;
 
                 return (
-                  
-                 <article
-  key={p.id}
-  style={{
-    borderRadius: "1rem",
-    border: "1px solid #27272a",
-    backgroundColor: "rgba(24,24,27,0.85)",
-    padding: "1.25rem",
-    marginBottom: "1.5rem",
-  }}
-  aria-labelledby={`prod-${p.id}-title`}
->
-  {/* HERO IMAGE – centered & capped */}
-  {p.imageUrl && (
-    <div
-      style={{
-        width: "100%",
-        marginBottom: "1rem",
-        display: "flex",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "340px", // cap size on desktop/laptop
-          borderRadius: "0.75rem",
-          overflow: "hidden",
-          backgroundColor: "#09090b",
-        }}
-      >
-        <img
-          src={p.imageUrl}
-          alt={p.title || "Product image"}
-          loading="lazy"
-          style={{
-            width: "100%",
-            height: "auto",
-            display: "block",
-            objectFit: "cover",
-          }}
-        />
-      </div>
-    </div>
-  )}
+                  <article
+                    key={p.id}
+                    style={{
+                      borderRadius: "1rem",
+                      border: "1px solid #27272a",
+                      backgroundColor: "rgba(24,24,27,0.9)",
+                      padding: "1.25rem",
+                      marginBottom: "1.5rem",
+                    }}
+                    aria-labelledby={`prod-${p.id}-title`}
+                  >
+                    {/* HERO IMAGE – centered & capped */}
+                    {p.imageUrl && (
+                      <div
+                        style={{
+                          width: "100%",
+                          marginBottom: "0.9rem",
+                          display: "flex",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "100%",
+                            maxWidth: "380px", // cap size on desktop/laptop
+                            borderRadius: "0.85rem",
+                            overflow: "hidden",
+                            backgroundColor: "#09090b",
+                          }}
+                        >
+                          <img
+                            src={p.imageUrl}
+                            alt={p.title || "Product image"}
+                            loading="lazy"
+                            style={{
+                              width: "100%",
+                              height: "auto",
+                              display: "block",
+                              objectFit: "cover",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
 
-  <div
-    style={{
-      fontSize: "0.75rem",
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      color: "#a3a3a3",
-      marginBottom: "0.35rem",
-    }}
-  >
-    Drop
-  </div>
-  <h2
-    id={`prod-${p.id}-title`}
-    style={{
-      fontSize: "1.1rem",
-      fontWeight: 600,
-      marginBottom: "0.5rem",
-    }}
-  >
-    {p.title || "Untitled"}
-  </h2>
-  {st.label ? (
-    <div
-      style={{
-        fontSize: "0.85rem",
-        marginBottom: "0.75rem",
-        color: st.soldOut || st.ended ? "#fecaca" : "#6ee7b7",
-      }}
-    >
-      {st.label}
-    </div>
-  ) : null}
-  {/* ...rest of card unchanged... */}
-</article>
+                    <div
+                      style={{
+                        fontSize: "0.8rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        color: "#a3a3a3",
+                        marginBottom: "0.35rem",
+                      }}
+                    >
+                      Drop
+                    </div>
+                    <h2
+                      id={`prod-${p.id}-title`}
+                      style={{
+                        fontSize: "1.25rem",
+                        fontWeight: 600,
+                        marginBottom: "0.4rem",
+                      }}
+                    >
+                      {p.title || "Untitled"}
+                    </h2>
 
+                    {/* Status line */}
+                    {st.label ? (
+                      <div
+                        style={{
+                          fontSize: "0.9rem",
+                          marginBottom: "0.9rem",
+                          color:
+                            st.soldOut || st.ended ? "#fecaca" : "#6ee7b7",
+                        }}
+                      >
+                        {st.label}
+                      </div>
+                    ) : null}
+
+                    {/* CTA */}
+                    <div>
+                      {showBuy ? (
+                        <a
+                          href={buyHref}
+                          style={{
+                            display: "inline-flex",
+                            width: "100%",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.5rem",
+                            borderRadius: "999px",
+                            border: "1px solid #22c55e",
+                            padding: "0.8rem 1rem",
+                            fontSize: "0.95rem",
+                            fontWeight: 600,
+                            backgroundColor: "#16a34a",
+                            color: "#f9fafb",
+                            textDecoration: "none",
+                          }}
+                          aria-label={`Buy ${p.title || "this product"}`}
+                          onClick={() => {
+                            try {
+                              navigator.sendBeacon(
+                                "/api/track",
+                                new Blob(
+                                  [
+                                    JSON.stringify({
+                                      type: "buy_click",
+                                      productId: p.id,
+                                      publicSlug: slug || null,
+                                      ts: Date.now(),
+                                      ref:
+                                        typeof window !== "undefined"
+                                          ? window.location.href
+                                          : "",
+                                    }),
+                                  ],
+                                  {
+                                    type: "application/json",
+                                  }
+                                )
+                              );
+                            } catch {}
+                          }}
+                        >
+                          Buy now
+                        </a>
+                      ) : (
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            width: "100%",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "999px",
+                            border: "1px solid #27272a",
+                            padding: "0.8rem 1rem",
+                            fontSize: "0.95rem",
+                            color: "#a1a1aa",
+                          }}
+                          aria-disabled="true"
+                        >
+                          {st.soldOut
+                            ? "Sold out"
+                            : st.ended
+                            ? "Drop ended"
+                            : "Unavailable"}
+                        </div>
+                      )}
+                    </div>
+                  </article>
                 );
               })}
             </section>
           )}
 
-          
-    {/* LINKS */}
-{links.length > 0 && (
-  <div
-    style={{
-      marginTop: "24px",
-      width: "100%",
-      maxWidth: "420px",
-      marginLeft: "auto",
-      marginRight: "auto",
-    }}
-  >
-    <div
-      style={{
-        fontSize: "0.9rem",
-        fontWeight: 600,
-        textAlign: "center",
-        marginBottom: "12px",
-      }}
-    >
-      Links
-    </div>
+          {/* LINKS (pill-style, like Linktree) */}
+          {links.length > 0 && (
+            <section
+              style={{
+                marginTop: "0.25rem",
+                width: "100%",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  textAlign: "center",
+                  marginBottom: "0.75rem",
+                }}
+              >
+                Links
+              </div>
 
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
-      }}
-    >
-      {links.map((l) => {
-        const label = l.label || l.url || "Link";
-        return (
-          <a
-            key={l.id || l.url}
-            href={l.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0.9rem 1.1rem",
-              borderRadius: "999px",
-              background:
-                "linear-gradient(135deg, rgba(39,39,42,0.95), rgba(24,24,27,0.95))",
-              border: "1px solid #27272a",
-              textDecoration: "none",
-              color: "#f4f4f5",
-              fontSize: "0.95rem",
-            }}
-          >
-            <span>{label}</span>
-            <span style={{ fontSize: "0.8rem", opacity: 0.6 }}>↗</span>
-          </a>
-        );
-      })}
-    </div>
-  </div>
-)}
-
-{/* LINKS UNDER DROP CARD */}
-{links.length > 0 && (
-  <div
-    style={{
-      marginTop: "24px",
-      width: "100%",
-      maxWidth: "26rem",
-      marginLeft: "auto",
-      marginRight: "auto",
-      display: "flex",
-      flexDirection: "column",
-      gap: "12px",
-    }}
-  >
-    {links.map((l) => {
-      const label = l.label || l.url || "Link";
-      return (
-        <a
-          key={l.id || l.url}
-          href={l.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0.75rem 1rem",
-            borderRadius: "0.75rem",
-            border: "1px solid #27272a",
-            backgroundColor: "rgba(24,24,27,0.85)",
-            textDecoration: "none",
-            color: "#f9fafb",
-            fontSize: "0.95rem",
-          }}
-        >
-          <span>{label}</span>
-          <span
-            style={{
-              fontSize: "0.75rem",
-              opacity: 0.6,
-            }}
-          >
-            ↗
-          </span>
-        </a>
-      );
-    })}
-  </div>
-)}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.65rem",
+                }}
+              >
+                {links.map((l) => {
+                  const label = l.label || l.url || "Link";
+                  return (
+                    <a
+                      key={l.id || l.url}
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "0.95rem 1.2rem",
+                        borderRadius: "999px",
+                        background:
+                          "linear-gradient(135deg, rgba(39,39,42,0.96), rgba(24,24,27,0.96))",
+                        border: "1px solid #27272a",
+                        textDecoration: "none",
+                        color: "#f4f4f5",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      <span>{label}</span>
+                      <span style={{ fontSize: "0.85rem", opacity: 0.6 }}>↗</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* FOOTER */}
           <footer
             style={{
-              fontSize: "0.75rem",
+              fontSize: "0.78rem",
               color: "#737373",
               paddingBottom: "1.5rem",
               width: "100%",
+              marginTop: "0.75rem",
             }}
           >
             <div style={{ marginBottom: "0.25rem" }}>
-              Made with <span style={{ fontWeight: 600 }}>Launch6</span>
+              Made with{" "}
+              <a
+                href="https://launch6.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontWeight: 600,
+                  textDecoration: "underline",
+                  textUnderlineOffset: "2px",
+                }}
+              >
+                Launch6
+              </a>
             </div>
             <div
               style={{

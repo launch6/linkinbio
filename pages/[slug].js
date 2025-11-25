@@ -265,6 +265,7 @@ export default function PublicSlugPage() {
   const bio = profile?.bio || profile?.description || "";
   const canCollectEmail = !!profile?.collectEmail;
 
+
   const links = Array.isArray(profile?.links)
     ? profile.links.filter(
         (l) =>
@@ -273,6 +274,12 @@ export default function PublicSlugPage() {
           l.url.trim().length > 0
       )
     : [];
+  // TEMP: hard-coded test link so we can see the link UI
+  links.push({
+    id: "test-link",
+    label: "Backyards of Key West Shop",
+    url: "https://backyardsofkeywest.com",
+  });
 
   const social = profile?.social || {};
   const hasSocialRow =

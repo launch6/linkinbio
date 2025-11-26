@@ -496,29 +496,29 @@ export default function PublicSlugPage() {
 
               {/* Handle (@backyards) */}
               <h1
-                style={{
-                  fontSize: "1.7rem",
-                  lineHeight: 1.1, // tighter, like Linktree
-                  fontWeight: 700,
-                  marginBottom: HEADER_STACK_SPACING,
-                }}
-              >
-                {title ? `@${title}` : "Artist"}
-              </h1>
+  style={{
+    fontSize: "1.7rem",
+    lineHeight: 1.2,
+    fontWeight: 700,
+    margin: `0 0 ${HEADER_STACK_SPACING}`, // equal gap below, no top margin
+  }}
+>
+  {title ? `@${title}` : "Artist"}
+</h1>
 
               {/* Description */}
-              {bio ? (
-                <p
-                  style={{
-                    color: "#e5e7eb",
-                    fontSize: "1rem",
-                    lineHeight: 1.4,
-                    marginBottom: HEADER_STACK_SPACING,
-                  }}
-                >
-                  {bio}
-                </p>
-              ) : null}
+            {bio ? (
+  <p
+    style={{
+      color: "#e5e7eb",
+      fontSize: "1rem",
+      lineHeight: 1.5,
+      margin: `0 0 ${HEADER_STACK_SPACING}`, // same spacing, no top margin
+    }}
+  >
+    {bio}
+  </p>
+) : null}
 
               {/* Social icons */}
               {hasSocialRow && (

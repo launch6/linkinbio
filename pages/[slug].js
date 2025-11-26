@@ -1014,7 +1014,7 @@ export default function PublicSlugPage() {
   }}
 >
   <img
-    src="/launch6_black.png"
+    src="/launch6_white.png"
     alt="Launch6 logo"
     style={{
       height: "1.6rem",

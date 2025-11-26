@@ -1022,7 +1022,7 @@ export default function PublicSlugPage() {
       display: "block",
     }}
   />
-  <span>Launch your own artist drops 🚀</span>
+  <span>Launch for free here 🚀</span>
 </a>
 
   </div>

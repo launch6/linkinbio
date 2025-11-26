@@ -40,11 +40,9 @@ function isValidEmail(email) {
 
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
-  // bigger frame, same 24x24 drawing space so icons actually scale up
-  const size = 28;
   const common = {
-    width: size,
-    height: size,
+    width: 24,
+    height: 24,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
@@ -127,7 +125,7 @@ export default function PublicSlugPage() {
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
-  const debugLabel = "DEBUG-PUBLIC-V11";
+  const debugLabel = "DEBUG-PUBLIC-V12";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -241,7 +239,7 @@ export default function PublicSlugPage() {
     const left = toNumberOrNull(p.unitsLeft);
     const total = toNumberOrNull(p.unitsTotal);
     const rem = remaining[p.id]; // ms or null
-       const ended = rem === 0;
+    const ended = rem === 0;
     const soldOut = left !== null && left <= 0;
 
     if (soldOut)
@@ -323,7 +321,11 @@ export default function PublicSlugPage() {
   }
 
   const title = profile?.displayName || profile?.name || "Artist";
-  const bio = profile?.bio || profile?.description || "";
+  const rawBio = profile?.bio || profile?.description || "";
+  const bio =
+    rawBio && rawBio.length > 180
+      ? rawBio.slice(0, 177) + "…"
+      : rawBio; // soft character cap
   const canCollectEmail = !!profile?.collectEmail;
 
   const links = Array.isArray(profile?.links)
@@ -391,17 +393,16 @@ export default function PublicSlugPage() {
   }
 
   // INLINE STYLES to force centering no matter what global CSS does
-  
   const mainStyle = {
-  maxWidth: "500px",        // wider like Linktree
-  margin: "0 auto",
-  padding: "2.5rem 1.5rem",
-  textAlign: "center",
-  display: "flex",
-  flexDirection: "column",
-  gap: "2rem",
-  alignItems: "center",
-};
+    maxWidth: "500px", // wider like Linktree
+    margin: "0 auto",
+    padding: "2.25rem 1.5rem",
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1.6rem", // tighter than 2rem
+    alignItems: "center",
+  };
 
   const fullWidthSection = {
     width: "100%",
@@ -460,7 +461,7 @@ export default function PublicSlugPage() {
           <header
             style={{
               width: "100%",
-              marginBottom: "0.75rem",
+              marginBottom: "0.25rem",
             }}
           >
             <div
@@ -472,27 +473,26 @@ export default function PublicSlugPage() {
                 flexDirection: "column",
                 alignItems: "center",
                 textAlign: "center",
-                gap: "0.85rem",
+                gap: "0.5rem",
               }}
             >
               {/* Avatar */}
-              <div>
-                <div
-                  style={{
-                    height: "3.5rem",
-                    width: "3.5rem",
-                    borderRadius: "999px",
-                    backgroundColor: "#18181b",
-                    border: "1px solid #27272a",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 600,
-                    fontSize: "1.4rem",
-                  }}
-                >
-                  {avatarInitial}
-                </div>
+              <div
+                style={{
+                  height: "3.5rem",
+                  width: "3.5rem",
+                  borderRadius: "999px",
+                  backgroundColor: "#18181b",
+                  border: "1px solid #27272a",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 600,
+                  fontSize: "1.4rem",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                {avatarInitial}
               </div>
 
               {/* Handle */}
@@ -501,18 +501,34 @@ export default function PublicSlugPage() {
                   fontSize: "1.7rem",
                   lineHeight: 1.2,
                   fontWeight: 700,
+                  margin: "0.1rem 0 0.1rem",
                 }}
               >
                 {title ? `@${title}` : "Artist"}
               </h1>
 
-                         {/* Social icons */}
+              {/* Description */}
+              {bio ? (
+                <p
+                  style={{
+                    color: "#e5e7eb",
+                    fontSize: "1rem",
+                    lineHeight: 1.45,
+                    margin: "0.3rem 0 0.55rem",
+                  }}
+                >
+                  {bio}
+                </p>
+              ) : null}
+
+              {/* Social icons */}
               {hasSocialRow && (
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "center",
-                    gap: "0.75rem",
+                    gap: "0.9rem",
+                    marginBottom: "0.3rem",
                   }}
                 >
                   {social.instagram && (
@@ -522,18 +538,17 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="Instagram"
                       style={{
-  height: "2.8rem",
-  width: "2.8rem",
-  borderRadius: "999px",
-  border: "1px solid #27272a",
-  backgroundColor: "rgba(24,24,27,0.9)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#f9fafb",
-  textDecoration: "none",
-}}
-
+                        height: "3rem",
+                        width: "3rem",
+                        borderRadius: "999px",
+                        border: "1px solid #27272a",
+                        backgroundColor: "rgba(24,24,27,0.95)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#f9fafb",
+                        textDecoration: "none",
+                      }}
                     >
                       <SocialIcon type="instagram" />
                     </a>
@@ -545,11 +560,11 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="Facebook"
                       style={{
-                        height: "2.4rem",
-                        width: "2.4rem",
+                        height: "3rem",
+                        width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.9)",
+                        backgroundColor: "rgba(24,24,27,0.95)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -567,11 +582,11 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="TikTok"
                       style={{
-                        height: "2.4rem",
-                        width: "2.4rem",
+                        height: "3rem",
+                        width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.9)",
+                        backgroundColor: "rgba(24,24,27,0.95)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -589,11 +604,11 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="YouTube"
                       style={{
-                        height: "2.4rem",
-                        width: "2.4rem",
+                        height: "3rem",
+                        width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.9)",
+                        backgroundColor: "rgba(24,24,27,0.95)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -611,11 +626,11 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="X"
                       style={{
-                        height: "2.4rem",
-                        width: "2.4rem",
+                        height: "3rem",
+                        width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.9)",
+                        backgroundColor: "rgba(24,24,27,0.95)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -633,11 +648,11 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="Website"
                       style={{
-                        height: "2.4rem",
-                        width: "2.4rem",
+                        height: "3rem",
+                        width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.9)",
+                        backgroundColor: "rgba(24,24,27,0.95)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -650,19 +665,6 @@ export default function PublicSlugPage() {
                   )}
                 </div>
               )}
-              
-            {bio ? (
-  <p
-    style={{
-      color: "#e5e7eb",
-      fontSize: "1rem",
-      lineHeight: 1.5,
-      margin: "1.25rem 0 1.25rem", // equal space above & below
-    }}
-  >
-    {bio}
-  </p>
-) : null}
             </div>
           </header>
 
@@ -775,9 +777,7 @@ export default function PublicSlugPage() {
           )}
 
           {/* PRODUCTS */}
-          {products.length === 0 ? (
-            <div style={{ opacity: 0.7 }}>No products are published yet.</div>
-          ) : (
+          {products.length > 0 && (
             <section style={fullWidthSection}>
               {products.map((p) => {
                 const st = productStatus(p);
@@ -797,7 +797,7 @@ export default function PublicSlugPage() {
                       border: "1px solid #27272a",
                       backgroundColor: "rgba(24,24,27,0.85)",
                       padding: "1.25rem",
-                      marginBottom: "1.5rem",
+                      marginBottom: "1.35rem",
                     }}
                     aria-labelledby={`prod-${p.id}-title`}
                   >
@@ -806,7 +806,7 @@ export default function PublicSlugPage() {
                       <div
                         style={{
                           width: "100%",
-                          marginBottom: "1rem",
+                          marginBottom: "0.85rem",
                           display: "flex",
                           justifyContent: "center",
                         }}
@@ -841,7 +841,7 @@ export default function PublicSlugPage() {
                         textTransform: "uppercase",
                         letterSpacing: "0.08em",
                         color: "#a3a3a3",
-                        marginBottom: "0.35rem",
+                        marginBottom: "0.3rem",
                       }}
                     >
                       Drop
@@ -851,7 +851,7 @@ export default function PublicSlugPage() {
                       style={{
                         fontSize: "1.15rem",
                         fontWeight: 600,
-                        marginBottom: "0.5rem",
+                        marginBottom: "0.45rem",
                       }}
                     >
                       {p.title || "Untitled"}
@@ -861,7 +861,7 @@ export default function PublicSlugPage() {
                       <div
                         style={{
                           fontSize: "0.9rem",
-                          marginBottom: "0.75rem",
+                          marginBottom: "0.7rem",
                           color:
                             st.soldOut || st.ended
                               ? "#fecaca"
@@ -877,7 +877,7 @@ export default function PublicSlugPage() {
                         style={{
                           fontSize: "0.9rem",
                           color: "#e5e5e5",
-                          marginBottom: showBuy ? "0.9rem" : 0,
+                          marginBottom: showBuy ? "0.85rem" : 0,
                         }}
                       >
                         {p.description}
@@ -888,7 +888,7 @@ export default function PublicSlugPage() {
                       <a
                         href={buyHref}
                         style={{
-                          marginTop: "0.25rem",
+                          marginTop: "0.15rem",
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -913,19 +913,19 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* LINKS (below drop card) */}
+          {/* LINKS (below drop card or directly under header if no products) */}
           {links.length > 0 && (
             <section
               style={{
                 width: "100%",
-                marginTop: "0.5rem",
+                marginTop: products.length > 0 ? "0.4rem" : "0.2rem",
               }}
             >
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.75rem",
+                  gap: "0.7rem",
                 }}
               >
                 {links.map((l) => {
@@ -967,58 +967,56 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-         <footer
-  style={{
-    fontSize: "0.9rem",
-    color: "#a3a3a3",
-    paddingBottom: "2.25rem",
-    width: "100%",
-    marginTop: "2rem",
-  }}
->
-  <div
-    style={{
-      margin: "1.25rem 0", // equal space above & below this line
-      lineHeight: 1.4,
-      textAlign: "center",
-    }}
-  >
-    Join{" "}
-    <a
-      href="https://launch6.com"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        fontWeight: 600,
-        textDecoration: "underline",
-        textUnderlineOffset: "2px",
-        color: "#e5e5e5",
-      }}
-    >
-      Launch6
-    </a>{" "}
-    to create your own artist drops.
-  </div>
-
-  <div
-    style={{
-      display: "flex",
-      flexWrap: "wrap",
-      justifyContent: "center",
-      gap: "0.9rem",
-    }}
-  >
-    <button style={{ textDecoration: "underline" }}>
-      Cookie preferences
-    </button>
-    <button style={{ textDecoration: "underline" }}>
-      Report page
-    </button>
-    <button style={{ textDecoration: "underline" }}>
-      Privacy
-    </button>
-  </div>
-</footer>
+          <footer
+            style={{
+              fontSize: "0.9rem",
+              color: "#a3a3a3",
+              paddingBottom: "2rem",
+              width: "100%",
+              marginTop: "1.4rem", // tighter than before
+            }}
+          >
+            <div
+              style={{
+                marginBottom: "0.65rem",
+                lineHeight: 1.4,
+              }}
+            >
+              Join{" "}
+              <a
+                href="https://launch6.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontWeight: 600,
+                  textDecoration: "underline",
+                  textUnderlineOffset: "2px",
+                  color: "#e5e5e5",
+                }}
+              >
+                Launch6
+              </a>{" "}
+              to create your own artist drops.
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: "0.85rem",
+              }}
+            >
+              <button style={{ textDecoration: "underline" }}>
+                Cookie preferences
+              </button>
+              <button style={{ textDecoration: "underline" }}>
+                Report page
+              </button>
+              <button style={{ textDecoration: "underline" }}>
+                Privacy
+              </button>
+            </div>
+          </footer>
         </main>
       </div>
     </>

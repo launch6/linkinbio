@@ -40,10 +40,12 @@ function isValidEmail(email) {
 
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
-   const common = {
-    width: 28,
-    height: 28,
-    viewBox: "0 0 28 28",
+  // bigger frame, same 24x24 drawing space so icons actually scale up
+  const size = 28;
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
     strokeWidth: 1.8,
@@ -520,17 +522,18 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="Instagram"
                       style={{
-                        height: "2.4rem",
-                        width: "2.4rem",
-                        borderRadius: "999px",
-                        border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.9)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#f9fafb",
-                        textDecoration: "none",
-                      }}
+  height: "2.8rem",
+  width: "2.8rem",
+  borderRadius: "999px",
+  border: "1px solid #27272a",
+  backgroundColor: "rgba(24,24,27,0.9)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#f9fafb",
+  textDecoration: "none",
+}}
+
                     >
                       <SocialIcon type="instagram" />
                     </a>
@@ -647,15 +650,14 @@ export default function PublicSlugPage() {
                   )}
                 </div>
               )}
-
               
             {bio ? (
   <p
     style={{
       color: "#e5e7eb",
-      fontSize: "1rem",        // bigger text
+      fontSize: "1rem",
       lineHeight: 1.5,
-      marginBottom: "1.25rem", // space between bio and socials
+      margin: "1.25rem 0 1.25rem", // equal space above & below
     }}
   >
     {bio}
@@ -965,56 +967,58 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer
-            style={{
-              fontSize: "0.9rem",
-              color: "#a3a3a3",
-              paddingBottom: "2.25rem",
-              width: "100%",
-              marginTop: "2.25rem",
-            }}
-          >
-            <div
-              style={{
-                marginBottom: "0.9rem",
-                lineHeight: 1.4,
-              }}
-            >
-              Join{" "}
-              <a
-                href="https://launch6.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontWeight: 600,
-                  textDecoration: "underline",
-                  textUnderlineOffset: "2px",
-                  color: "#e5e5e5",
-                }}
-              >
-                Launch6
-              </a>{" "}
-              to create your own artist drops.
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "0.9rem",
-              }}
-            >
-              <button style={{ textDecoration: "underline" }}>
-                Cookie preferences
-              </button>
-              <button style={{ textDecoration: "underline" }}>
-                Report page
-              </button>
-              <button style={{ textDecoration: "underline" }}>
-                Privacy
-              </button>
-            </div>
-          </footer>
+         <footer
+  style={{
+    fontSize: "0.9rem",
+    color: "#a3a3a3",
+    paddingBottom: "2.25rem",
+    width: "100%",
+    marginTop: "2rem",
+  }}
+>
+  <div
+    style={{
+      margin: "1.25rem 0", // equal space above & below this line
+      lineHeight: 1.4,
+      textAlign: "center",
+    }}
+  >
+    Join{" "}
+    <a
+      href="https://launch6.com"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        fontWeight: 600,
+        textDecoration: "underline",
+        textUnderlineOffset: "2px",
+        color: "#e5e5e5",
+      }}
+    >
+      Launch6
+    </a>{" "}
+    to create your own artist drops.
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: "0.9rem",
+    }}
+  >
+    <button style={{ textDecoration: "underline" }}>
+      Cookie preferences
+    </button>
+    <button style={{ textDecoration: "underline" }}>
+      Report page
+    </button>
+    <button style={{ textDecoration: "underline" }}>
+      Privacy
+    </button>
+  </div>
+</footer>
         </main>
       </div>
     </>

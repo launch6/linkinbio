@@ -40,9 +40,9 @@ function isValidEmail(email) {
 
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
-  const common = {
-    width: 18,
-    height: 18,
+   const common = {
+    width: 22,
+    height: 22,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
@@ -504,7 +504,7 @@ export default function PublicSlugPage() {
                 {title ? `@${title}` : "Artist"}
               </h1>
 
-              {/* Social icons */}
+                         {/* Social icons */}
               {hasSocialRow && (
                 <div
                   style={{

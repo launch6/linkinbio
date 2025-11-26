@@ -1022,7 +1022,7 @@ export default function PublicSlugPage() {
       display: "block",
     }}
   />
-  <span>Launch for free here 🚀</span>
+  <span>Blastoff here 🚀</span>
 </a>
 
   </div>

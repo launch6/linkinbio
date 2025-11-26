@@ -974,56 +974,82 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer
-            style={{
-              fontSize: "0.9rem",
-              color: "#a3a3a3",
-              paddingBottom: "2.25rem",
-              width: "100%",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                marginBottom: "0.9rem",
-                lineHeight: 1.4,
-              }}
-            >
-              Join{" "}
-              <a
-                href="https://launch6.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontWeight: 600,
-                  textDecoration: "underline",
-                  textUnderlineOffset: "2px",
-                  color: "#e5e5e5",
-                }}
-              >
-                Launch6
-              </a>{" "}
-              to create your own artist drops.
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "0.9rem",
-              }}
-            >
-              <button style={{ textDecoration: "underline" }}>
-                Cookie preferences
-              </button>
-              <button style={{ textDecoration: "underline" }}>
-                Report page
-              </button>
-              <button style={{ textDecoration: "underline" }}>
-                Privacy
-              </button>
-            </div>
-          </footer>
+<footer
+  style={{
+    fontSize: "0.9rem",
+    color: "#a3a3a3",
+    paddingBottom: "2.25rem",
+    width: "100%",
+    textAlign: "center",
+  }}
+>
+  {/* Launch6 logo CTA */}
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      marginBottom: "1rem",
+    }}
+  >
+    <a
+      href="https://launch6.com"
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.55rem",
+        padding: "0.55rem 0.95rem",
+        borderRadius: "999px",
+        border: "1px solid #27272a",
+        backgroundColor: "rgba(24,24,27,0.95)",
+        textDecoration: "none",
+        color: "#e5e5e5",
+      }}
+    >
+      <img
+        src="/launch6_black.png"
+        alt="Launch6 logo"
+        style={{
+          height: "22px",
+          width: "auto",
+          display: "block",
+        }}
+      />
+      <span
+        style={{
+          fontSize: "0.85rem",
+          fontWeight: 500,
+          letterSpacing: "0.03em",
+          textTransform: "uppercase",
+        }}
+      >
+        Create your own artist drops
+      </span>
+    </a>
+  </div>
+
+  {/* Legal / utility links */}
+  <div
+    style={{
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: "0.9rem",
+    }}
+  >
+    <button style={{ textDecoration: "underline" }}>
+      Cookie preferences
+    </button>
+    <button style={{ textDecoration: "underline" }}>
+      Report page
+    </button>
+    <button style={{ textDecoration: "underline" }}>
+      Privacy
+    </button>
+  </div>
+</footer>
+
         </main>
       </div>
     </>

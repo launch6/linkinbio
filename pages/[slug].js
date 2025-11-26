@@ -385,7 +385,8 @@ export default function PublicSlugPage() {
   }
 
   // Layout: single column, Linktree-style
-  const mainStyle = {
+  
+    const mainStyle = {
     maxWidth: "500px",
     margin: "0 auto",
     padding: "2.5rem 1.5rem 2.75rem",
@@ -396,7 +397,8 @@ export default function PublicSlugPage() {
     width: "100%",
   };
 
-  const SECTION_GAP = "1.5rem"; // header↔drop and drop↔links
+  const SECTION_GAP = "1.5rem";           // header↔drop and drop↔links
+  const HEADER_STACK_SPACING = "0.9rem";  // equal gaps in header stack
 
   return (
     <>
@@ -450,55 +452,56 @@ export default function PublicSlugPage() {
                 textAlign: "center",
               }}
             >
-              {/* Avatar */}
-              <div
-                style={{
-                  marginBottom: "0.75rem",
-                }}
-              >
-                <div
-                  style={{
-                    height: "3.5rem",
-                    width: "3.5rem",
-                    borderRadius: "999px",
-                    backgroundColor: "#18181b",
-                    border: "1px solid #27272a",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 600,
-                    fontSize: "1.4rem",
-                  }}
-                >
-                  {avatarInitial}
-                </div>
-              </div>
 
-              {/* Handle */}
-              <h1
-                style={{
-                  fontSize: "1.7rem",
-                  lineHeight: 1.2,
-                  fontWeight: 700,
-                  marginBottom: "0.5rem",
-                }}
-              >
-                {title ? `@${title}` : "Artist"}
-              </h1>
+             {/* Avatar */}
+<div
+  style={{
+    marginBottom: HEADER_STACK_SPACING,
+  }}
+>
+  <div
+    style={{
+      height: "3.5rem",
+      width: "3.5rem",
+      borderRadius: "999px",
+      backgroundColor: "#18181b",
+      border: "1px solid #27272a",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontWeight: 600,
+      fontSize: "1.4rem",
+    }}
+  >
+    {avatarInitial}
+  </div>
+</div>
 
-              {/* Bio directly under handle */}
-              {bio ? (
-                <p
-                  style={{
-                    color: "#e5e7eb",
-                    fontSize: "1rem",
-                    lineHeight: 1.5,
-                    marginBottom: "0.9rem",
-                  }}
-                >
-                  {bio}
-                </p>
-              ) : null}
+{/* Handle */}
+<h1
+  style={{
+    fontSize: "1.7rem",
+    lineHeight: 1.2,
+    fontWeight: 700,
+    marginBottom: HEADER_STACK_SPACING,
+  }}
+>
+  {title ? `@${title}` : "Artist"}
+</h1>
+
+{/* Bio directly under handle */}
+{bio ? (
+  <p
+    style={{
+      color: "#e5e7eb",
+      fontSize: "1rem",
+      lineHeight: 1.5,
+      marginBottom: HEADER_STACK_SPACING,
+    }}
+  >
+    {bio}
+  </p>
+) : null}
 
               {/* Social icons under description */}
               {hasSocialRow && (

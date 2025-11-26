@@ -41,9 +41,9 @@ function isValidEmail(email) {
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
   const common = {
-    width: 24,
-    height: 24,
-    viewBox: "0 0 24 24",
+    width: 28,
+    height: 28,
+    viewBox: "0 0 28 28",
     fill: "none",
     stroke: "currentColor",
     strokeWidth: 1.8,
@@ -54,9 +54,9 @@ function SocialIcon({ type }) {
   if (type === "instagram") {
     return (
       <svg {...common}>
-        <rect x="4" y="4" width="16" height="16" rx="5" />
-        <circle cx="12" cy="12" r="4" />
-        <circle cx="17" cy="7" r="1.2" fill="currentColor" stroke="none" />
+        <rect x="5" y="5" width="18" height="18" rx="6" />
+        <circle cx="14" cy="14" r="4.2" />
+        <circle cx="19" cy="9" r="1.2" fill="currentColor" stroke="none" />
       </svg>
     );
   }
@@ -64,7 +64,7 @@ function SocialIcon({ type }) {
   if (type === "facebook") {
     return (
       <svg {...common}>
-        <path d="M14 8h2V4h-2a4 4 0 0 0-4 4v2H8v4h2v6h4v-6h2v-4h-2V8a1 1 0 0 1 1-1z" />
+        <path d="M16 9h2.5V5.5H16a4.5 4.5 0 0 0-4.5 4.5v2H9v3.5h2.5V23h3.5v-7h2.5V12h-2.5v-2.5A1.5 1.5 0 0 1 16 9z" />
       </svg>
     );
   }
@@ -72,7 +72,7 @@ function SocialIcon({ type }) {
   if (type === "tiktok") {
     return (
       <svg {...common}>
-        <path d="M15 5c.4 1.3 1.4 2.3 2.7 2.7L19 8.1V11c-1 0-2-.3-3-.9v3.2a5 5 0 1 1-4.5-5V10a2.1 2.1 0 0 0-1.5-.1A2 2 0 1 0 13 12V5h2z" />
+        <path d="M17 6c.5 1.6 1.7 2.7 3.3 3.1L21 9.3V12c-1.3 0-2.6-.4-3.7-1.1v3.8a5.2 5.2 0 1 1-4.7-5.2V11a2.2 2.2 0 0 0-1.7-.2 2.1 2.1 0 1 0 2.2 2.1V6h3z" />
       </svg>
     );
   }
@@ -80,7 +80,7 @@ function SocialIcon({ type }) {
   if (type === "youtube") {
     return (
       <svg {...common} fill="currentColor" stroke="none">
-        <path d="M21.8 8.3a2 2 0 0 0-1.4-1.4C19 6.5 12 6.5 12 6.5s-7 0-8.4.4A2 2 0 0 0 2.2 8.3C1.8 9.7 1.8 12 1.8 12s0 2.3.4 3.7a2 2 0 0 0 1.4 1.4c1.4.4 8.4.4 8.4.4s7 0 8.4-.4a2 2 0 0 0 1.4-1.4c.4-1.4.4-3.7.4-3.7s0-2.3-.4-3.7zM10.5 14.7V9.3L15 12l-4.5 2.7z" />
+        <path d="M23.2 9.4a2.2 2.2 0 0 0-1.5-1.6C20.2 7.4 14 7.4 14 7.4s-6.2 0-7.7.4a2.2 2.2 0 0 0-1.5 1.6C4.4 11 4.4 14 4.4 14s0 3 .4 4.6a2.2 2.2 0 0 0 1.5 1.6c1.5.4 7.7.4 7.7.4s6.2 0 7.7-.4a2.2 2.2 0 0 0 1.5-1.6c.4-1.6.4-4.6.4-4.6s0-3-.4-4.6zM12.7 16.5v-5L17.3 14l-4.6 2.5z" />
       </svg>
     );
   }
@@ -88,7 +88,7 @@ function SocialIcon({ type }) {
   if (type === "x") {
     return (
       <svg {...common}>
-        <path d="M6 5l5.2 6.1L6 19h2.2L12 12.9 15.8 19H18l-5.2-7.9L18 5h-2.2L12 10.1 8.2 5H6z" />
+        <path d="M7 6l6 7.1L7 22h2.6l4.4-6 4.4 6H21l-6-8.9L21 6h-2.6l-4 5.5L10.4 6H7z" />
       </svg>
     );
   }
@@ -96,9 +96,9 @@ function SocialIcon({ type }) {
   if (type === "website") {
     return (
       <svg {...common}>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M3 12h18" />
-        <path d="M12 3a12 12 0 0 1 3 9 12 12 0 0 1-3 9 12 12 0 0 1-3-9 12 12 0 0 1 3-9z" />
+        <circle cx="14" cy="14" r="9.5" />
+        <path d="M4.5 14h19" />
+        <path d="M14 4.5a14 14 0 0 1 3.5 9.5 14 14 0 0 1-3.5 9.5A14 14 0 0 1 10.5 14 14 14 0 0 1 14 4.5z" />
       </svg>
     );
   }
@@ -124,8 +124,6 @@ export default function PublicSlugPage() {
 
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
-
-  const debugLabel = "DEBUG-PUBLIC-V12";
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -259,12 +257,10 @@ export default function PublicSlugPage() {
 
     const parts = [];
 
-    // only show X/Y when showInventory is true and both numbers exist
     if (p.showInventory && total !== null && left !== null) {
       parts.push(`${left}/${total} left`);
     }
 
-    // only show countdown when showTimer is true and timer exists
     if (p.showTimer && rem !== null) {
       parts.push(`Ends in ${formatRemaining(rem)}`);
     }
@@ -321,11 +317,7 @@ export default function PublicSlugPage() {
   }
 
   const title = profile?.displayName || profile?.name || "Artist";
-  const rawBio = profile?.bio || profile?.description || "";
-  const bio =
-    rawBio && rawBio.length > 180
-      ? rawBio.slice(0, 177) + "…"
-      : rawBio; // soft character cap
+  const bio = profile?.bio || profile?.description || "";
   const canCollectEmail = !!profile?.collectEmail;
 
   const links = Array.isArray(profile?.links)
@@ -392,21 +384,19 @@ export default function PublicSlugPage() {
     );
   }
 
-  // INLINE STYLES to force centering no matter what global CSS does
+  // Layout: single column, Linktree-style
   const mainStyle = {
-    maxWidth: "500px", // wider like Linktree
+    maxWidth: "500px",
     margin: "0 auto",
-    padding: "2.25rem 1.5rem",
+    padding: "2.5rem 1.5rem 2.75rem",
     textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1.6rem", // tighter than 2rem
-    alignItems: "center",
   };
 
   const fullWidthSection = {
     width: "100%",
   };
+
+  const SECTION_GAP = "1.5rem"; // header↔drop and drop↔links
 
   return (
     <>
@@ -441,27 +431,12 @@ export default function PublicSlugPage() {
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
-        {/* DEBUG MARKER */}
-        <div
-          style={{
-            position: "fixed",
-            top: 4,
-            left: 4,
-            fontSize: 12,
-            opacity: 0.7,
-            pointerEvents: "none",
-            zIndex: 50,
-          }}
-        >
-          {debugLabel}
-        </div>
-
         <main style={mainStyle}>
           {/* HEADER */}
           <header
             style={{
               width: "100%",
-              marginBottom: "0.25rem",
+              marginBottom: SECTION_GAP,
             }}
           >
             <div
@@ -473,26 +448,30 @@ export default function PublicSlugPage() {
                 flexDirection: "column",
                 alignItems: "center",
                 textAlign: "center",
-                gap: "0.5rem",
               }}
             >
               {/* Avatar */}
               <div
                 style={{
-                  height: "3.5rem",
-                  width: "3.5rem",
-                  borderRadius: "999px",
-                  backgroundColor: "#18181b",
-                  border: "1px solid #27272a",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 600,
-                  fontSize: "1.4rem",
-                  marginBottom: "0.25rem",
+                  marginBottom: "0.75rem",
                 }}
               >
-                {avatarInitial}
+                <div
+                  style={{
+                    height: "3.5rem",
+                    width: "3.5rem",
+                    borderRadius: "999px",
+                    backgroundColor: "#18181b",
+                    border: "1px solid #27272a",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 600,
+                    fontSize: "1.4rem",
+                  }}
+                >
+                  {avatarInitial}
+                </div>
               </div>
 
               {/* Handle */}
@@ -501,34 +480,33 @@ export default function PublicSlugPage() {
                   fontSize: "1.7rem",
                   lineHeight: 1.2,
                   fontWeight: 700,
-                  margin: "0.1rem 0 0.1rem",
+                  marginBottom: "0.5rem",
                 }}
               >
                 {title ? `@${title}` : "Artist"}
               </h1>
 
-              {/* Description */}
+              {/* Bio directly under handle */}
               {bio ? (
                 <p
                   style={{
                     color: "#e5e7eb",
                     fontSize: "1rem",
-                    lineHeight: 1.45,
-                    margin: "0.3rem 0 0.55rem",
+                    lineHeight: 1.5,
+                    marginBottom: "0.9rem",
                   }}
                 >
                   {bio}
                 </p>
               ) : null}
 
-              {/* Social icons */}
+              {/* Social icons under description */}
               {hasSocialRow && (
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "center",
                     gap: "0.9rem",
-                    marginBottom: "0.3rem",
                   }}
                 >
                   {social.instagram && (
@@ -542,7 +520,7 @@ export default function PublicSlugPage() {
                         width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.95)",
+                        backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -564,7 +542,7 @@ export default function PublicSlugPage() {
                         width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.95)",
+                        backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -586,7 +564,7 @@ export default function PublicSlugPage() {
                         width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.95)",
+                        backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -608,7 +586,7 @@ export default function PublicSlugPage() {
                         width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.95)",
+                        backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -630,7 +608,7 @@ export default function PublicSlugPage() {
                         width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.95)",
+                        backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -652,7 +630,7 @@ export default function PublicSlugPage() {
                         width: "3rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.95)",
+                        backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -668,7 +646,7 @@ export default function PublicSlugPage() {
             </div>
           </header>
 
-          {/* EMAIL CAPTURE */}
+          {/* EMAIL CAPTURE (optional, still full-width) */}
           {canCollectEmail && (
             <section
               style={{
@@ -677,6 +655,7 @@ export default function PublicSlugPage() {
                 border: "1px solid #27272a",
                 padding: "1.25rem",
                 textAlign: "left",
+                marginBottom: SECTION_GAP,
               }}
             >
               <div
@@ -776,9 +755,16 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* PRODUCTS */}
-          {products.length > 0 && (
-            <section style={fullWidthSection}>
+          {/* PRODUCTS / DROP CARD */}
+          {products.length === 0 ? (
+            <></>
+          ) : (
+            <section
+              style={{
+                ...fullWidthSection,
+                marginBottom: SECTION_GAP, // same as header gap
+              }}
+            >
               {products.map((p) => {
                 const st = productStatus(p);
                 const showBuy =
@@ -797,7 +783,6 @@ export default function PublicSlugPage() {
                       border: "1px solid #27272a",
                       backgroundColor: "rgba(24,24,27,0.85)",
                       padding: "1.25rem",
-                      marginBottom: "1.35rem",
                     }}
                     aria-labelledby={`prod-${p.id}-title`}
                   >
@@ -806,7 +791,7 @@ export default function PublicSlugPage() {
                       <div
                         style={{
                           width: "100%",
-                          marginBottom: "0.85rem",
+                          marginBottom: "1rem",
                           display: "flex",
                           justifyContent: "center",
                         }}
@@ -841,7 +826,7 @@ export default function PublicSlugPage() {
                         textTransform: "uppercase",
                         letterSpacing: "0.08em",
                         color: "#a3a3a3",
-                        marginBottom: "0.3rem",
+                        marginBottom: "0.35rem",
                       }}
                     >
                       Drop
@@ -851,7 +836,7 @@ export default function PublicSlugPage() {
                       style={{
                         fontSize: "1.15rem",
                         fontWeight: 600,
-                        marginBottom: "0.45rem",
+                        marginBottom: "0.5rem",
                       }}
                     >
                       {p.title || "Untitled"}
@@ -861,7 +846,7 @@ export default function PublicSlugPage() {
                       <div
                         style={{
                           fontSize: "0.9rem",
-                          marginBottom: "0.7rem",
+                          marginBottom: "0.75rem",
                           color:
                             st.soldOut || st.ended
                               ? "#fecaca"
@@ -877,7 +862,7 @@ export default function PublicSlugPage() {
                         style={{
                           fontSize: "0.9rem",
                           color: "#e5e5e5",
-                          marginBottom: showBuy ? "0.85rem" : 0,
+                          marginBottom: showBuy ? "0.9rem" : 0,
                         }}
                       >
                         {p.description}
@@ -888,7 +873,7 @@ export default function PublicSlugPage() {
                       <a
                         href={buyHref}
                         style={{
-                          marginTop: "0.15rem",
+                          marginTop: "0.25rem",
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -913,19 +898,20 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* LINKS (below drop card or directly under header if no products) */}
+          {/* LINKS (below drop card OR directly after header if no products) */}
           {links.length > 0 && (
             <section
               style={{
                 width: "100%",
-                marginTop: products.length > 0 ? "0.4rem" : "0.2rem",
+                marginTop: products.length === 0 ? SECTION_GAP : 0,
+                marginBottom: "2rem",
               }}
             >
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.7rem",
+                  gap: "0.75rem",
                 }}
               >
                 {links.map((l) => {
@@ -971,14 +957,14 @@ export default function PublicSlugPage() {
             style={{
               fontSize: "0.9rem",
               color: "#a3a3a3",
-              paddingBottom: "2rem",
+              paddingBottom: "2.25rem",
               width: "100%",
-              marginTop: "1.4rem", // tighter than before
+              textAlign: "center",
             }}
           >
             <div
               style={{
-                marginBottom: "0.65rem",
+                marginBottom: "0.9rem",
                 lineHeight: 1.4,
               }}
             >
@@ -1003,7 +989,7 @@ export default function PublicSlugPage() {
                 display: "flex",
                 flexWrap: "wrap",
                 justifyContent: "center",
-                gap: "0.85rem",
+                gap: "0.9rem",
               }}
             >
               <button style={{ textDecoration: "underline" }}>

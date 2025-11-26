@@ -974,6 +974,7 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
+{/* FOOTER */}
 <footer
   style={{
     fontSize: "0.9rem",
@@ -1008,7 +1009,7 @@ export default function PublicSlugPage() {
       }}
     >
       <img
-        src="/launch6_black.png"
+        src="/launch6_black.png" // ensure this file is in /public
         alt="Launch6 logo"
         style={{
           height: "22px",
@@ -1018,13 +1019,14 @@ export default function PublicSlugPage() {
       />
       <span
         style={{
-          fontSize: "0.85rem",
+          fontSize: "0.86rem",
           fontWeight: 500,
-          letterSpacing: "0.03em",
-          textTransform: "uppercase",
+          letterSpacing: "0.01em",
+          textTransform: "none",
+          whiteSpace: "nowrap",
         }}
       >
-        Create your own artist drops
+        Launch your next artist drop 🚀
       </span>
     </a>
   </div>
@@ -1049,6 +1051,7 @@ export default function PublicSlugPage() {
     </button>
   </div>
 </footer>
+
 
         </main>
       </div>

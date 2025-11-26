@@ -365,6 +365,8 @@ export default function PublicSlugPage() {
   const avatarInitial =
     (title && title.trim().charAt(0).toUpperCase()) || "L";
 
+      const avatarUrl = profile?.avatarUrl || profile?.imageUrl || null;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
@@ -384,12 +386,11 @@ export default function PublicSlugPage() {
     );
   }
 
-  // Layout: single column, Linktree-style
-  
-    const mainStyle = {
+    // Layout: single column, Linktree-style
+  const mainStyle = {
     maxWidth: "500px",
     margin: "0 auto",
-    padding: "2.5rem 1.5rem 2.75rem",
+    padding: "2.3rem 1.5rem 2.5rem", // slightly tighter top + bottom
     textAlign: "center",
   };
 
@@ -397,8 +398,9 @@ export default function PublicSlugPage() {
     width: "100%",
   };
 
-  const SECTION_GAP = "1.5rem";           // header↔drop and drop↔links
-  const HEADER_STACK_SPACING = "0.9rem";  // equal gaps in header stack
+  // vertical rhythm
+  const SECTION_GAP = "1.35rem";        // header↔drop and drop↔links
+  const HEADER_STACK_SPACING = "0.8rem"; // avatar↔handle↔bio↔socials
 
   return (
     <>
@@ -434,7 +436,8 @@ export default function PublicSlugPage() {
 
       <div className="min-h-screen bg-neutral-950 text-white">
         <main style={mainStyle}>
-          {/* HEADER */}
+          
+                {/* HEADER */}
           <header
             style={{
               width: "100%",
@@ -452,58 +455,72 @@ export default function PublicSlugPage() {
                 textAlign: "center",
               }}
             >
+                            {/* Avatar */}
+              <div
+                style={{
+                  marginBottom: HEADER_STACK_SPACING,
+                }}
+              >
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={title || "Avatar"}
+                    style={{
+                      height: "4rem",
+                      width: "4rem",
+                      borderRadius: "999px",
+                      objectFit: "cover",
+                      border: "1px solid #27272a",
+                      display: "block",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      height: "3.5rem",
+                      width: "3.5rem",
+                      borderRadius: "999px",
+                      backgroundColor: "#18181b",
+                      border: "1px solid #27272a",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 600,
+                      fontSize: "1.4rem",
+                    }}
+                  >
+                    {avatarInitial}
+                  </div>
+                )}
+              </div>
 
-             {/* Avatar */}
-<div
-  style={{
-    marginBottom: HEADER_STACK_SPACING,
-  }}
->
-  <div
-    style={{
-      height: "3.5rem",
-      width: "3.5rem",
-      borderRadius: "999px",
-      backgroundColor: "#18181b",
-      border: "1px solid #27272a",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontWeight: 600,
-      fontSize: "1.4rem",
-    }}
-  >
-    {avatarInitial}
-  </div>
-</div>
+              {/* Handle (@backyards) */}
+              <h1
+                style={{
+                  fontSize: "1.7rem",
+                  lineHeight: 1.1, // tighter, like Linktree
+                  fontWeight: 700,
+                  marginBottom: HEADER_STACK_SPACING,
+                }}
+              >
+                {title ? `@${title}` : "Artist"}
+              </h1>
 
-{/* Handle */}
-<h1
-  style={{
-    fontSize: "1.7rem",
-    lineHeight: 1.2,
-    fontWeight: 700,
-    marginBottom: HEADER_STACK_SPACING,
-  }}
->
-  {title ? `@${title}` : "Artist"}
-</h1>
+              {/* Description */}
+              {bio ? (
+                <p
+                  style={{
+                    color: "#e5e7eb",
+                    fontSize: "1rem",
+                    lineHeight: 1.4,
+                    marginBottom: HEADER_STACK_SPACING,
+                  }}
+                >
+                  {bio}
+                </p>
+              ) : null}
 
-{/* Bio directly under handle */}
-{bio ? (
-  <p
-    style={{
-      color: "#e5e7eb",
-      fontSize: "1rem",
-      lineHeight: 1.5,
-      marginBottom: HEADER_STACK_SPACING,
-    }}
-  >
-    {bio}
-  </p>
-) : null}
-
-              {/* Social icons under description */}
+              {/* Social icons */}
               {hasSocialRow && (
                 <div
                   style={{
@@ -648,6 +665,7 @@ export default function PublicSlugPage() {
               )}
             </div>
           </header>
+
 
           {/* EMAIL CAPTURE (optional, still full-width) */}
           {canCollectEmail && (

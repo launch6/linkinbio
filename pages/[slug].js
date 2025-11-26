@@ -389,16 +389,17 @@ export default function PublicSlugPage() {
   }
 
   // INLINE STYLES to force centering no matter what global CSS does
+  
   const mainStyle = {
-    maxWidth: "500px", // Linktree-ish width
-    margin: "0 auto",
-    padding: "2.25rem 1.5rem 2.75rem",
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1.75rem",
-    alignItems: "center",
-  };
+  maxWidth: "500px",        // wider like Linktree
+  margin: "0 auto",
+  padding: "2.5rem 1.5rem",
+  textAlign: "center",
+  display: "flex",
+  flexDirection: "column",
+  gap: "2rem",
+  alignItems: "center",
+};
 
   const fullWidthSection = {
     width: "100%",
@@ -647,19 +648,19 @@ export default function PublicSlugPage() {
                 </div>
               )}
 
-              {/* Bio */}
-              {bio ? (
-                <p
-                  style={{
-                    color: "#d1d5db",
-                    fontSize: "0.95rem",
-                    lineHeight: 1.5,
-                    maxWidth: "26rem",
-                  }}
-                >
-                  {bio}
-                </p>
-              ) : null}
+              
+            {bio ? (
+  <p
+    style={{
+      color: "#e5e7eb",
+      fontSize: "1rem",        // bigger text
+      lineHeight: 1.5,
+      marginBottom: "1.25rem", // space between bio and socials
+    }}
+  >
+    {bio}
+  </p>
+) : null}
             </div>
           </header>
 

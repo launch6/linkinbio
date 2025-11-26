@@ -993,42 +993,38 @@ export default function PublicSlugPage() {
     }}
   >
     <a
-      href="https://launch6.com"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "0.55rem",
-        padding: "0.55rem 0.95rem",
-        borderRadius: "999px",
-        border: "1px solid #27272a",
-        backgroundColor: "rgba(24,24,27,0.95)",
-        textDecoration: "none",
-        color: "#e5e5e5",
-      }}
-    >
-      <img
-        src="/launch6_black.png" // ensure this file is in /public
-        alt="Launch6 logo"
-        style={{
-          height: "22px",
-          width: "auto",
-          display: "block",
-        }}
-      />
-      <span
-        style={{
-          fontSize: "0.86rem",
-          fontWeight: 500,
-          letterSpacing: "0.01em",
-          textTransform: "none",
-          whiteSpace: "nowrap",
-        }}
-      >
-        Launch your next artist drop 🚀
-      </span>
-    </a>
+  href="https://launch6.com"
+  target="_blank"
+  rel="noopener noreferrer"
+  style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: "0.75rem",
+    padding: "0.95rem 1.2rem",
+    borderRadius: "999px",
+    background:
+      "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
+    border: "1px solid #27272a",
+    textDecoration: "none",
+    color: "#f4f4f5",
+    fontSize: "0.98rem",
+    fontWeight: 500,
+    marginTop: "0.5rem",
+  }}
+>
+  <img
+    src="/launch6_black.png"
+    alt="Launch6 logo"
+    style={{
+      height: "1.6rem",
+      width: "auto",
+      display: "block",
+    }}
+  />
+  <span>Launch your own artist drops 🚀</span>
+</a>
+
   </div>
 
   {/* Legal / utility links */}

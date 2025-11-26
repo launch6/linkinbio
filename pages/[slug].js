@@ -1022,7 +1022,7 @@ export default function PublicSlugPage() {
       display: "block",
     }}
   />
-  <span>Blastoff here 🚀</span>
+  <span>blastoff here 🚀</span>
 </a>
 
   </div>

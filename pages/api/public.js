@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: "missing_slug" });
   }
 
-  try:
+  try {
     const db = await getDb();
 
     const profiles = db.collection("profiles");

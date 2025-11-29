@@ -1,5 +1,5 @@
 // pages/dashboard/new.js
-import { useState, useMemo } from "react";
+import { useState } from "react";
 
 export default function NewProfile() {
   const [name, setName] = useState("");
@@ -9,229 +9,195 @@ export default function NewProfile() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const publicPath = useMemo(
-    () => (slug ? `/${slug}` : "/your-name"),
-    [slug]
-  );
-
-  async function handleCreate(e) {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setError("");
-
-    const trimmedName = name.trim();
-    const trimmedSlug = slug.trim().toLowerCase();
-
-    if (!trimmedName || !trimmedSlug) {
-      setError("Please fill in your name and URL slug.");
-      return;
-    }
+    setSubmitting(true);
 
     try {
-      setSubmitting(true);
       const res = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: trimmedName,
-          slug: trimmedSlug,
+          name,
+          slug,
           description: description || "",
           avatarUrl: avatarUrl || "",
         }),
       });
 
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok || !data?.ok) {
-        setError(data?.error || "Failed to create profile.");
+        setError(data?.error || "Failed to create profile");
+        setSubmitting(false);
         return;
       }
 
       window.location.href = `/dashboard/${data.editToken}`;
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      setError(err.message || "Something went wrong");
     } finally {
       setSubmitting(false);
     }
-  }
+  };
 
-  const initials = useMemo(() => {
-    if (!name) return "A";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-    return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
-  }, [name]);
+  const previewSlug = slug || "your-name";
+  const previewName = name || "Your name";
+  const previewBio =
+    description || "Tell collectors what you create and how to get it.";
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      {/* Top nav with logo */}
-      <header className="border-b border-neutral-900">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img
-              src="https://linkinbio-tau-pink.vercel.app/launch6_white.png"
-              alt="Launch6"
-              className="h-6 w-auto"
-            />
-            <span className="text-sm font-semibold tracking-wide">
-              Launch6
-            </span>
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* Header */}
+        <header className="mb-8">
+          <div className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-2">
+            Step 1 of 2
           </div>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <div className="max-w-5xl mx-auto px-4 py-10 grid md:grid-cols-2 gap-10 items-start">
-        {/* Left: copy + form */}
-        <div>
-          <p className="text-xs font-semibold tracking-[0.2em] text-emerald-400 uppercase mb-2">
-            Step 1
-          </p>
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">
+          <h1 className="text-3xl md:text-4xl font-semibold">
             Create your artist profile
           </h1>
-          <p className="text-sm text-neutral-300 mb-6">
-            This sets up your public page URL, avatar, and bio. You’ll add
-            drops, links, social icons, and email capture from your editor
-            after this step.
+          <p className="mt-2 text-sm md:text-base text-neutral-300 max-w-2xl">
+            This sets up your public page URL, avatar, and bio. You’ll add drops,
+            links, social icons, and email capture from your editor after this
+            step.
           </p>
+        </header>
 
-          {error ? (
-            <div className="mb-4 rounded-lg border border-rose-600/40 bg-rose-900/20 px-3 py-2 text-sm text-rose-100">
-              {error}
-            </div>
-          ) : null}
-
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div>
-              <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
-                Display name
-              </label>
-              <input
-                className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-                placeholder="Your name or studio (e.g., Backyards of Key West)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
-                Public URL slug
-              </label>
-              <input
-                className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-                placeholder="e.g., backyardsofkeywest"
-                value={slug}
-                onChange={(e) =>
-                  setSlug(
-                    e.target.value
-                      .toLowerCase()
-                      .replace(/[^a-z0-9-]/g, "")
-                  )
-                }
-                pattern="^[a-z0-9-]{3,40}$"
-                title="Lowercase letters, numbers, and hyphens only."
-                required
-              />
-              <p className="mt-1 text-xs text-neutral-400">
-                This becomes{" "}
-                <span className="text-neutral-100">
-                  l6.io{publicPath}
-                </span>{" "}
-                (or your own domain later).
-              </p>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs uppercase tracking-wide text-neutral-400">
-                  Avatar image URL
-                </label>
-                <span className="text-[10px] text-neutral-500 uppercase">
-                  Optional
-                </span>
+        <div className="grid gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">
+          {/* Form */}
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 md:p-7 space-y-5">
+            {error ? (
+              <div className="rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
+                {error}
               </div>
-              <input
-                className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-                placeholder="https://…/avatar.jpg"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-              />
-              <p className="mt-1 text-xs text-neutral-400">
-                Paste a direct HTTPS image link (JPG/PNG/WebP, ideally &lt;
-                2&nbsp;MB). Uploading from your camera roll will be available
-                on paid plans.
-              </p>
-            </div>
+            ) : null}
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs uppercase tracking-wide text-neutral-400">
-                  Short bio
+            <form onSubmit={handleCreate} className="space-y-5">
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
+                  Display name
                 </label>
-                <span className="text-[10px] text-neutral-500 uppercase">
-                  Optional
-                </span>
-              </div>
-              <textarea
-                className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-emerald-500 min-h-[80px]"
-                placeholder="Tell collectors what you create and how you drop pieces."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="mt-2 inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-black hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-            >
-              {submitting ? "Creating profile…" : "Create profile"}
-            </button>
-
-            <p className="text-[11px] text-neutral-500">
-              After this, you’ll land in your editor where you can add drops,
-              links, social icons, and email capture.
-            </p>
-          </form>
-        </div>
-
-        {/* Right: preview */}
-        <div className="hidden md:flex justify-center">
-          <div className="w-72 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-xl px-5 py-6 flex flex-col items-center gap-4">
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-neutral-700 to-neutral-800 flex items-center justify-center text-xl font-semibold">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="Avatar preview"
-                  className="w-full h-full object-cover"
+                <input
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm focus:border-neutral-400"
+                  name="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name or studio (e.g., Backyards of Key West)"
+                  required
                 />
-              ) : (
-                <span>{initials}</span>
-              )}
-            </div>
-
-            <div className="text-center space-y-1">
-              <div className="text-sm font-semibold">
-                {name || "Your display name"}
               </div>
-              <div className="text-xs text-neutral-400">
-                {description || "Short bio about what you create."}
+
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
+                  Public URL slug
+                </label>
+                <input
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm focus:border-neutral-400"
+                  name="slug"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder="e.g., backyardsofkeywest"
+                  pattern="^[a-z0-9-]{3,40}$"
+                  title="Lowercase letters, numbers, hyphen. 3–40 characters."
+                  required
+                />
+                <p className="mt-1 text-xs text-neutral-400">
+                  This becomes{" "}
+                  <code className="text-neutral-200">
+                    l6.io/{previewSlug}
+                  </code>{" "}
+                  (or your own domain later).
+                </p>
               </div>
-            </div>
 
-            <div className="w-full mt-2 space-y-2">
-              <button className="w-full rounded-full bg-neutral-100 text-neutral-900 text-xs font-semibold py-2">
-                Primary link
-              </button>
-              <button className="w-full rounded-full border border-neutral-700 text-xs text-neutral-200 py-2">
-                Drop goes here
-              </button>
-            </div>
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
+                  Avatar image URL <span className="text-neutral-500">(optional)</span>
+                </label>
+                <input
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm focus:border-neutral-400"
+                  name="avatarUrl"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://…/avatar.jpg"
+                />
+                <p className="mt-1 text-xs text-neutral-400">
+                  Paste a direct HTTPS image link (ideal square image, ~1000×1000px, max
+                  ~2&nbsp;MB). Image upload from your computer is coming soon.
+                </p>
+              </div>
 
-            <div className="mt-3 text-[11px] text-neutral-500 text-center">
-              Preview of your Launch6 page — you can customize everything
-              after you create your profile.
+              <div>
+                <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
+                  Short bio <span className="text-neutral-500">(optional)</span>
+                </label>
+                <textarea
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm focus:border-neutral-400 min-h-[80px]"
+                  name="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Tell collectors what you create and how often you drop new pieces."
+                />
+              </div>
+
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center justify-center rounded-lg bg-white text-neutral-950 px-4 py-2 text-sm font-medium hover:bg-neutral-200 disabled:opacity-60"
+                >
+                  {submitting ? "Creating…" : "Create profile"}
+                </button>
+                <p className="text-xs text-neutral-400">
+                  After this step you’ll land in your editor to add drops, links,
+                  social icons, and email capture.
+                </p>
+              </div>
+            </form>
+          </div>
+
+          {/* Preview */}
+          <div className="hidden md:block">
+            <div className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-3">
+              Live preview
+            </div>
+            <div className="rounded-[32px] border border-neutral-800 bg-gradient-to-b from-neutral-900 to-neutral-950 p-5 w-full max-w-xs mx-auto shadow-xl">
+              <div className="flex flex-col items-center mb-4">
+                <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden flex items-center justify-center text-sm text-neutral-400">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt="Avatar preview"
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <span>{previewName.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="mt-3 text-sm font-semibold">{previewName}</div>
+                <div className="text-[11px] text-neutral-400">
+                  l6.io/{previewSlug}
+                </div>
+              </div>
+
+              <div className="text-[11px] text-neutral-300 mb-4 line-clamp-3">
+                {previewBio}
+              </div>
+
+              <div className="space-y-2">
+                <div className="h-9 rounded-full bg-neutral-800/80 border border-neutral-700/80 flex items-center justify-center text-[11px] text-neutral-300">
+                  Example drop — “Sunset Study”
+                </div>
+                <div className="h-9 rounded-full bg-neutral-800/60 border border-neutral-700/60 flex items-center justify-center text-[11px] text-neutral-400">
+                  Example link — “Shop prints”
+                </div>
+              </div>
             </div>
           </div>
         </div>

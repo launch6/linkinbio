@@ -13,7 +13,8 @@ export default function NewProfile() {
     return window.location.host.replace(/^(www\.)/, "");
   }, []);
 
-  const publicPreview = slug ? `https://${baseHost}/${slug}` : `https://${baseHost}/your-name`;
+  const previewSlug = slug.trim() || "your-name";
+  const publicPreview = `https://${baseHost}/${previewSlug}`;
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -33,8 +34,8 @@ export default function NewProfile() {
       const payload = {
         name: name.trim(),
         slug: trimmedSlug,
-        description: description.trim(),
-        avatarUrl: avatarUrl.trim(),
+        description: (description || "").trim(),
+        avatarUrl: (avatarUrl || "").trim(),
       };
 
       const res = await fetch("/api/profile", {
@@ -51,7 +52,7 @@ export default function NewProfile() {
         return;
       }
 
-      // Send the artist into the dashboard/editor for this profile
+      // Go to the dashboard/editor for this profile
       window.location.href = `/dashboard/${data.editToken}`;
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -60,108 +61,86 @@ export default function NewProfile() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-xl rounded-2xl border border-neutral-800 bg-neutral-900/70 p-6 md:p-8 shadow-xl">
-        <header className="mb-6">
-          <div className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-1">
-            Launch6
-          </div>
-          <h1 className="text-2xl md:text-3xl font-semibold mb-1">
-            Create your artist profile
-          </h1>
-          <p className="text-sm text-neutral-400">
-            This sets up your public page URL, avatar, and bio. You can add drops,
-            links, and email capture after this step.
-          </p>
-        </header>
+    <main className="container">
+      <div className="card">
+        <h1>Create your artist profile</h1>
+        <p className="small">
+          This sets up your public page URL, avatar, and bio. You can add drops,
+          links, and email capture after this step.
+        </p>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-rose-600/40 bg-rose-900/30 px-3 py-2 text-sm text-rose-100">
+          <div className="alert error" style={{ marginTop: 12 }}>
             {error}
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleCreate}>
+        <form onSubmit={handleCreate} style={{ marginTop: 16 }}>
           {/* Display name */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-300 mb-1">
-              Display name
-            </label>
-            <input
-              className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-              name="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name or studio (e.g., Backyards of Key West)"
-              required
-            />
-          </div>
+          <label>Display name</label>
+          <input
+            className="input"
+            name="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name or studio (e.g., Backyards of Key West)"
+            required
+          />
 
           {/* Slug */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-300 mb-1">
-              Public URL slug
-            </label>
-            <input
-              className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-              name="slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase())}
-              placeholder="e.g., backyardsofkeywest"
-              pattern="^[a-z0-9-]{3,40}$"
-              title="Lowercase letters, numbers, hyphen; 3–40 characters."
-              required
-            />
-            <p className="mt-1 text-xs text-neutral-500">
-              This will become{" "}
-              <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-[11px]">
-                {publicPreview}
-              </code>
-              .
-            </p>
+          <label style={{ marginTop: 12 }}>Public URL slug</label>
+          <input
+            className="input"
+            name="slug"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value.toLowerCase())}
+            placeholder="e.g., backyardsofkeywest"
+            pattern="^[a-z0-9-]{3,40}$"
+            title="Lowercase letters, numbers, hyphen; 3–40 characters."
+            required
+          />
+          <div className="small" style={{ marginTop: 4 }}>
+            This will become{" "}
+            <code>{publicPreview}</code>.
           </div>
 
           {/* Avatar URL */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-300 mb-1">
-              Avatar image URL <span className="text-neutral-500">(optional)</span>
-            </label>
-            <input
-              className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-              name="avatarUrl"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://…/avatar.jpg"
-            />
-            <p className="mt-1 text-xs text-neutral-500">
-              You can paste a direct HTTPS image link now, or add/change this later in
-              your editor.
-            </p>
+          <label style={{ marginTop: 16 }}>
+            Avatar image URL <span className="small">(optional)</span>
+          </label>
+          <input
+            className="input"
+            name="avatarUrl"
+            value={avatarUrl}
+            onChange={(e) => setAvatarUrl(e.target.value)}
+            placeholder="https://…/avatar.jpg"
+          />
+          <div className="small" style={{ marginTop: 4 }}>
+            Paste a direct HTTPS image link now, or change this later in your editor.
           </div>
 
           {/* Bio */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-300 mb-1">
-              Short bio <span className="text-neutral-500">(optional)</span>
-            </label>
-            <textarea
-              className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-neutral-400 min-h-[80px]"
-              name="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Tell collectors what you create and how your drops work."
-            />
-          </div>
+          <label style={{ marginTop: 16 }}>
+            Short bio <span className="small">(optional)</span>
+          </label>
+          <textarea
+            className="textarea"
+            name="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Tell collectors what you create and how your drops work."
+          />
 
           <button
-            className="mt-2 w-full rounded-lg bg-white text-neutral-900 text-sm font-medium px-4 py-2.5 hover:bg-neutral-200 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            className="button"
             type="submit"
             disabled={submitting}
+            style={{ marginTop: 16 }}
           >
             {submitting ? "Creating profile…" : "Create profile"}
           </button>
 
-          <p className="mt-2 text-[11px] text-neutral-500 text-center">
+          <p className="small" style={{ marginTop: 8 }}>
             After this step you’ll land in your editor, where you can add drops, links,
             social icons, and email capture.
           </p>

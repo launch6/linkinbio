@@ -105,114 +105,113 @@ export default function NewProfile() {
       </div>
 
       <div className="card">
-        <div className="card-inner">
-          <p className="step-label">STEP 1 OF 3</p>
-          <h1 className="title">Add profile details</h1>
+        <p className="step-label">STEP 1 OF 3</p>
+        <h1 className="title">Add profile details</h1>
 
-          <p className="subtitle-strong">
-            Add your profile image, name, and bio.
-          </p>
-          <p className="subtitle-strong">
-            You’ll set up links, drops, and email capture in the next steps.
-          </p>
+        <p className="subtitle-strong">
+          Add your profile image, name, and bio.
+        </p>
+        <p className="subtitle-strong">
+          You’ll set up links, drops, and email capture in the next steps.
+        </p>
 
-          <form onSubmit={handleSubmit}>
-            {/* Avatar upload */}
-            <div className="avatar-block">
-              <button
-                type="button"
-                className="avatar-circle"
-                onClick={handleAvatarClick}
-                aria-label="Upload profile image"
-              >
-                {avatarDataUrl ? (
-                  <span
-                    className="avatar-preview"
-                    style={{ backgroundImage: `url(${avatarDataUrl})` }}
-                  />
-                ) : (
-                  <span className="avatar-icon">
-                    <span className="camera-body" />
-                    <span className="camera-lens" />
-                    <span className="camera-plus">+</span>
-                  </span>
-                )}
-              </button>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg"
-                className="hidden-file-input"
-                onChange={handleFileChange}
-              />
-
-              <p className="helper-text">
-                Drag &amp; Drop or Tap to Upload image
-              </p>
-              <p className="helper-text helper-sub">
-                (JPG/PNG, up to 1MB)
-              </p>
-            </div>
-
-            {/* Display name */}
-            <div className="field">
-              <input
-                id="displayName"
-                aria-label="Display name"
-                className="text-input"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="@yourname or Studio Name"
-              />
-            </div>
-
-            {/* Short bio */}
-            <div className="field">
-              <div className="textarea-wrap">
-                <textarea
-                  id="bio"
-                  aria-label="Short bio"
-                  className="textarea-input"
-                  value={bio}
-                  onChange={(e) => {
-                    const next = e.target.value.slice(0, bioMax);
-                    setBio(next);
-                  }}
-                  placeholder="Fill in your bio or tell collectors about your newest art drop"
-                  maxLength={bioMax}
+        <form onSubmit={handleSubmit}>
+          {/* Avatar upload */}
+          <div className="avatar-block">
+            <button
+              type="button"
+              className="avatar-circle"
+              onClick={handleAvatarClick}
+              aria-label="Upload profile image"
+            >
+              {avatarDataUrl ? (
+                <span
+                  className="avatar-preview"
+                  style={{ backgroundImage: `url(${avatarDataUrl})` }}
                 />
-                <span className="char-count">
-                  {bioCount}/{bioMax}
-                </span>
-              </div>
-            </div>
+              ) : (
+                <div className="avatar-inner">
+                  <span className="avatar-camera" aria-hidden="true">
+                    {/* Simple camera + plus icon using characters */}
+                    📷+
+                  </span>
+                </div>
+              )}
+            </button>
 
-            {/* Actions */}
-            <div className="actions-row">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={saving}
-              >
-                {saving ? 'Creating…' : 'Continue'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleSkip}
-                disabled={saving}
-              >
-                Skip
-              </button>
-            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden-file-input"
+              onChange={handleFileChange}
+            />
 
-            <p className="footer-note">
-              After this step you’ll land in your editor to add links, social icons, drops, and email capture.
+            <p className="helper-text">
+              Drag &amp; Drop or Tap to Upload image
             </p>
-          </form>
-        </div>
+            <p className="helper-text helper-text-sub">
+              (JPG/PNG, up to 1MB)
+            </p>
+          </div>
+
+          {/* Display name */}
+          <div className="field">
+            <input
+              id="displayName"
+              aria-label="Display name"
+              className="text-input"
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="@yourname or Studio Name"
+            />
+          </div>
+
+          {/* Short bio */}
+          <div className="field">
+            <div className="textarea-wrap">
+              <textarea
+                id="bio"
+                aria-label="Short bio"
+                className="textarea-input"
+                value={bio}
+                onChange={(e) => {
+                  const next = e.target.value.slice(0, bioMax);
+                  setBio(next);
+                }}
+                placeholder="Fill in your bio or tell collectors about your newest art drop"
+                maxLength={bioMax}
+              />
+              <span className="char-count">
+                {bioCount}/{bioMax}
+              </span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="actions-row">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={saving}
+            >
+              {saving ? 'Creating…' : 'Continue'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleSkip}
+              disabled={saving}
+            >
+              Skip
+            </button>
+          </div>
+
+          <p className="footer-note">
+            After this step you’ll land in your editor to add links, social icons, drops, and email capture.
+          </p>
+        </form>
       </div>
 
       <style jsx>{`
@@ -227,57 +226,53 @@ export default function NewProfile() {
         }
 
         .logo-row {
-          margin-top: 4px;
-          margin-bottom: 8px;
+          margin-top: 0;
+          margin-bottom: 10px;
         }
 
         .logo {
-          height: 62px; /* larger logo, closer to your mock */
+          height: 52px;
           width: auto;
         }
 
         .card {
           width: 100%;
-          max-width: 760px;
+          max-width: 640px;
           background: rgba(12, 12, 21, 0.96);
           border-radius: 28px;
-          box-shadow: 0 22px 70px rgba(0, 0, 0, 0.65);
-          padding: 28px 24px 26px;
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+          padding: 26px 22px 26px;
           display: flex;
-          justify-content: center;
+          flex-direction: column;
+          align-items: center;
+          border: 1px solid rgba(255, 255, 255, 0.16);
         }
 
         @media (min-width: 768px) {
           .card {
-            padding: 32px 40px 30px;
+            padding: 30px 32px 30px;
           }
-        }
-
-        /* Inner content width so fields/buttons/bio are inset like design 1 */
-        .card-inner {
-          width: 100%;
-          max-width: 640px;
-          margin: 0 auto;
-          text-align: center;
         }
 
         .step-label {
           font-size: 12px;
-          letter-spacing: 0.22em;
+          letter-spacing: 0.18em;
           text-transform: uppercase;
           color: #8b8fa5;
-          margin: 4px 0 14px;
+          margin-bottom: 10px;
         }
 
         .title {
-          font-size: 26px;
+          font-size: 24px;
           font-weight: 700;
-          margin: 0 0 10px;
+          margin: 0 0 12px;
+          text-align: center;
         }
 
         .subtitle-strong {
           font-size: 15px;
           color: #ffffff;
+          text-align: center;
           margin: 0;
         }
 
@@ -288,32 +283,30 @@ export default function NewProfile() {
         form {
           width: 100%;
           margin-top: 26px;
-          text-align: left;
         }
 
         .avatar-block {
           text-align: center;
-          margin-bottom: 26px;
+          margin-bottom: 24px;
         }
 
         .avatar-circle {
           position: relative;
           border-radius: 999px;
-          border: 2px solid rgba(130, 135, 170, 0.7);
-          background: radial-gradient(circle at top, #29304a 0, #181a2f 55%, #101221 100%);
-          width: 148px;
-          height: 148px;
+          border: 1px solid #4b5068;
+          background: radial-gradient(circle at top, #262b43 0, #15172a 60%, #101221 100%);
+          width: 132px;  /* slightly smaller than before */
+          height: 132px;
           display: flex;
           align-items: center;
           justify-content: center;
           margin: 0 auto 12px;
           cursor: pointer;
           overflow: hidden;
-          box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
         }
 
         .avatar-circle:hover {
-          border-color: #9ea8ff;
+          border-color: #9da7ff;
         }
 
         .avatar-preview {
@@ -324,50 +317,20 @@ export default function NewProfile() {
           background-position: center;
         }
 
-        .avatar-icon {
-          position: relative;
-          width: 44px;
-          height: 34px;
+        .avatar-inner {
+          width: 72px;
+          height: 72px;
+          border-radius: 999px;
+          background: rgba(5, 6, 18, 0.84);
           display: flex;
           align-items: center;
           justify-content: center;
+          z-index: 1;
         }
 
-        .camera-body {
-          position: absolute;
-          top: 6px;
-          width: 34px;
-          height: 22px;
-          border-radius: 8px;
-          border: 2px solid rgba(245, 246, 255, 0.95);
-        }
-
-        .camera-lens {
-          position: absolute;
-          top: 10px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 10px;
-          height: 10px;
-          border-radius: 999px;
-          border: 2px solid rgba(245, 246, 255, 0.95);
-        }
-
-        .camera-plus {
-          position: absolute;
-          right: -4px;
-          bottom: -4px;
-          width: 18px;
-          height: 18px;
-          border-radius: 999px;
-          background: #ffffff;
-          color: #111322;
-          font-size: 12px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          line-height: 1;
+        .avatar-camera {
+          font-size: 28px;
+          color: #ffffff;
         }
 
         .hidden-file-input {
@@ -375,18 +338,17 @@ export default function NewProfile() {
         }
 
         .helper-text {
-          font-size: 13px;
+          font-size: 12px;
           color: #8b8fa5;
           margin: 0;
         }
 
-        .helper-sub {
+        .helper-text-sub {
           margin-top: 2px;
-          font-size: 12px;
         }
 
         .field {
-          margin-top: 20px;
+          margin-top: 18px;
         }
 
         .text-input,
@@ -395,7 +357,7 @@ export default function NewProfile() {
           border-radius: 999px;
           border: 1px solid #34384f;
           background: #090a12;
-          padding: 13px 18px;
+          padding: 11px 18px;
           font-size: 15px;
           color: #ffffff;
           outline: none;
@@ -409,17 +371,16 @@ export default function NewProfile() {
         .text-input:focus,
         .textarea-input:focus {
           border-color: #7e8bff;
-          box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.35);
+          box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
         }
 
         .textarea-wrap {
           position: relative;
-          width: 100%;
         }
 
         .textarea-input {
           border-radius: 18px;
-          min-height: 132px;
+          min-height: 140px;
           resize: vertical;
           padding-right: 70px;
           padding-top: 14px;
@@ -434,10 +395,10 @@ export default function NewProfile() {
         }
 
         .actions-row {
-          margin-top: 26px;
+          margin-top: 24px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
         @media (min-width: 600px) {
@@ -450,9 +411,9 @@ export default function NewProfile() {
           flex: 1;
           border-radius: 999px;
           border: none;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 500;
-          padding: 13px 18px;
+          padding: 12px 16px;
           cursor: pointer;
           transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
         }
@@ -460,7 +421,7 @@ export default function NewProfile() {
         .btn-primary {
           background: linear-gradient(90deg, #6366ff, #a855f7);
           color: #ffffff;
-          box-shadow: 0 10px 30px rgba(88, 92, 255, 0.7);
+          box-shadow: 0 8px 24px rgba(88, 92, 255, 0.55);
         }
 
         .btn-primary:disabled {
@@ -471,7 +432,7 @@ export default function NewProfile() {
 
         .btn-primary:not(:disabled):active {
           transform: translateY(1px);
-          box-shadow: 0 5px 18px rgba(88, 92, 255, 0.5);
+          box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
         }
 
         .btn-secondary {

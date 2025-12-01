@@ -2,206 +2,204 @@
 import { useState } from "react";
 
 export default function NewProfile() {
-  const [name, setName] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [slug, setSlug] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [description, setDescription] = useState("");
+  const [bio, setBio] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+
+  const publicUrl = slug ? `l6.io/${slug}` : "l6.io/your-name";
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    setError("");
-    setSubmitting(true);
+    if (submitting) return;
+
+    const body = {
+      name: displayName,
+      slug,
+      description: bio || "",
+      avatarUrl: avatarUrl || "",
+    };
 
     try {
+      setSubmitting(true);
       const res = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          slug,
-          description: description || "",
-          avatarUrl: avatarUrl || "",
-        }),
+        body: JSON.stringify(body),
       });
 
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || !data?.ok) {
-        setError(data?.error || "Failed to create profile");
-        setSubmitting(false);
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to create profile");
         return;
       }
 
       window.location.href = `/dashboard/${data.editToken}`;
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      alert(err.message || "Something went wrong");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const previewSlug = slug || "your-name";
-  const previewName = name || "Your name";
-  const previewBio =
-    description || "Tell collectors what you create and how to get it.";
-
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        {/* Header */}
-        <header className="mb-8">
-          <div className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-2">
-            Step 1 of 2
+    <main className="min-h-screen bg-neutral-950 text-white">
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        {/* Top bar */}
+        <header className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <img
+              src="/launch6_white.png"
+              alt="Launch6"
+              className="h-8 w-auto md:h-9"
+            />
+            <span className="text-xs uppercase tracking-[0.28em] text-neutral-400 hidden sm:inline">
+              Link-in-bio drops for artists
+            </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-semibold">
-            Create your artist profile
-          </h1>
-          <p className="mt-2 text-sm md:text-base text-neutral-300 max-w-2xl">
-            This sets up your public page URL, avatar, and bio. You’ll add drops,
-            links, social icons, and email capture from your editor after this
-            step.
-          </p>
         </header>
 
-        <div className="grid gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">
-          {/* Form */}
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 md:p-7 space-y-5">
-            {error ? (
-              <div className="rounded-md border border-rose-600/40 bg-rose-900/20 text-rose-100 px-3 py-2 text-sm">
-                {error}
-              </div>
-            ) : null}
+        {/* Main card */}
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-6 md:p-8 grid md:grid-cols-2 gap-8 items-start">
+          {/* Left: form */}
+          <section>
+            <div className="text-xs font-medium tracking-[0.22em] uppercase text-neutral-400 mb-2">
+              Step 1
+            </div>
+            <h1 className="text-2xl md:text-3xl font-semibold mb-2">
+              Create your artist profile
+            </h1>
+            <p className="text-sm text-neutral-300 mb-6">
+              This sets up your public page URL, avatar, and bio. You’ll add
+              drops, links, social icons, and email capture from your editor
+              after this step.
+            </p>
 
-            <form onSubmit={handleCreate} className="space-y-5">
+            <form onSubmit={handleCreate} className="space-y-4">
+              {/* Display name */}
               <div>
-                <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-neutral-300 mb-1">
                   Display name
                 </label>
                 <input
-                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm focus:border-neutral-400"
-                  name="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  type="text"
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-0"
                   placeholder="Your name or studio (e.g., Backyards of Key West)"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
                   required
                 />
               </div>
 
+              {/* Slug */}
               <div>
-                <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-neutral-300 mb-1">
                   Public URL slug
                 </label>
                 <input
-                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm focus:border-neutral-400"
-                  name="slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
+                  type="text"
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-0"
                   placeholder="e.g., backyardsofkeywest"
                   pattern="^[a-z0-9-]{3,40}$"
-                  title="Lowercase letters, numbers, hyphen. 3–40 characters."
+                  title="Use 3–40 characters: lowercase letters, numbers, and dashes."
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
                   required
                 />
                 <p className="mt-1 text-xs text-neutral-400">
-                  This becomes{" "}
-                  <code className="text-neutral-200">
-                    l6.io/{previewSlug}
-                  </code>{" "}
-                  (or your own domain later).
+                  This becomes <span className="font-mono">{publicUrl}</span>{" "}
+                  on l6.io or your own domain later.
                 </p>
               </div>
 
+              {/* Avatar URL */}
               <div>
-                <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-neutral-300 mb-1">
                   Avatar image URL <span className="text-neutral-500">(optional)</span>
                 </label>
                 <input
-                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm focus:border-neutral-400"
-                  name="avatarUrl"
+                  type="url"
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-0"
+                  placeholder="https://…/avatar.jpg"
                   value={avatarUrl}
                   onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://…/avatar.jpg"
                 />
                 <p className="mt-1 text-xs text-neutral-400">
-                  Paste a direct HTTPS image link (ideal square image, ~1000×1000px, max
-                  ~2&nbsp;MB). Image upload from your computer is coming soon.
+                  Use a direct HTTPS image link; aim for around 800×800px,
+                  under ~2&nbsp;MB. Uploading from your device lives in the
+                  editor roadmap.
                 </p>
               </div>
 
+              {/* Bio */}
               <div>
-                <label className="block text-xs uppercase tracking-wide text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-neutral-300 mb-1">
                   Short bio <span className="text-neutral-500">(optional)</span>
                 </label>
                 <textarea
-                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 outline-none text-sm focus:border-neutral-400 min-h-[80px]"
-                  name="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Tell collectors what you create and how often you drop new pieces."
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-700 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-0 min-h-[80px]"
+                  placeholder="Tell collectors what you create and how your drops work."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
                 />
               </div>
 
-              <div className="pt-2 flex items-center gap-3">
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center justify-center rounded-lg bg-white text-neutral-950 px-4 py-2 text-sm font-medium hover:bg-neutral-200 disabled:opacity-60"
+                  className="inline-flex items-center justify-center rounded-lg bg-violet-500 hover:bg-violet-400 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 disabled:cursor-not-allowed w-full md:w-auto"
                 >
-                  {submitting ? "Creating…" : "Create profile"}
+                  {submitting ? "Creating profile…" : "Create profile"}
                 </button>
-                <p className="text-xs text-neutral-400">
-                  After this step you’ll land in your editor to add drops, links,
-                  social icons, and email capture.
+                <p className="mt-2 text-xs text-neutral-500">
+                  After this step you land in your editor where you can add
+                  drops, links, social icons, and email capture.
                 </p>
               </div>
             </form>
-          </div>
+          </section>
 
-          {/* Preview */}
-          <div className="hidden md:block">
-            <div className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-3">
-              Live preview
-            </div>
-            <div className="rounded-[32px] border border-neutral-800 bg-gradient-to-b from-neutral-900 to-neutral-950 p-5 w-full max-w-xs mx-auto shadow-xl">
+          {/* Right: live preview */}
+          <section className="hidden md:flex justify-center">
+            <div className="w-64 rounded-3xl border border-neutral-700 bg-gradient-to-b from-neutral-900 to-neutral-950 px-4 py-5 shadow-[0_0_40px_rgba(0,0,0,0.65)]">
               <div className="flex flex-col items-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden flex items-center justify-center text-sm text-neutral-400">
+                <div className="h-16 w-16 rounded-full bg-neutral-800 border border-neutral-700 overflow-hidden mb-3">
                   {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={avatarUrl}
                       alt="Avatar preview"
                       className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
                     />
-                  ) : (
-                    <span>{previewName.charAt(0).toUpperCase()}</span>
-                  )}
+                  ) : null}
                 </div>
-                <div className="mt-3 text-sm font-semibold">{previewName}</div>
-                <div className="text-[11px] text-neutral-400">
-                  l6.io/{previewSlug}
+                <div className="text-sm font-semibold">
+                  {displayName || "Your name"}
                 </div>
-              </div>
-
-              <div className="text-[11px] text-neutral-300 mb-4 line-clamp-3">
-                {previewBio}
+                <div className="text-[11px] text-neutral-400 truncate max-w-full">
+                  {bio || "Short line about your work and drops."}
+                </div>
               </div>
 
               <div className="space-y-2">
-                <div className="h-9 rounded-full bg-neutral-800/80 border border-neutral-700/80 flex items-center justify-center text-[11px] text-neutral-300">
-                  Example drop — “Sunset Study”
+                <div className="h-9 rounded-xl bg-neutral-800/80 border border-neutral-700/80 flex items-center justify-center text-[11px] text-neutral-200">
+                  Example drop link
                 </div>
-                <div className="h-9 rounded-full bg-neutral-800/60 border border-neutral-700/60 flex items-center justify-center text-[11px] text-neutral-400">
-                  Example link — “Shop prints”
+                <div className="h-9 rounded-xl bg-neutral-800/60 border border-neutral-700/60 flex items-center justify-center text-[11px] text-neutral-300/80">
+                  Another link
                 </div>
               </div>
+
+              <div className="mt-4 pt-3 border-t border-neutral-800 text-[10px] text-neutral-500 text-center">
+                Preview of{" "}
+                <span className="font-mono text-neutral-300">{publicUrl}</span>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

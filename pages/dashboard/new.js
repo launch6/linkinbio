@@ -133,19 +133,24 @@ export default function NewProfile() {
                 ) : (
                   <svg
                     className="avatar-icon"
-                    viewBox="0 0 48 48"
+                    viewBox="0 0 64 64"
                     aria-hidden="true"
                   >
+                    {/* Camera body */}
                     <rect
-                      x="9"
-                      y="14"
-                      width="30"
-                      height="20"
-                      rx="6"
+                      x="16"
+                      y="22"
+                      width="32"
+                      height="22"
+                      rx="8"
                     />
-                    <circle cx="24" cy="24" r="6" />
-                    <path d="M32 19h6" />
-                    <path d="M35 16v6" />
+                    {/* Top hump */}
+                    <path d="M24 22l3-5h10l3 5" />
+                    {/* Lens */}
+                    <circle cx="32" cy="33" r="7" />
+                    {/* Plus in lower-right corner of camera */}
+                    <path d="M41 34v7" />
+                    <path d="M37.5 37.5h7" />
                   </svg>
                 )}
               </button>
@@ -318,10 +323,10 @@ export default function NewProfile() {
         .avatar-circle {
           position: relative;
           border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
+          border: 1px solid rgba(255, 255, 255, 0.18);
           box-shadow:
             0 0 0 1px rgba(0, 0, 0, 0.7) inset,
-            0 14px 40px rgba(0, 0, 0, 0.7);
+            0 18px 50px rgba(0, 0, 0, 0.75);
           background: radial-gradient(circle at top, #262b43 0, #161827 55%, #101221 100%);
           width: 152px;
           height: 152px;
@@ -348,7 +353,8 @@ export default function NewProfile() {
         .avatar-icon {
           width: 62px;
           height: 62px;
-          stroke: #f5f6ff;
+          color: #f5f6ff;
+          stroke: currentColor;
           stroke-width: 2.2;
           stroke-linecap: round;
           stroke-linejoin: round;

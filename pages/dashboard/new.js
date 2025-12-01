@@ -16,6 +16,9 @@ export default function NewProfile() {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
 
+  const bioMax = 160;
+  const bioCount = bio.length;
+
   const handleAvatarClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
@@ -91,9 +94,6 @@ export default function NewProfile() {
     createProfile(true);
   };
 
-  const bioMax = 160;
-  const bioCount = bio.length;
-
   return (
     <main className="onboarding-root">
       <div className="logo-row">
@@ -108,10 +108,10 @@ export default function NewProfile() {
         <p className="step-label">STEP 1 OF 3</p>
         <h1 className="title">Add profile details</h1>
 
-        <p className="subtitle">
+        <p className="subtitle-strong">
           Add your profile image, name, and bio.
         </p>
-        <p className="subtitle">
+        <p className="subtitle-strong">
           You’ll set up links, drops, and email capture in the next steps.
         </p>
 
@@ -119,6 +119,7 @@ export default function NewProfile() {
           {/* Avatar upload */}
           <div className="avatar-block">
             <span className="field-label-center">Profile image (optional)</span>
+
             <button
               type="button"
               className="avatar-circle"
@@ -131,13 +132,17 @@ export default function NewProfile() {
                   style={{ backgroundImage: `url(${avatarDataUrl})` }}
                 />
               ) : (
-                <span className="avatar-icon">
-                  {/* simple camera + plus icon using characters */}
-                  <span className="avatar-camera">📷</span>
-                  <span className="avatar-plus">+</span>
-                </span>
+                <>
+                  <div className="avatar-inner">
+                    <span className="avatar-camera">📷</span>
+                  </div>
+                  <div className="avatar-plus-badge">
+                    <span className="avatar-plus">+</span>
+                  </div>
+                </>
               )}
             </button>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -145,6 +150,7 @@ export default function NewProfile() {
               className="hidden-file-input"
               onChange={handleFileChange}
             />
+
             <p className="helper-text">
               Drag &amp; drop or tap to upload image (JPG/PNG, up to 1MB).
             </p>
@@ -152,11 +158,9 @@ export default function NewProfile() {
 
           {/* Display name */}
           <div className="field">
-            <label className="field-label" htmlFor="displayName">
-              Display name
-            </label>
             <input
               id="displayName"
+              aria-label="Display name"
               className="text-input"
               type="text"
               value={displayName}
@@ -167,12 +171,10 @@ export default function NewProfile() {
 
           {/* Short bio */}
           <div className="field">
-            <label className="field-label" htmlFor="bio">
-              Short bio
-            </label>
             <div className="textarea-wrap">
               <textarea
                 id="bio"
+                aria-label="Short bio"
                 className="textarea-input"
                 value={bio}
                 onChange={(e) => {
@@ -221,16 +223,16 @@ export default function NewProfile() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 24px 16px 40px;
+          padding: 12px 16px 40px;
         }
 
         .logo-row {
-          margin-top: 8px;
-          margin-bottom: 12px;
+          margin-top: 4px;
+          margin-bottom: 6px;
         }
 
         .logo {
-          height: 40px;
+          height: 44px;
           width: auto;
         }
 
@@ -240,7 +242,7 @@ export default function NewProfile() {
           background: rgba(12, 12, 21, 0.96);
           border-radius: 24px;
           box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-          padding: 28px 22px 24px;
+          padding: 26px 22px 24px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -248,7 +250,7 @@ export default function NewProfile() {
 
         @media (min-width: 768px) {
           .card {
-            padding: 36px 40px 32px;
+            padding: 30px 40px 30px;
           }
         }
 
@@ -257,56 +259,56 @@ export default function NewProfile() {
           letter-spacing: 0.18em;
           text-transform: uppercase;
           color: #8b8fa5;
-          margin-bottom: 10px;
+          margin-bottom: 8px;
         }
 
         .title {
-          font-size: 22px;
+          font-size: 24px;
           font-weight: 700;
           margin: 0 0 10px;
           text-align: center;
         }
 
-        .subtitle {
+        .subtitle-strong {
           font-size: 14px;
-          color: #c4c7da;
+          color: #ffffff;
           text-align: center;
           margin: 0;
         }
 
-        .subtitle + .subtitle {
+        .subtitle-strong + .subtitle-strong {
           margin-top: 2px;
         }
 
         form {
           width: 100%;
-          margin-top: 24px;
+          margin-top: 22px;
         }
 
         .avatar-block {
           text-align: center;
-          margin-bottom: 24px;
+          margin-bottom: 22px;
         }
 
         .field-label-center {
           display: block;
           font-size: 13px;
           color: #e5e7ff;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
         }
 
         .avatar-circle {
+          position: relative;
           border-radius: 999px;
           border: 1px solid #3a3f5a;
           background: radial-gradient(circle at top, #262b43 0, #15172a 60%, #101221 100%);
-          width: 124px;
-          height: 124px;
+          width: 144px;
+          height: 144px;
           display: flex;
           align-items: center;
           justify-content: center;
           margin: 0 auto 10px;
           cursor: pointer;
-          position: relative;
           overflow: hidden;
         }
 
@@ -322,22 +324,38 @@ export default function NewProfile() {
           background-position: center;
         }
 
-        .avatar-icon {
+        .avatar-inner {
+          width: 72px;
+          height: 72px;
+          border-radius: 999px;
+          background: rgba(5, 6, 18, 0.82);
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 2px;
-          font-size: 20px;
           z-index: 1;
         }
 
         .avatar-camera {
-          font-size: 18px;
+          font-size: 24px;
+        }
+
+        .avatar-plus-badge {
+          position: absolute;
+          right: 34px;
+          bottom: 30px;
+          width: 26px;
+          height: 26px;
+          border-radius: 999px;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2;
         }
 
         .avatar-plus {
-          font-size: 16px;
+          font-size: 18px;
+          color: #111322;
           line-height: 1;
         }
 
@@ -355,20 +373,13 @@ export default function NewProfile() {
           margin-top: 18px;
         }
 
-        .field-label {
-          display: block;
-          font-size: 13px;
-          color: #e5e7ff;
-          margin-bottom: 6px;
-        }
-
         .text-input,
         .textarea-input {
           width: 100%;
           border-radius: 999px;
           border: 1px solid #34384f;
           background: #090a12;
-          padding: 10px 14px;
+          padding: 10px 16px;
           font-size: 14px;
           color: #ffffff;
           outline: none;
@@ -376,7 +387,7 @@ export default function NewProfile() {
 
         .text-input::placeholder,
         .textarea-input::placeholder {
-          color: #727793;
+          color: #f5f5ff;
         }
 
         .text-input:focus,
@@ -390,16 +401,17 @@ export default function NewProfile() {
         }
 
         .textarea-input {
-          border-radius: 14px;
-          min-height: 110px;
+          border-radius: 16px;
+          min-height: 120px;
           resize: vertical;
-          padding-right: 56px;
+          padding-right: 64px;
+          padding-top: 12px;
         }
 
         .char-count {
           position: absolute;
-          right: 12px;
-          bottom: 8px;
+          right: 14px;
+          bottom: 10px;
           font-size: 11px;
           color: #8b8fa5;
         }

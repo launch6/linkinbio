@@ -105,135 +105,114 @@ export default function NewProfile() {
       </div>
 
       <div className="card">
-        <p className="step-label">STEP 1 OF 3</p>
-        <h1 className="title">Add profile details</h1>
+        <div className="card-inner">
+          <p className="step-label">STEP 1 OF 3</p>
+          <h1 className="title">Add profile details</h1>
 
-        <p className="subtitle-strong">
-          Add your profile image, name, and bio.
-        </p>
-        <p className="subtitle-strong">
-          You’ll set up links, drops, and email capture in the next steps.
-        </p>
-
-        <form onSubmit={handleSubmit} className="form-shell">
-          {/* Avatar upload */}
-          <div className="avatar-block">
-            <button
-              type="button"
-              className="avatar-circle"
-              onClick={handleAvatarClick}
-              aria-label="Upload profile image"
-            >
-              {avatarDataUrl ? (
-                <span
-                  className="avatar-preview"
-                  style={{ backgroundImage: `url(${avatarDataUrl})` }}
-                />
-              ) : (
-                <svg
-                  className="avatar-icon"
-                  viewBox="0 0 64 64"
-                  aria-hidden="true"
-                >
-                  {/* camera body */}
-                  <rect
-                    x="14"
-                    y="20"
-                    width="36"
-                    height="26"
-                    rx="4"
-                    ry="4"
-                  />
-                  {/* top hump */}
-                  <rect
-                    x="24"
-                    y="16"
-                    width="16"
-                    height="6"
-                    rx="3"
-                    ry="3"
-                  />
-                  {/* lens */}
-                  <circle cx="32" cy="33" r="7" />
-                  {/* plus sign in corner */}
-                  <line x1="44" y1="40" x2="44" y2="52" />
-                  <line x1="38" y1="46" x2="50" y2="46" />
-                </svg>
-              )}
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg"
-              className="hidden-file-input"
-              onChange={handleFileChange}
-            />
-
-            <p className="helper-text">
-              Drag &amp; Drop or Tap to Upload image
-              <br />
-              (JPG/PNG, up to 1MB)
-            </p>
-          </div>
-
-          {/* Display name */}
-          <div className="field">
-            <input
-              id="displayName"
-              aria-label="Display name"
-              className="text-input"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="@yourname or Studio Name"
-            />
-          </div>
-
-          {/* Short bio */}
-          <div className="field">
-            <div className="textarea-wrap">
-              <textarea
-                id="bio"
-                aria-label="Short bio"
-                className="textarea-input"
-                value={bio}
-                onChange={(e) => {
-                  const next = e.target.value.slice(0, bioMax);
-                  setBio(next);
-                }}
-                placeholder="Fill in your bio or tell collectors about your newest art drop"
-                maxLength={bioMax}
-              />
-              <span className="char-count">
-                {bioCount}/{bioMax}
-              </span>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="actions-row">
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={saving}
-            >
-              {saving ? 'Creating…' : 'Continue'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleSkip}
-              disabled={saving}
-            >
-              Skip
-            </button>
-          </div>
-
-          <p className="footer-note">
-            After this step you’ll land in your editor to add links, social icons, drops, and email capture.
+          <p className="subtitle-strong">
+            Add your profile image, name, and bio.
           </p>
-        </form>
+          <p className="subtitle-strong">
+            You’ll set up links, drops, and email capture in the next steps.
+          </p>
+
+          <form onSubmit={handleSubmit}>
+            {/* Avatar upload */}
+            <div className="avatar-block">
+              <button
+                type="button"
+                className="avatar-circle"
+                onClick={handleAvatarClick}
+                aria-label="Upload profile image"
+              >
+                {avatarDataUrl ? (
+                  <span
+                    className="avatar-preview"
+                    style={{ backgroundImage: `url(${avatarDataUrl})` }}
+                  />
+                ) : (
+                  <span className="avatar-icon">
+                    <span className="camera-body" />
+                    <span className="camera-lens" />
+                    <span className="camera-plus">+</span>
+                  </span>
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg"
+                className="hidden-file-input"
+                onChange={handleFileChange}
+              />
+
+              <p className="helper-text">
+                Drag &amp; Drop or Tap to Upload image
+              </p>
+              <p className="helper-text helper-sub">
+                (JPG/PNG, up to 1MB)
+              </p>
+            </div>
+
+            {/* Display name */}
+            <div className="field">
+              <input
+                id="displayName"
+                aria-label="Display name"
+                className="text-input"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="@yourname or Studio Name"
+              />
+            </div>
+
+            {/* Short bio */}
+            <div className="field">
+              <div className="textarea-wrap">
+                <textarea
+                  id="bio"
+                  aria-label="Short bio"
+                  className="textarea-input"
+                  value={bio}
+                  onChange={(e) => {
+                    const next = e.target.value.slice(0, bioMax);
+                    setBio(next);
+                  }}
+                  placeholder="Fill in your bio or tell collectors about your newest art drop"
+                  maxLength={bioMax}
+                />
+                <span className="char-count">
+                  {bioCount}/{bioMax}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="actions-row">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={saving}
+              >
+                {saving ? 'Creating…' : 'Continue'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleSkip}
+                disabled={saving}
+              >
+                Skip
+              </button>
+            </div>
+
+            <p className="footer-note">
+              After this step you’ll land in your editor to add links, social icons, drops, and email capture.
+            </p>
+          </form>
+        </div>
       </div>
 
       <style jsx>{`
@@ -249,86 +228,92 @@ export default function NewProfile() {
 
         .logo-row {
           margin-top: 4px;
-          margin-bottom: 6px;
+          margin-bottom: 8px;
         }
 
         .logo {
-          height: 44px;
+          height: 62px; /* larger logo, closer to your mock */
           width: auto;
         }
 
         .card {
           width: 100%;
-          max-width: 720px;
+          max-width: 760px;
           background: rgba(12, 12, 21, 0.96);
-          border-radius: 24px;
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-          padding: 26px 22px 24px;
+          border-radius: 28px;
+          box-shadow: 0 22px 70px rgba(0, 0, 0, 0.65);
+          padding: 28px 24px 26px;
           display: flex;
-          flex-direction: column;
-          align-items: center;
+          justify-content: center;
         }
 
         @media (min-width: 768px) {
           .card {
-            padding: 30px 40px 30px;
+            padding: 32px 40px 30px;
           }
         }
 
+        /* Inner content width so fields/buttons/bio are inset like design 1 */
+        .card-inner {
+          width: 100%;
+          max-width: 640px;
+          margin: 0 auto;
+          text-align: center;
+        }
+
         .step-label {
-          font-size: 11px;
-          letter-spacing: 0.18em;
+          font-size: 12px;
+          letter-spacing: 0.22em;
           text-transform: uppercase;
           color: #8b8fa5;
-          margin-bottom: 8px;
+          margin: 4px 0 14px;
         }
 
         .title {
-          font-size: 24px;
+          font-size: 26px;
           font-weight: 700;
           margin: 0 0 10px;
-          text-align: center;
         }
 
         .subtitle-strong {
-          font-size: 14px;
+          font-size: 15px;
           color: #ffffff;
-          text-align: center;
           margin: 0;
         }
 
         .subtitle-strong + .subtitle-strong {
-          margin-top: 2px;
+          margin-top: 4px;
         }
 
-        .form-shell {
+        form {
           width: 100%;
-          max-width: 640px;
-          margin: 22px auto 0;
+          margin-top: 26px;
+          text-align: left;
         }
 
         .avatar-block {
           text-align: center;
-          margin-bottom: 22px;
+          margin-bottom: 26px;
         }
 
         .avatar-circle {
           position: relative;
           border-radius: 999px;
-          border: 1px solid #3a3f5a;
-          background: radial-gradient(circle at top, #262b43 0, #15172a 60%, #101221 100%);
-          width: 152px;
-          height: 152px;
+          border: 2px solid rgba(130, 135, 170, 0.7);
+          background: radial-gradient(circle at top, #29304a 0, #181a2f 55%, #101221 100%);
+          width: 148px;
+          height: 148px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin: 0 auto 10px;
+          margin: 0 auto 12px;
           cursor: pointer;
           overflow: hidden;
+          box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
         }
 
         .avatar-circle:hover {
-          border-color: #7e8bff;
+          border-color: #9ea8ff;
         }
 
         .avatar-preview {
@@ -340,12 +325,49 @@ export default function NewProfile() {
         }
 
         .avatar-icon {
-          width: 56px;
-          height: 56px;
-          color: #f5f5ff;
-          stroke: currentColor;
-          stroke-width: 2.4;
-          fill: none;
+          position: relative;
+          width: 44px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .camera-body {
+          position: absolute;
+          top: 6px;
+          width: 34px;
+          height: 22px;
+          border-radius: 8px;
+          border: 2px solid rgba(245, 246, 255, 0.95);
+        }
+
+        .camera-lens {
+          position: absolute;
+          top: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          border: 2px solid rgba(245, 246, 255, 0.95);
+        }
+
+        .camera-plus {
+          position: absolute;
+          right: -4px;
+          bottom: -4px;
+          width: 18px;
+          height: 18px;
+          border-radius: 999px;
+          background: #ffffff;
+          color: #111322;
+          font-size: 12px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
         }
 
         .hidden-file-input {
@@ -353,25 +375,28 @@ export default function NewProfile() {
         }
 
         .helper-text {
-          font-size: 12px;
+          font-size: 13px;
           color: #8b8fa5;
           margin: 0;
-          line-height: 1.4;
+        }
+
+        .helper-sub {
+          margin-top: 2px;
+          font-size: 12px;
         }
 
         .field {
-          margin-top: 18px;
+          margin-top: 20px;
         }
 
         .text-input,
         .textarea-input {
-          box-sizing: border-box;
           width: 100%;
           border-radius: 999px;
           border: 1px solid #34384f;
           background: #090a12;
-          padding: 10px 16px;
-          font-size: 14px;
+          padding: 13px 18px;
+          font-size: 15px;
           color: #ffffff;
           outline: none;
         }
@@ -384,31 +409,32 @@ export default function NewProfile() {
         .text-input:focus,
         .textarea-input:focus {
           border-color: #7e8bff;
-          box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
+          box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.35);
         }
 
         .textarea-wrap {
           position: relative;
+          width: 100%;
         }
 
         .textarea-input {
-          border-radius: 16px;
-          min-height: 120px;
+          border-radius: 18px;
+          min-height: 132px;
           resize: vertical;
-          padding-right: 64px;
-          padding-top: 12px;
+          padding-right: 70px;
+          padding-top: 14px;
         }
 
         .char-count {
           position: absolute;
-          right: 14px;
-          bottom: 10px;
+          right: 16px;
+          bottom: 12px;
           font-size: 11px;
           color: #8b8fa5;
         }
 
         .actions-row {
-          margin-top: 22px;
+          margin-top: 26px;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -424,9 +450,9 @@ export default function NewProfile() {
           flex: 1;
           border-radius: 999px;
           border: none;
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 500;
-          padding: 11px 16px;
+          padding: 13px 18px;
           cursor: pointer;
           transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
         }
@@ -434,7 +460,7 @@ export default function NewProfile() {
         .btn-primary {
           background: linear-gradient(90deg, #6366ff, #a855f7);
           color: #ffffff;
-          box-shadow: 0 8px 24px rgba(88, 92, 255, 0.55);
+          box-shadow: 0 10px 30px rgba(88, 92, 255, 0.7);
         }
 
         .btn-primary:disabled {
@@ -445,7 +471,7 @@ export default function NewProfile() {
 
         .btn-primary:not(:disabled):active {
           transform: translateY(1px);
-          box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
+          box-shadow: 0 5px 18px rgba(88, 92, 255, 0.5);
         }
 
         .btn-secondary {
@@ -464,7 +490,7 @@ export default function NewProfile() {
         }
 
         .footer-note {
-          margin-top: 12px;
+          margin-top: 14px;
           font-size: 12px;
           color: #8b8fa5;
           text-align: center;

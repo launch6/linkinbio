@@ -1,258 +1,484 @@
-// pages/dashboard/new.js
-import { useRef, useState } from 'react';
+import { useState, useRef } from 'react';
 
 function slugify(input) {
-  return (
-    input
-      .toLowerCase()
-      .trim()
-      .replace(/^@+/, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 40) || 'profile'
-  );
+  const base = (input || '').toLowerCase().trim();
+  const core = base
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return core || `artist-${Date.now()}`;
 }
 
 export default function NewProfile() {
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
-  const [bioLength, setBioLength] = useState(0);
-  const [avatarPreview, setAvatarPreview] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarDataUrl, setAvatarDataUrl] = useState('');
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
+
+  const bioMax = 160;
+  const bioCount = bio.length;
 
   const handleAvatarClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
-  const handleAvatarChange = (e) => {
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxBytes = 1024 * 1024; // 1 MB
+    const maxBytes = 1 * 1024 * 1024; // 1MB
     if (file.size > maxBytes) {
-      alert('Please upload an image up to 1 MB.');
+      alert('Image is too large. Please upload a JPG/PNG up to 1MB.');
       e.target.value = '';
       return;
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        setAvatarPreview(reader.result);
+    reader.onload = (evt) => {
+      const result = evt.target?.result;
+      if (typeof result === 'string') {
+        setAvatarDataUrl(result);
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
+  const createProfile = async (skip = false) => {
+    if (saving) return;
+    setSaving(true);
 
-    const name = displayName.trim();
-    if (!name) {
-      alert('Please add a display name or tap Skip.');
-      return;
+    let name = displayName.trim();
+    let description = bio.trim();
+
+    if (skip && !name) {
+      name = 'New artist';
     }
 
-    setIsSubmitting(true);
+    const slug = slugify(name || 'artist');
+
     try {
-      const slug = slugify(name);
       const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
           slug,
-          description: bio.trim(),
-          avatarUrl: avatarPreview || '',
+          description,
+          avatarUrl: avatarDataUrl || '',
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || 'Failed to create profile');
-        setIsSubmitting(false);
+        setSaving(false);
         return;
       }
 
       window.location.href = `/dashboard/${data.editToken}`;
     } catch (err) {
       console.error(err);
-      alert('Something went wrong while creating your profile.');
-      setIsSubmitting(false);
+      alert('Something went wrong creating your profile.');
+      setSaving(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    createProfile(false);
   };
 
   const handleSkip = (e) => {
     e.preventDefault();
-    // Empty profile shell. Name is required by the API, so give a neutral default.
-    const fallbackName = 'New profile';
-    const slug = slugify(fallbackName);
-
-    setIsSubmitting(true);
-    fetch('/api/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: fallbackName,
-        slug,
-        description: '',
-        avatarUrl: '',
-      }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          alert(data.error || 'Failed to create profile');
-          setIsSubmitting(false);
-          return;
-        }
-        window.location.href = `/dashboard/${data.editToken}`;
-      })
-      .catch((err) => {
-        console.error(err);
-        alert('Something went wrong while creating your profile.');
-        setIsSubmitting(false);
-      });
-  };
-
-  const handleBioChange = (e) => {
-    const value = e.target.value.slice(0, 160);
-    setBio(value);
-    setBioLength(value.length);
+    createProfile(true);
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#05020f] via-[#050316] to-[#020008] text-white flex flex-col items-center px-4 pb-16">
-      {/* Logo */}
-      <header className="pt-6 pb-4">
+    <main className="onboarding-root">
+      <div className="logo-row">
         <img
           src="/launch6_white.png"
           alt="Launch6"
-          className="mx-auto h-10 w-auto"
+          className="logo"
         />
-      </header>
+      </div>
 
-      {/* Card */}
-      <section className="relative w-full max-w-2xl rounded-3xl border border-white/5 bg-[#05040e]/95 shadow-[0_30px_80px_rgba(0,0,0,0.85)] backdrop-blur-xl px-8 sm:px-10 py-10 sm:py-12">
-        {/* Step */}
-        <p className="text-center text-xs tracking-[0.22em] text-white/55 mb-4 uppercase">
-          STEP 1 OF 3
-        </p>
+      <div className="card">
+        <p className="step-label">STEP 1 OF 3</p>
+        <h1 className="title">Add profile details</h1>
 
-        {/* Heading */}
-        <h1 className="text-center text-2xl font-semibold mb-2">
-          Add profile details
-        </h1>
-
-        {/* Subcopy (same size as name/bio placeholders visually) */}
-        <p className="text-center text-[15px] leading-relaxed text-white mb-1">
+        <p className="subtitle-strong">
           Add your profile image, name, and bio.
         </p>
-        <p className="text-center text-[15px] leading-relaxed text-white mb-8">
+        <p className="subtitle-strong">
           You’ll set up links, drops, and email capture in the next steps.
         </p>
 
-        {/* Avatar uploader */}
-        <div className="flex flex-col items-center mb-8">
-          <button
-            type="button"
-            onClick={handleAvatarClick}
-            className="group relative flex h-32 w-32 items-center justify-center rounded-full border border-white/18 bg-gradient-to-b from-[#141325] via-[#080716] to-[#05040e] shadow-[0_12px_30px_rgba(0,0,0,0.75)] overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/70"
-          >
-            {avatarPreview ? (
-              <img
-                src={avatarPreview}
-                alt="Profile preview"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-1 text-white">
-                <span className="text-2xl leading-none">📷</span>
-                <span className="text-lg leading-none">+</span>
-              </div>
-            )}
-          </button>
+        <form onSubmit={handleSubmit}>
+          {/* Avatar upload */}
+          <div className="avatar-block">
+            <span className="field-label-center">Profile image (optional)</span>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
+            <button
+              type="button"
+              className="avatar-circle"
+              onClick={handleAvatarClick}
+              aria-label="Upload profile image"
+            >
+              {avatarDataUrl ? (
+                <span
+                  className="avatar-preview"
+                  style={{ backgroundImage: `url(${avatarDataUrl})` }}
+                />
+              ) : (
+                <>
+                  <div className="avatar-inner">
+                    <span className="avatar-camera">📷</span>
+                  </div>
+                  <div className="avatar-plus-badge">
+                    <span className="avatar-plus">+</span>
+                  </div>
+                </>
+              )}
+            </button>
 
-          <p className="mt-4 text-xs text-white/65">
-            Drag &amp; drop or tap to upload image
-          </p>
-          <p className="text-xs text-white/45">(JPG/PNG, up to 1MB)</p>
-        </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden-file-input"
+              onChange={handleFileChange}
+            />
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Display name */}
-          <div>
-            <label className="sr-only" htmlFor="displayName">
-              Display name
-            </label>
-            <div className="rounded-full border border-white/14 bg-black/30 px-5 py-3 text-[15px] focus-within:border-purple-400/80 focus-within:bg-black/50 transition-colors">
-              <input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="@yourname or Studio Name"
-                className="w-full bg-transparent text-[15px] text-white placeholder:text-white/60 outline-none"
-                autoComplete="off"
-              />
-            </div>
+            <p className="helper-text">
+              Drag &amp; drop or tap to upload image (JPG/PNG, up to 1MB).
+            </p>
           </div>
 
-          {/* Bio */}
-          <div>
-            <label className="sr-only" htmlFor="bio">
-              Short bio
-            </label>
-            <div className="relative rounded-2xl border border-white/14 bg-black/30 px-5 pt-3 pb-8 focus-within:border-purple-400/80 focus-within:bg-black/50 transition-colors">
+          {/* Display name */}
+          <div className="field">
+            <input
+              id="displayName"
+              aria-label="Display name"
+              className="text-input"
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="@yourname or Studio Name"
+            />
+          </div>
+
+          {/* Short bio */}
+          <div className="field">
+            <div className="textarea-wrap">
               <textarea
                 id="bio"
+                aria-label="Short bio"
+                className="textarea-input"
                 value={bio}
-                onChange={handleBioChange}
+                onChange={(e) => {
+                  const next = e.target.value.slice(0, bioMax);
+                  setBio(next);
+                }}
                 placeholder="Fill in your bio or tell collectors about your newest art drop"
-                className="min-h-[120px] w-full resize-none bg-transparent text-[15px] text-white placeholder:text-white/60 outline-none"
+                maxLength={bioMax}
               />
-              <span className="pointer-events-none absolute bottom-2 right-4 text-xs text-white/45">
-                {bioLength}/160
+              <span className="char-count">
+                {bioCount}/{bioMax}
               </span>
             </div>
           </div>
 
-          {/* Buttons */}
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          {/* Actions */}
+          <div className="actions-row">
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="flex-1 rounded-full bg-gradient-to-r from-[#6f4bff] via-[#7f5dff] to-[#4db5ff] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.7)] disabled:opacity-60"
+              className="btn btn-primary"
+              disabled={saving}
             >
-              {isSubmitting ? 'Saving…' : 'Continue'}
+              {saving ? 'Creating…' : 'Continue'}
             </button>
             <button
               type="button"
+              className="btn btn-secondary"
               onClick={handleSkip}
-              disabled={isSubmitting}
-              className="flex-1 rounded-full border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white/85 hover:bg-white/8 disabled:opacity-60"
+              disabled={saving}
             >
               Skip
             </button>
           </div>
 
-          <p className="mt-4 text-center text-xs text-white/50">
-            After this step you’ll land in your editor to add links, social
-            icons, drops, and email capture.
+          <p className="footer-note">
+            After this step you’ll land in your editor to add links, social icons, drops, and email capture.
           </p>
         </form>
-      </section>
+      </div>
+
+      <style jsx>{`
+        .onboarding-root {
+          min-height: 100vh;
+          background: radial-gradient(circle at top, #15162a 0, #05050b 55%, #020208 100%);
+          color: #ffffff;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 12px 16px 40px;
+        }
+
+        .logo-row {
+          margin-top: 4px;
+          margin-bottom: 6px;
+        }
+
+        .logo {
+          height: 44px;
+          width: auto;
+        }
+
+        .card {
+          width: 100%;
+          max-width: 720px;
+          background: rgba(12, 12, 21, 0.96);
+          border-radius: 24px;
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+          padding: 26px 22px 24px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        @media (min-width: 768px) {
+          .card {
+            padding: 30px 40px 30px;
+          }
+        }
+
+        .step-label {
+          font-size: 11px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #8b8fa5;
+          margin-bottom: 8px;
+        }
+
+        .title {
+          font-size: 24px;
+          font-weight: 700;
+          margin: 0 0 10px;
+          text-align: center;
+        }
+
+        .subtitle-strong {
+          font-size: 14px;
+          color: #ffffff;
+          text-align: center;
+          margin: 0;
+        }
+
+        .subtitle-strong + .subtitle-strong {
+          margin-top: 2px;
+        }
+
+        form {
+          width: 100%;
+          margin-top: 22px;
+        }
+
+        .avatar-block {
+          text-align: center;
+          margin-bottom: 22px;
+        }
+
+        .field-label-center {
+          display: block;
+          font-size: 13px;
+          color: #e5e7ff;
+          margin-bottom: 10px;
+        }
+
+        .avatar-circle {
+          position: relative;
+          border-radius: 999px;
+          border: 1px solid #3a3f5a;
+          background: radial-gradient(circle at top, #262b43 0, #15172a 60%, #101221 100%);
+          width: 144px;
+          height: 144px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 10px;
+          cursor: pointer;
+          overflow: hidden;
+        }
+
+        .avatar-circle:hover {
+          border-color: #7e8bff;
+        }
+
+        .avatar-preview {
+          position: absolute;
+          inset: 0;
+          border-radius: 999px;
+          background-size: cover;
+          background-position: center;
+        }
+
+        .avatar-inner {
+          width: 72px;
+          height: 72px;
+          border-radius: 999px;
+          background: rgba(5, 6, 18, 0.82);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1;
+        }
+
+        .avatar-camera {
+          font-size: 24px;
+        }
+
+        .avatar-plus-badge {
+          position: absolute;
+          right: 34px;
+          bottom: 30px;
+          width: 26px;
+          height: 26px;
+          border-radius: 999px;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2;
+        }
+
+        .avatar-plus {
+          font-size: 18px;
+          color: #111322;
+          line-height: 1;
+        }
+
+        .hidden-file-input {
+          display: none;
+        }
+
+        .helper-text {
+          font-size: 12px;
+          color: #8b8fa5;
+          margin: 0;
+        }
+
+        .field {
+          margin-top: 18px;
+        }
+
+        .text-input,
+        .textarea-input {
+          width: 100%;
+          border-radius: 999px;
+          border: 1px solid #34384f;
+          background: #090a12;
+          padding: 10px 16px;
+          font-size: 14px;
+          color: #ffffff;
+          outline: none;
+        }
+
+        .text-input::placeholder,
+        .textarea-input::placeholder {
+          color: #f5f5ff;
+        }
+
+        .text-input:focus,
+        .textarea-input:focus {
+          border-color: #7e8bff;
+          box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
+        }
+
+        .textarea-wrap {
+          position: relative;
+        }
+
+        .textarea-input {
+          border-radius: 16px;
+          min-height: 120px;
+          resize: vertical;
+          padding-right: 64px;
+          padding-top: 12px;
+        }
+
+        .char-count {
+          position: absolute;
+          right: 14px;
+          bottom: 10px;
+          font-size: 11px;
+          color: #8b8fa5;
+        }
+
+        .actions-row {
+          margin-top: 22px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        @media (min-width: 600px) {
+          .actions-row {
+            flex-direction: row;
+          }
+        }
+
+        .btn {
+          flex: 1;
+          border-radius: 999px;
+          border: none;
+          font-size: 14px;
+          font-weight: 500;
+          padding: 11px 16px;
+          cursor: pointer;
+          transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+        }
+
+        .btn-primary {
+          background: linear-gradient(90deg, #6366ff, #a855f7);
+          color: #ffffff;
+          box-shadow: 0 8px 24px rgba(88, 92, 255, 0.55);
+        }
+
+        .btn-primary:disabled {
+          opacity: 0.7;
+          cursor: default;
+          box-shadow: none;
+        }
+
+        .btn-primary:not(:disabled):active {
+          transform: translateY(1px);
+          box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
+        }
+
+        .btn-secondary {
+          background: transparent;
+          color: #e5e7ff;
+          border: 1px solid #3a3f5a;
+        }
+
+        .btn-secondary:disabled {
+          opacity: 0.7;
+          cursor: default;
+        }
+
+        .btn-secondary:not(:disabled):active {
+          transform: translateY(1px);
+        }
+
+        .footer-note {
+          margin-top: 12px;
+          font-size: 12px;
+          color: #8b8fa5;
+          text-align: center;
+        }
+      `}</style>
     </main>
   );
 }

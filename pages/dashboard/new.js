@@ -43,6 +43,22 @@ export default function NewProfile() {
 
   const inferredSlug = slugFromName(name);
 
+  const handleAvatarFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Please choose an image under 2 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setAvatarUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <main
       style={{
@@ -57,7 +73,7 @@ export default function NewProfile() {
           padding: "32px 16px 48px",
         }}
       >
-        {/* Small logo header */}
+        {/* Logo header */}
         <header
           style={{
             display: "flex",
@@ -68,7 +84,8 @@ export default function NewProfile() {
           <img
             src="/launch6_white.png"
             alt="Launch6"
-            style={{ height: 40, width: "auto" }}
+            // 40% larger
+            style={{ height: 84, width: "auto" }}
           />
         </header>
 
@@ -81,6 +98,7 @@ export default function NewProfile() {
             boxShadow: "0 18px 40px rgba(0,0,0,0.55)",
           }}
         >
+          {/* Step label */}
           <p
             className="small"
             style={{
@@ -89,16 +107,20 @@ export default function NewProfile() {
               fontSize: 11,
               marginBottom: 8,
               color: "#9ca3af",
+              textAlign: "center",
             }}
           >
             Step 1 of 2
           </p>
+
+          {/* Title + intro */}
           <h1
             style={{
               fontSize: 24,
               lineHeight: 1.3,
               fontWeight: 600,
               marginBottom: 8,
+              textAlign: "center",
             }}
           >
             Create your artist profile
@@ -109,6 +131,7 @@ export default function NewProfile() {
               fontSize: 14,
               color: "#b0b3c6",
               marginBottom: 24,
+              textAlign: "center",
             }}
           >
             Add your profile image, display name, and a short bio. You will
@@ -116,7 +139,7 @@ export default function NewProfile() {
           </p>
 
           <form onSubmit={handleCreate}>
-            {/* Profile image */}
+            {/* PROFILE IMAGE */}
             <label
               style={{
                 display: "block",
@@ -145,6 +168,7 @@ export default function NewProfile() {
                   width: 64,
                   borderRadius: "999px",
                   background: "#1f2937",
+                  overflow: "hidden",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -153,28 +177,43 @@ export default function NewProfile() {
                   flexShrink: 0,
                 }}
               >
-                {avatarUrl ? "🖼️" : "+"}
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar preview"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  "+"
+                )}
               </div>
+
               <div style={{ flex: 1 }}>
-                <button
-                  type="button"
-                  className="button secondary"
-                  style={{
-                    padding: "6px 14px",
-                    fontSize: 13,
-                    marginBottom: 4,
-                    cursor: "not-allowed",
-                    opacity: 0.6,
-                  }}
-                  disabled
-                >
-                  Upload from device (coming soon)
-                </button>
+                <label style={{ display: "inline-block" }}>
+                  <span
+                    className="button secondary"
+                    style={{
+                      padding: "6px 14px",
+                      fontSize: 13,
+                      marginBottom: 4,
+                      cursor: "pointer",
+                      display: "inline-block",
+                    }}
+                  >
+                    Upload from device
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarFile}
+                    style={{ display: "none" }}
+                  />
+                </label>
                 <p
                   className="small"
                   style={{ fontSize: 12, color: "#9ca3af" }}
                 >
-                  Paste an image URL for now. Direct HTTPS links work best.
+                  JPG or PNG up to 2 MB, or paste an image URL below.
                 </p>
               </div>
             </div>
@@ -188,7 +227,7 @@ export default function NewProfile() {
               style={{ marginBottom: 20 }}
             />
 
-            {/* Display name */}
+            {/* DISPLAY NAME */}
             <label
               style={{
                 display: "block",
@@ -212,7 +251,7 @@ export default function NewProfile() {
               style={{ marginBottom: 16 }}
             />
 
-            {/* Short bio */}
+            {/* SHORT BIO + COUNTER */}
             <label
               style={{
                 display: "block",
@@ -226,16 +265,31 @@ export default function NewProfile() {
             >
               Short bio (optional)
             </label>
-            <textarea
-              className="textarea"
-              name="description"
-              placeholder="Tell collectors what you create and how often you drop new pieces."
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              style={{ marginBottom: 16 }}
-            />
 
-            {/* URL preview, slug inferred from name */}
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <textarea
+                className="textarea"
+                name="description"
+                placeholder="Tell collectors what you create and how often you drop new pieces."
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                maxLength={160}
+                style={{ paddingBottom: 28 }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  bottom: 8,
+                  fontSize: 11,
+                  color: "#6b7280",
+                }}
+              >
+                {bio.length}/160
+              </span>
+            </div>
+
+            {/* URL PREVIEW */}
             <p
               className="small"
               style={{
@@ -255,6 +309,7 @@ export default function NewProfile() {
               . You can update this later in your editor.
             </p>
 
+            {/* SUBMIT */}
             <button
               className="button"
               type="submit"

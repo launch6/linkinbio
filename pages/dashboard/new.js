@@ -312,10 +312,16 @@ export default function NewProfile() {
           margin-top: 2px;
         }
 
-        .form {
+               .form {
           width: 100%;
+          max-width: 560px;       /* shared inner width for inputs + buttons */
           margin-top: 26px;
+          margin-left: auto;
+          margin-right: auto;
+          padding: 0;             /* keep edges clean */
+          box-sizing: border-box;
         }
+
 
         .avatar-block {
           text-align: center;
@@ -383,13 +389,12 @@ export default function NewProfile() {
           margin-top: 18px;
         }
 
-         /* Shared inner width for inputs and buttons so edges align */
-        .field-control {
+             /* Shared inner width for inputs so they line up with the buttons */
+       .field-control {
           width: 100%;
-          max-width: 560px;   /* tune this number if you want it wider/narrower */
-          margin-left: auto;
-          margin-right: auto;
+          margin: 0;          /* form already centers everything */
         }
+
 
         .text-input,
         .textarea-input {
@@ -435,15 +440,12 @@ export default function NewProfile() {
           color: #8b8fa5;
         }
 
-       .actions-row {
+            .actions-row {
           margin-top: 24px;
           display: flex;
           flex-direction: column;
           gap: 10px;
-          width: 100%;
-          max-width: 560px;   /* matches .field-control */
-          margin-left: auto;
-          margin-right: auto;
+          width: 100%;        /* fills the same 560px form rail */
         }
 
         @media (min-width: 600px) {

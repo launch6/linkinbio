@@ -264,12 +264,13 @@ export default function NewProfile() {
           justify-content: center;
         }
 
+        /* 20% narrower card + more visible white outline */
         .card-inner {
           width: 100%;
-          max-width: 780px;
+          max-width: 620px; /* was 780px */
           background: rgba(9, 9, 18, 0.96);
           border-radius: 32px;
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.16); /* brighter white line */
           box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
           padding: 40px 40px 32px;
           display: flex;
@@ -320,6 +321,7 @@ export default function NewProfile() {
           margin-bottom: 24px;
         }
 
+        /* 30% smaller avatar circle */
         .avatar-circle {
           position: relative;
           border-radius: 999px;
@@ -328,8 +330,8 @@ export default function NewProfile() {
             0 0 0 1px rgba(0, 0, 0, 0.7) inset,
             0 18px 50px rgba(0, 0, 0, 0.75);
           background: radial-gradient(circle at top, #262b43 0, #161827 55%, #101221 100%);
-          width: 152px;
-          height: 152px;
+          width: 108px;  /* was 152px */
+          height: 108px; /* was 152px */
           display: flex;
           align-items: center;
           justify-content: center;
@@ -351,8 +353,8 @@ export default function NewProfile() {
         }
 
         .avatar-icon {
-          width: 62px;
-          height: 62px;
+          width: 52px;
+          height: 52px;
           color: #f5f6ff;
           stroke: currentColor;
           stroke-width: 2.2;

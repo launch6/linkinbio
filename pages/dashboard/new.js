@@ -118,8 +118,6 @@ export default function NewProfile() {
         <form onSubmit={handleSubmit}>
           {/* Avatar upload */}
           <div className="avatar-block">
-            <span className="field-label-center">Profile image (optional)</span>
-
             <button
               type="button"
               className="avatar-circle"
@@ -132,14 +130,10 @@ export default function NewProfile() {
                   style={{ backgroundImage: `url(${avatarDataUrl})` }}
                 />
               ) : (
-                <>
-                  <div className="avatar-inner">
-                    <span className="avatar-camera">📷</span>
-                  </div>
-                  <div className="avatar-plus-badge">
-                    <span className="avatar-plus">+</span>
-                  </div>
-                </>
+                <div className="avatar-inner">
+                  <span className="avatar-camera">📷</span>
+                  <span className="avatar-plus">+</span>
+                </div>
               )}
             </button>
 
@@ -152,7 +146,10 @@ export default function NewProfile() {
             />
 
             <p className="helper-text">
-              Drag &amp; drop or tap to upload image (JPG/PNG, up to 1MB).
+              Drag &amp; Drop or Tap to Upload image
+            </p>
+            <p className="helper-subtext">
+              (JPG/PNG, up to 1MB)
             </p>
           </div>
 
@@ -218,7 +215,7 @@ export default function NewProfile() {
       <style jsx>{`
         .onboarding-root {
           min-height: 100vh;
-          background: radial-gradient(circle at top, #15162a 0, #05050b 55%, #020208 100%);
+          background: radial-gradient(circle at top, #181932 0, #05050b 55%, #020208 100%);
           color: #ffffff;
           display: flex;
           flex-direction: column;
@@ -232,17 +229,18 @@ export default function NewProfile() {
         }
 
         .logo {
-          height: 44px;
+          height: 56px;
           width: auto;
         }
 
         .card {
           width: 100%;
-          max-width: 720px;
-          background: rgba(12, 12, 21, 0.96);
-          border-radius: 24px;
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-          padding: 26px 22px 24px;
+          max-width: 640px;
+          background: radial-gradient(circle at top, rgba(34, 36, 72, 0.98) 0, rgba(10, 11, 26, 0.98) 55%, rgba(7, 8, 20, 0.98) 100%);
+          border-radius: 26px;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          box-shadow: 0 22px 70px rgba(0, 0, 0, 0.65);
+          padding: 20px 20px 26px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -250,27 +248,27 @@ export default function NewProfile() {
 
         @media (min-width: 768px) {
           .card {
-            padding: 30px 40px 30px;
+            padding: 22px 40px 28px;
           }
         }
 
         .step-label {
-          font-size: 11px;
-          letter-spacing: 0.18em;
+          font-size: 12px;
+          letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: #8b8fa5;
-          margin-bottom: 8px;
+          color: #9ba0c3;
+          margin-bottom: 10px;
         }
 
         .title {
-          font-size: 24px;
+          font-size: 22px;
           font-weight: 700;
-          margin: 0 0 10px;
+          margin: 0 0 8px;
           text-align: center;
         }
 
         .subtitle-strong {
-          font-size: 14px;
+          font-size: 15px;
           color: #ffffff;
           text-align: center;
           margin: 0;
@@ -282,19 +280,12 @@ export default function NewProfile() {
 
         form {
           width: 100%;
-          margin-top: 22px;
+          margin-top: 20px;
         }
 
         .avatar-block {
           text-align: center;
-          margin-bottom: 22px;
-        }
-
-        .field-label-center {
-          display: block;
-          font-size: 13px;
-          color: #e5e7ff;
-          margin-bottom: 10px;
+          margin-bottom: 24px;
         }
 
         .avatar-circle {
@@ -325,37 +316,25 @@ export default function NewProfile() {
         }
 
         .avatar-inner {
-          width: 72px;
-          height: 72px;
+          width: 76px;
+          height: 76px;
           border-radius: 999px;
-          background: rgba(5, 6, 18, 0.82);
+          background: rgba(5, 6, 18, 0.9);
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
+          gap: 2px;
           z-index: 1;
         }
 
         .avatar-camera {
           font-size: 24px;
-        }
-
-        .avatar-plus-badge {
-          position: absolute;
-          right: 34px;
-          bottom: 30px;
-          width: 26px;
-          height: 26px;
-          border-radius: 999px;
-          background: #ffffff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 2;
+          line-height: 1;
         }
 
         .avatar-plus {
-          font-size: 18px;
-          color: #111322;
+          font-size: 16px;
           line-height: 1;
         }
 
@@ -365,8 +344,14 @@ export default function NewProfile() {
 
         .helper-text {
           font-size: 12px;
-          color: #8b8fa5;
+          color: #d3d6ff;
           margin: 0;
+        }
+
+        .helper-subtext {
+          font-size: 12px;
+          color: #8b8fa5;
+          margin: 2px 0 0;
         }
 
         .field {
@@ -380,14 +365,14 @@ export default function NewProfile() {
           border: 1px solid #34384f;
           background: #090a12;
           padding: 10px 16px;
-          font-size: 14px;
+          font-size: 15px;
           color: #ffffff;
           outline: none;
         }
 
         .text-input::placeholder,
         .textarea-input::placeholder {
-          color: #f5f5ff;
+          color: #ffffff;
         }
 
         .text-input:focus,
@@ -401,7 +386,7 @@ export default function NewProfile() {
         }
 
         .textarea-input {
-          border-radius: 16px;
+          border-radius: 18px;
           min-height: 120px;
           resize: vertical;
           padding-right: 64px;

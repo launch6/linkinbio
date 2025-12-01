@@ -235,6 +235,7 @@ export default function NewProfile() {
         </div>
       </div>
 
+
       <style jsx>{`
         .onboarding-root {
           min-height: 100vh;
@@ -382,10 +383,12 @@ export default function NewProfile() {
           margin-top: 18px;
         }
 
+         /* Shared inner width for inputs and buttons so edges align */
         .field-control {
           width: 100%;
-          max-width: 640px;
-          margin: 0 auto;
+          max-width: 560px;   /* tune this number if you want it wider/narrower */
+          margin-left: auto;
+          margin-right: auto;
         }
 
         .text-input,
@@ -432,13 +435,13 @@ export default function NewProfile() {
           color: #8b8fa5;
         }
 
-        .actions-row {
+       .actions-row {
           margin-top: 24px;
           display: flex;
           flex-direction: column;
           gap: 10px;
           width: 100%;
-          max-width: 640px;
+          max-width: 560px;   /* matches .field-control */
           margin-left: auto;
           margin-right: auto;
         }

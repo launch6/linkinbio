@@ -112,12 +112,10 @@ export default function NewProfile() {
           <p className="step-label">STEP 1 OF 3</p>
           <h1 className="title">Add profile details</h1>
 
-          {/* Combined subtitle for font consistency */}
+          {/* Subtitles: 16px, split onto two lines, matching input styles */}
           <div className="subtitle-block">
-            <p>
-              Add your profile image, name, and bio.
-              You’ll set up links, drops, and email capture in the next steps.
-            </p>
+            <p className="subtitle-line">Add your profile image, name, and bio.</p>
+            <p className="subtitle-line">You’ll set up links, drops, and email capture in the next steps.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="form">
@@ -230,22 +228,22 @@ export default function NewProfile() {
       </div>
 
       <style jsx>{`
-        /* Ensure global background consistency */
+        /* 1. Global Background Change to #121219 */
         :global(html),
         :global(body) {
-          background-color: #05050b;
+          background-color: #121219;
           margin: 0;
           padding: 0;
         }
 
         .onboarding-root {
           min-height: 100vh;
-          background-color: #05050b; /* Exact solid color */
+          background-color: #121219;
           color: #ffffff;
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 20px 16px 40px; /* Adjusted top padding */
+          padding: 20px 16px 40px;
           font-family: ${fontStack};
         }
 
@@ -266,12 +264,14 @@ export default function NewProfile() {
 
         .card-inner {
           width: 100%;
-          max-width: 620px;
+          /* 2. Narrower Width: Reduced from 620px to 540px (~13% reduction) */
+          max-width: 540px;
           background: rgba(9, 9, 18, 0.96);
           border-radius: 32px;
           border: 1px solid rgba(255, 255, 255, 0.16);
           box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-          padding: 40px 40px 32px;
+          /* 3. Padding Adjustment: Reduced top padding to 32px to move Step Label higher */
+          padding: 32px 40px 32px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -290,6 +290,7 @@ export default function NewProfile() {
           text-transform: uppercase;
           color: #8b8fa5;
           margin-bottom: 8px;
+          margin-top: 0; /* Ensures it sits high */
         }
 
         .title {
@@ -299,19 +300,19 @@ export default function NewProfile() {
           text-align: center;
         }
 
-        /* Combined subtitle styling for consistency */
         .subtitle-block {
           text-align: center;
-          max-width: 480px;
+          width: 100%;
           margin-bottom: 10px;
         }
-        
-        .subtitle-block p {
-          font-size: 14px;
+
+        /* 4. Subtitle Typography: 16px, separate lines */
+        .subtitle-line {
+          font-size: 16px; 
           color: #ffffff;
           margin: 0;
           line-height: 1.5;
-          font-weight: 400; /* Regular weight */
+          font-weight: 400;
         }
 
         .form {
@@ -322,10 +323,10 @@ export default function NewProfile() {
           align-items: center;
         }
 
-        /* Shared class for width alignment between inputs and buttons */
         .content-rail {
             width: 100%;
-            max-width: 480px; /* Reduced width for tighter alignment */
+            /* Matches new narrower card width minus padding */
+            max-width: 100%; 
         }
 
         .avatar-block {
@@ -396,27 +397,24 @@ export default function NewProfile() {
           margin-top: 18px;
         }
 
-        /* Inputs styling. 
-           Enforced font-family and size for consistency between placeholder and typed text.
-           Added box-sizing to ensure padding doesn't affect width alignment.
-        */
+        /* 5. Input Typography: Matches subtitle (16px, white) */
         .text-input,
         .textarea-input {
           width: 100%;
-          box-sizing: border-box; /* Crucial for alignment */
-          font-family: ${fontStack}; /* Explicit font family */
-          font-size: 14px; /* Explicit font size */
-          color: #ffffff;
+          box-sizing: border-box; 
+          font-family: ${fontStack};
+          font-size: 16px; /* Matched to subtitle */
+          color: #ffffff;  /* Matched to subtitle */
           border-radius: 999px;
           border: 1px solid #34384f;
           background: #090a12;
-          padding: 12px 18px;
+          padding: 12px 20px;
           outline: none;
         }
 
         .text-input::placeholder,
         .textarea-input::placeholder {
-          color: #8b8fa5; /* Slightly darker placeholder for better contrast */
+          color: #8b8fa5; 
           opacity: 1;
         }
 
@@ -435,8 +433,8 @@ export default function NewProfile() {
           border-radius: 18px;
           min-height: 142px;
           resize: vertical;
-          padding-right: 64px; /* Space for char count */
-          line-height: 1.45;
+          padding-right: 64px; 
+          line-height: 1.5;
         }
 
         .char-count {
@@ -447,15 +445,12 @@ export default function NewProfile() {
           color: #8b8fa5;
         }
 
-        /* Actions row shares the .content-rail width constraint */
         .actions-row {
           margin-top: 24px;
           display: flex;
           flex-direction: column;
           gap: 10px;
-          /* width handled by content-rail class */
         }
-
 
         @media (min-width: 600px) {
           .actions-row {
@@ -512,7 +507,7 @@ export default function NewProfile() {
           font-size: 12px;
           color: #8b8fa5;
           text-align: center;
-          max-width: 480px;
+          max-width: 100%;
         }
       `}</style>
     </main>

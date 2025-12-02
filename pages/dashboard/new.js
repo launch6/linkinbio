@@ -119,10 +119,10 @@ export default function NewProfile() {
           <form onSubmit={handleSubmit} className="form">
             {/* Avatar upload */}
             <div className="avatar-block">
-              <button
-                type="button"
+              <div 
                 className="avatar-circle"
                 onClick={handleAvatarClick}
+                role="button"
                 aria-label="Upload profile image"
               >
                 {avatarDataUrl ? (
@@ -131,29 +131,31 @@ export default function NewProfile() {
                     style={{ backgroundImage: `url(${avatarDataUrl})` }}
                   />
                 ) : (
-                  <svg
-                    className="avatar-icon"
-                    viewBox="0 0 64 64"
-                    aria-hidden="true"
-                  >
-                    {/* Camera body */}
-                    <rect
-                      x="16"
-                      y="22"
-                      width="32"
-                      height="22"
-                      rx="8"
-                    />
-                    {/* Top hump */}
-                    <path d="M24 22l3-5h10l3 5" />
-                    {/* Lens */}
-                    <circle cx="32" cy="33" r="7" />
-                    {/* Plus in lower-right corner of camera */}
-                    <path d="M41 34v7" />
-                    <path d="M37.5 37.5h7" />
-                  </svg>
+                  <>
+                    <svg
+                      className="avatar-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {/* Simple Camera Icon */}
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    
+                    {/* The Plus Badge overlay */}
+                    <div className="plus-badge">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                    </div>
+                  </>
                 )}
-              </button>
+              </div>
 
               <input
                 ref={fileInputRef}
@@ -235,21 +237,19 @@ export default function NewProfile() {
         </div>
       </div>
 
-
       <style jsx>{`
-        
-      .onboarding-root {
-  min-height: 100vh;
-  background-color: #05050b; /* single, even background */
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 16px 40px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
-    'Inter', sans-serif;
-}
-
+        .onboarding-root {
+          min-height: 100vh;
+          /* UPDATED: Radial gradient to create the top purple glow */
+          background: radial-gradient(circle at 50% -20%, #2e2855 0%, #05050b 50%, #05050b 100%);
+          color: #ffffff;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 12px 16px 40px;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+            'Inter', sans-serif;
+        }
 
         .logo-row {
           margin-top: 4px;
@@ -267,14 +267,15 @@ export default function NewProfile() {
           justify-content: center;
         }
 
-        /* 20% narrower card + more visible white outline */
         .card-inner {
           width: 100%;
-          max-width: 620px; /* was 780px */
-          background: rgba(9, 9, 18, 0.96);
+          max-width: 620px;
+          /* UPDATED: Slightly more transparent background to let glow show through subtly */
+          background: rgba(9, 9, 18, 0.85);
+          backdrop-filter: blur(20px);
           border-radius: 32px;
-          border: 1px solid rgba(255, 255, 255, 0.16); /* brighter white line */
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
           padding: 40px 40px 32px;
           display: flex;
           flex-direction: column;
@@ -314,9 +315,9 @@ export default function NewProfile() {
           margin-top: 2px;
         }
 
-               .form {
+        .form {
           width: 100%;
-          max-width: 520px;       /* rail width for inputs + buttons */
+          max-width: 520px;
           margin-top: 26px;
           margin-left: auto;
           margin-right: auto;
@@ -324,30 +325,26 @@ export default function NewProfile() {
           box-sizing: border-box;
         }
 
-
-
         .avatar-block {
           text-align: center;
           margin-bottom: 24px;
         }
 
-        /* 30% smaller avatar circle */
+        /* Avatar Circle */
         .avatar-circle {
           position: relative;
-          border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          box-shadow:
-            0 0 0 1px rgba(0, 0, 0, 0.7) inset,
-            0 18px 50px rgba(0, 0, 0, 0.75);
-          background: radial-gradient(circle at top, #262b43 0, #161827 55%, #101221 100%);
-          width: 108px;  /* was 152px */
-          height: 108px; /* was 152px */
+          border-radius: 50%;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          /* UPDATED: Darker interior, subtle gradient */
+          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+          width: 108px;
+          height: 108px;
           display: flex;
           align-items: center;
           justify-content: center;
           margin: 0 auto 12px;
           cursor: pointer;
-          overflow: hidden;
+          overflow: visible; /* Changed to visible so badge can overlap if needed, though positioned inside here */
         }
 
         .avatar-circle:hover {
@@ -357,21 +354,37 @@ export default function NewProfile() {
         .avatar-preview {
           position: absolute;
           inset: 0;
-          border-radius: 999px;
+          border-radius: 50%;
           background-size: cover;
           background-position: center;
+          overflow: hidden;
         }
 
         .avatar-icon {
-          width: 52px;
-          height: 52px;
-          color: #f5f6ff;
-          stroke: currentColor;
-          stroke-width: 2.2;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          fill: none;
+          width: 36px;
+          height: 36px;
+          color: #a1a4c0;
+          opacity: 0.8;
           z-index: 1;
+        }
+
+        /* NEW: The Plus Badge Styling */
+        .plus-badge {
+          position: absolute;
+          bottom: 6px;
+          right: 6px;
+          width: 26px;
+          height: 26px;
+          background: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(4px);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+          z-index: 2;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         .hidden-file-input {
@@ -380,7 +393,7 @@ export default function NewProfile() {
 
         .helper-text {
           font-size: 12px;
-          color: #a1a4c0;
+          color: #8b8fa5;
           margin: 0;
         }
 
@@ -392,35 +405,37 @@ export default function NewProfile() {
           margin-top: 18px;
         }
 
-             /* Shared inner width for inputs so they line up with the buttons */
-           .field-control {
+        .field-control {
           width: 100%;
-          max-width: 520px;      /* match .form rail */
+          max-width: 520px;
           margin-left: auto;
           margin-right: auto;
         }
 
-
+        /* Inputs */
         .text-input,
         .textarea-input {
           width: 100%;
           font-size: 14px;
           color: #ffffff;
           border-radius: 999px;
-          border: 1px solid #34384f;
-          background: #090a12;
-          padding: 10px 18px;
+          /* UPDATED: More transparent border and background */
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.03); 
+          padding: 12px 20px;
           outline: none;
+          transition: border-color 0.2s, background 0.2s;
         }
 
         .text-input::placeholder,
         .textarea-input::placeholder {
-          color: #f5f5ff;
+          color: rgba(255, 255, 255, 0.7); /* Brighter placeholder */
         }
 
         .text-input:focus,
         .textarea-input:focus {
           border-color: #7e8bff;
+          background: rgba(255, 255, 255, 0.06);
           box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
         }
 
@@ -433,29 +448,28 @@ export default function NewProfile() {
           min-height: 142px;
           resize: vertical;
           padding-right: 64px;
-          padding-top: 12px;
-          line-height: 1.45;
+          padding-top: 14px;
+          line-height: 1.5;
         }
 
         .char-count {
           position: absolute;
           right: 16px;
-          bottom: 10px;
+          bottom: 12px;
           font-size: 11px;
-          color: #8b8fa5;
+          color: #6b6f85;
         }
 
-         .actions-row {
+        .actions-row {
           margin-top: 24px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
           width: 100%;
-          max-width: 520px;     /* same rail as inputs */
+          max-width: 520px;
           margin-left: auto;
           margin-right: auto;
         }
-
 
         @media (min-width: 600px) {
           .actions-row {
@@ -467,17 +481,18 @@ export default function NewProfile() {
           flex: 1;
           border-radius: 999px;
           border: none;
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 500;
-          padding: 11px 16px;
+          padding: 12px 16px;
           cursor: pointer;
           transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
         }
 
         .btn-primary {
-          background: linear-gradient(90deg, #6366ff, #a855f7);
+          /* UPDATED: Gradient to match design 1 closer */
+          background: linear-gradient(90deg, #7c4dff, #b55aff);
           color: #ffffff;
-          box-shadow: 0 8px 24px rgba(88, 92, 255, 0.55);
+          box-shadow: 0 8px 24px rgba(124, 77, 255, 0.4);
         }
 
         .btn-primary:disabled {
@@ -488,13 +503,13 @@ export default function NewProfile() {
 
         .btn-primary:not(:disabled):active {
           transform: translateY(1px);
-          box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
+          box-shadow: 0 4px 14px rgba(124, 77, 255, 0.3);
         }
 
         .btn-secondary {
           background: transparent;
           color: #e5e7ff;
-          border: 1px solid #3a3f5a;
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .btn-secondary:disabled {
@@ -506,11 +521,12 @@ export default function NewProfile() {
           transform: translateY(1px);
         }
 
-     .footer-note {
-          margin-top: 14px;
+        .footer-note {
+          margin-top: 16px;
           font-size: 12px;
-          color: #8b8fa5;
+          color: #6b6f85;
           text-align: center;
+          line-height: 1.4;
         }
 
         :global(html),

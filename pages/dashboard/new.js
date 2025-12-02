@@ -133,56 +133,69 @@ export default function NewProfile() {
                     style={{ backgroundImage: `url(${avatarDataUrl})` }}
                   />
                 ) : (
-                  // **REPLACED SVG ICON to match the outline style with + sign**
-                  <svg
-                    className="avatar-icon"
-                    viewBox="0 0 50 50"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    {/* Camera Body (Outline style) */}
-                    <path 
-                      d="M40.625 15.625H9.375C7.30058 15.625 5.625 17.3006 5.625 19.375V34.375C5.625 36.4494 7.30058 38.125 9.375 38.125H40.625C42.6994 38.125 44.375 36.4494 44.375 34.375V19.375C44.375 17.3006 42.6994 15.625 40.625 15.625Z" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    />
-                    {/* Lens/Viewfinder (Hollow inside) */}
-                    <circle 
-                      cx="25" 
-                      cy="28.125" 
-                      r="6.875" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    />
-                    {/* Flash/Accent */}
-                    <path 
-                      d="M33.75 15.625L36.25 10.625H29.375L31.875 15.625" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    />
-                    {/* Plus Sign (Smaller, offset to the side) */}
-                    <path 
-                      d="M40 31.25V35.625" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    />
-                    <path 
-                      d="M37.8125 33.4375H42.1875" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <>
+                    {/* Primary Camera Icon */}
+                    <svg
+                      className="avatar-icon-primary"
+                      viewBox="0 0 50 50"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      {/* Camera Body (Outline style) */}
+                      <path 
+                        d="M40.625 15.625H9.375C7.30058 15.625 5.625 17.3006 5.625 19.375V34.375C5.625 36.4494 7.30058 38.125 9.375 38.125H40.625C42.6994 38.125 44.375 36.4494 44.375 34.375V19.375C44.375 17.3006 42.6994 15.625 40.625 15.625Z" 
+                        stroke="currentColor" 
+                        strokeWidth="2.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      />
+                      {/* Lens/Viewfinder (Hollow inside) */}
+                      <circle 
+                        cx="25" 
+                        cy="28.125" 
+                        r="6.875" 
+                        stroke="currentColor" 
+                        strokeWidth="2.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      />
+                      {/* Flash/Accent */}
+                      <path 
+                        d="M33.75 15.625L36.25 10.625H29.375L31.875 15.625" 
+                        stroke="currentColor" 
+                        strokeWidth="2.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+
+                    {/* Secondary Plus Circle */}
+                    <div className="plus-circle-small">
+                      <svg
+                        className="plus-icon-small"
+                        viewBox="0 0 10 10"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                      >
+                        <path 
+                          d="M5 2V8" 
+                          stroke="currentColor" 
+                          strokeWidth="1.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                        />
+                        <path 
+                          d="M2 5H8" 
+                          stroke="currentColor" 
+                          strokeWidth="1.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                  </>
                 )}
               </button>
 
@@ -376,7 +389,7 @@ export default function NewProfile() {
         .avatar-circle {
           position: relative;
           border-radius: 999px;
-          /* UPDATED STYLING FOR THE CIRCLE/BUTTON */
+          /* STYLING FOR THE MAIN CIRCLE/BUTTON */
           border: 1px solid rgba(255, 255, 255, 0.1); 
           box-shadow:
             0 0 0 1px rgba(0, 0, 0, 0.5) inset,
@@ -391,7 +404,6 @@ export default function NewProfile() {
           cursor: pointer;
           overflow: hidden;
           
-          /* Added filter for subtle white outline glow as seen in the image */
           filter: drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.5));
           
           transition: all 0.2s ease;
@@ -399,24 +411,53 @@ export default function NewProfile() {
 
         .avatar-circle:hover {
           border-color: rgba(255, 255, 255, 0.2);
-          /* Added slight hover effect */
           transform: scale(1.02);
         }
         
-        /* UPDATED STYLING FOR THE ICON */
-        .avatar-icon {
-          width: 60px; /* Slightly larger for the detailed outline */
+        /* STYLING FOR PRIMARY CAMERA ICON */
+        .avatar-icon-primary {
+          width: 60px; 
           height: 60px;
           color: #f5f6ff;
-          stroke: #ffffff; /* Explicitly set stroke to white/light */
-          stroke-width: 2; /* Adjusted stroke width for a slightly bolder outline */
+          stroke: #ffffff;
+          stroke-width: 2; 
           stroke-linecap: round;
           stroke-linejoin: round;
           fill: none;
           z-index: 1;
-          
-          /* Added subtle drop shadow to match the light glow */
           filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.4));
+        }
+
+        /* STYLING FOR SECONDARY PLUS CIRCLE */
+        .plus-circle-small {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            /* Adjust positioning to be slightly outside the edge of the parent circle */
+            transform: translate(15%, 15%); 
+            
+            width: 32px; /* Smaller circle size */
+            height: 32px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            /* Darker background with a gradient/shadow effect */
+            background: #0d0d15; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5) inset, 0 0 5px rgba(0, 0, 0, 0.75);
+            
+            z-index: 10;
+        }
+
+        .plus-icon-small {
+            width: 14px; /* Size of the plus sign */
+            height: 14px;
+            stroke: #ffffff;
+            stroke-width: 2.5; /* Bold stroke for the plus sign */
+            fill: none;
+            filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6));
         }
 
         .avatar-preview {

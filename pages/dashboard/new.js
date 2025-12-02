@@ -88,8 +88,19 @@ export default function NewProfile() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
-        alert(data.error || 'Failed to create profile');
+        const rawError = data && typeof data.error === 'string' ? data.error : '';
+
+        if (
+          res.status === 409 ||
+          (rawError && rawError.toLowerCase().includes('slug'))
+        ) {
+          alert('That URL is already taken. Try another username.');
+        } else {
+          alert(rawError || 'Failed to create profile');
+        }
+
         setSaving(false);
         return;
       }
@@ -109,8 +120,7 @@ export default function NewProfile() {
 
   const handleSkip = (e) => {
     e.preventDefault();
-    // Skip still requires a name, it simply lets them move on
-    // without worrying about avatar/bio refinement.
+    // Skip still requires a name, it simply moves on without avatar/bio pressure
     createProfile();
   };
 
@@ -238,7 +248,7 @@ export default function NewProfile() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="@YourUsername"
+                  placeholder="Choose a name for your url (l6.io/yourname). You can always change it later."
                 />
               </div>
             </div>
@@ -324,7 +334,7 @@ export default function NewProfile() {
         .card {
           width: 100%;
           display: flex;
-          justify-content: center;
+          justifyContent: center;
         }
 
         .card-inner {

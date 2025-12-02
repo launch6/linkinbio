@@ -11,6 +11,7 @@ function slugify(input) {
 
 export default function NewProfile() {
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatarDataUrl, setAvatarDataUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -19,7 +20,6 @@ export default function NewProfile() {
   const bioMax = 160;
   const bioCount = bio.length;
 
-  // Define common font stack for consistency
   const fontStack =
     "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
@@ -48,28 +48,39 @@ export default function NewProfile() {
     reader.readAsDataURL(file);
   };
 
-  const createProfile = async (skip = false) => {
+  const createProfile = async () => {
     if (saving) return;
+    setSaving(true);
 
-    const trimmedName = displayName.trim();
+    const name = displayName.trim();
+    const description = bio.trim();
 
-    // REQUIRE A NAME FOR BOTH CONTINUE AND SKIP
-    if (!trimmedName) {
-      alert('Please add your name before continuing.');
+    if (!name) {
+      alert('Please add your name or studio name.');
+      setSaving(false);
       return;
     }
 
-    const description = bio.trim();
-    const slug = slugify(trimmedName);
+    // Username / slug source:
+    // 1. Prefer the username field
+    // 2. Strip leading @ if present
+    // 3. Fallback to name if username is blank
+    let slugSource = username.trim();
+    if (slugSource.startsWith('@')) {
+      slugSource = slugSource.slice(1).trim();
+    }
+    if (!slugSource) {
+      slugSource = name;
+    }
 
-    setSaving(true);
+    const slug = slugify(slugSource);
 
     try {
       const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: trimmedName,
+          name,
           slug,
           description,
           avatarUrl: avatarDataUrl || '',
@@ -77,9 +88,7 @@ export default function NewProfile() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        // Surface API error messages like "Slug is already in use"
         alert(data.error || 'Failed to create profile');
         setSaving(false);
         return;
@@ -95,12 +104,14 @@ export default function NewProfile() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createProfile(false);
+    createProfile();
   };
 
   const handleSkip = (e) => {
     e.preventDefault();
-    createProfile(true);
+    // Skip still requires a name, it simply lets them move on
+    // without worrying about avatar/bio refinement.
+    createProfile();
   };
 
   return (
@@ -114,9 +125,10 @@ export default function NewProfile() {
           <p className="step-label">STEP 1 OF 3</p>
           <h1 className="title">Add profile details</h1>
 
-          {/* Subtitles: 16px, split onto two lines, matching input styles */}
           <div className="subtitle-block">
-            <p className="subtitle-line">Add your profile image, name, and bio.</p>
+            <p className="subtitle-line">
+              Add your profile image, name, and bio.
+            </p>
             <p className="subtitle-line">
               You’ll set up links, drops, and email capture in the next steps.
             </p>
@@ -137,7 +149,6 @@ export default function NewProfile() {
                     style={{ backgroundImage: `url(${avatarDataUrl})` }}
                   />
                 ) : (
-                  // UPDATED SVG ICON: Camera with integrated Plus sign
                   <svg
                     className="avatar-icon"
                     viewBox="0 0 50 50"
@@ -145,7 +156,6 @@ export default function NewProfile() {
                     xmlns="http://www.w3.org/2000/svg"
                     aria-hidden="true"
                   >
-                    {/* Camera Body (Outline style) */}
                     <path
                       d="M40.625 15.625H9.375C7.30058 15.625 5.625 17.3006 5.625 19.375V34.375C5.625 36.4494 7.30058 38.125 9.375 38.125H40.625C42.6994 38.125 44.375 36.4494 44.375 34.375V19.375C44.375 17.3006 42.6994 15.625 40.625 15.625Z"
                       stroke="currentColor"
@@ -153,7 +163,6 @@ export default function NewProfile() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
-                    {/* Lens/Viewfinder (Hollow inside) */}
                     <circle
                       cx="25"
                       cy="28.125"
@@ -163,7 +172,6 @@ export default function NewProfile() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
-                    {/* Flash/Accent */}
                     <path
                       d="M33.75 15.625L36.25 10.625H29.375L31.875 15.625"
                       stroke="currentColor"
@@ -171,7 +179,6 @@ export default function NewProfile() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
-                    {/* Plus Sign (Integrated, bottom right of the camera body) */}
                     <path
                       d="M39 31V35.5"
                       stroke="currentColor"
@@ -198,21 +205,40 @@ export default function NewProfile() {
                 onChange={handleFileChange}
               />
 
-              <p className="helper-text">Drag &amp; drop or tap to upload image</p>
-              <p className="helper-text helper-text-sub">(JPG/PNG, up to 1MB).</p>
+              <p className="helper-text">
+                Drag &amp; drop or tap to upload image
+              </p>
+              <p className="helper-text helper-text-sub">
+                (JPG/PNG, up to 1MB).
+              </p>
             </div>
 
-            {/* Display name */}
+            {/* Name / Studio Name */}
             <div className="field">
               <div className="field-control content-rail">
                 <input
                   id="displayName"
-                  aria-label="Display name"
+                  aria-label="Name or studio name"
                   className="text-input"
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="@yourname or Studio Name"
+                  placeholder="Name or Studio Name"
+                />
+              </div>
+            </div>
+
+            {/* Username (slug source) */}
+            <div className="field">
+              <div className="field-control content-rail">
+                <input
+                  id="username"
+                  aria-label="Username"
+                  className="text-input"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="@YourUsername"
                 />
               </div>
             </div>
@@ -260,14 +286,14 @@ export default function NewProfile() {
             </div>
 
             <p className="footer-note">
-              After this step you’ll land in your editor to add links, social icons, drops, and email capture.
+              After this step you’ll land in your editor to add links, social
+              icons, drops, and email capture.
             </p>
           </form>
         </div>
       </div>
 
       <style jsx>{`
-        /* 1. Global Background Change to #121219 */
         :global(html),
         :global(body) {
           background-color: #121219;
@@ -303,13 +329,11 @@ export default function NewProfile() {
 
         .card-inner {
           width: 100%;
-          /* 2. Narrower Width: Reduced from 620px to 540px (~13% reduction) */
           max-width: 540px;
           background: rgba(9, 9, 18, 0.96);
           border-radius: 32px;
           border: 1px solid rgba(255, 255, 255, 0.16);
           box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-          /* 3. Padding Adjustment: Reduced top padding to 32px to move Step Label higher */
           padding: 32px 40px 32px;
           display: flex;
           flex-direction: column;
@@ -329,7 +353,7 @@ export default function NewProfile() {
           text-transform: uppercase;
           color: #8b8fa5;
           margin-bottom: 8px;
-          margin-top: 0; /* Ensures it sits high */
+          margin-top: 0;
         }
 
         .title {
@@ -345,7 +369,6 @@ export default function NewProfile() {
           margin-bottom: 10px;
         }
 
-        /* 4. Subtitle Typography: 16px, separate lines */
         .subtitle-line {
           font-size: 16px;
           color: #ffffff;
@@ -364,7 +387,6 @@ export default function NewProfile() {
 
         .content-rail {
           width: 100%;
-          /* Matches new narrower card width minus padding */
           max-width: 100%;
         }
 
@@ -376,7 +398,6 @@ export default function NewProfile() {
         .avatar-circle {
           position: relative;
           border-radius: 999px;
-          /* STYLING FOR THE MAIN CIRCLE/BUTTON */
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow:
             0 0 0 1px rgba(0, 0, 0, 0.5) inset,
@@ -390,9 +411,7 @@ export default function NewProfile() {
           margin: 0 auto 12px;
           cursor: pointer;
           overflow: hidden;
-
           filter: drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.5));
-
           transition: all 0.2s ease;
         }
 
@@ -401,9 +420,8 @@ export default function NewProfile() {
           transform: scale(1.02);
         }
 
-        /* STYLING FOR THE CAMERA ICON */
         .avatar-icon {
-          width: 60px; /* Size of the camera icon relative to the circle */
+          width: 60px;
           height: 60px;
           color: #f5f6ff;
           stroke: #ffffff;
@@ -444,19 +462,26 @@ export default function NewProfile() {
           margin-top: 18px;
         }
 
-        /* 5. Input Typography: Matches subtitle (16px, white) */
         .text-input,
         .textarea-input {
           width: 100%;
           box-sizing: border-box;
           font-family: ${fontStack};
-          font-size: 16px; /* Matched to subtitle */
-          color: #ffffff; /* Matched to subtitle */
+          font-size: 16px;
+          color: #ffffff;
           border-radius: 999px;
           border: 1px solid #34384f;
           background: #090a12;
           padding: 12px 20px;
           outline: none;
+        }
+
+        .textarea-input {
+          border-radius: 18px;
+          min-height: 142px;
+          resize: vertical;
+          padding-right: 64px;
+          line-height: 1.5;
         }
 
         .text-input::placeholder,
@@ -474,14 +499,6 @@ export default function NewProfile() {
         .textarea-wrap {
           position: relative;
           width: 100%;
-        }
-
-        .textarea-input {
-          border-radius: 18px;
-          min-height: 142px;
-          resize: vertical;
-          padding-right: 64px;
-          line-height: 1.5;
         }
 
         .char-count {

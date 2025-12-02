@@ -20,7 +20,8 @@ export default function NewProfile() {
   const bioCount = bio.length;
 
   // Define common font stack for consistency
-  const fontStack = "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
+  const fontStack =
+    "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
   const handleAvatarClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
@@ -49,23 +50,26 @@ export default function NewProfile() {
 
   const createProfile = async (skip = false) => {
     if (saving) return;
-    setSaving(true);
 
-    let name = displayName.trim();
-    let description = bio.trim();
+    const trimmedName = displayName.trim();
 
-    if (skip && !name) {
-      name = 'New artist';
+    // REQUIRE A NAME FOR BOTH CONTINUE AND SKIP
+    if (!trimmedName) {
+      alert('Please add your name before continuing.');
+      return;
     }
 
-    const slug = slugify(name || 'artist');
+    const description = bio.trim();
+    const slug = slugify(trimmedName);
+
+    setSaving(true);
 
     try {
       const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
+          name: trimmedName,
           slug,
           description,
           avatarUrl: avatarDataUrl || '',
@@ -73,7 +77,9 @@ export default function NewProfile() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
+        // Surface API error messages like "Slug is already in use"
         alert(data.error || 'Failed to create profile');
         setSaving(false);
         return;
@@ -100,11 +106,7 @@ export default function NewProfile() {
   return (
     <main className="onboarding-root">
       <div className="logo-row">
-        <img
-          src="/launch6_white.png"
-          alt="Launch6"
-          className="logo"
-        />
+        <img src="/launch6_white.png" alt="Launch6" className="logo" />
       </div>
 
       <div className="card">
@@ -115,7 +117,9 @@ export default function NewProfile() {
           {/* Subtitles: 16px, split onto two lines, matching input styles */}
           <div className="subtitle-block">
             <p className="subtitle-line">Add your profile image, name, and bio.</p>
-            <p className="subtitle-line">You’ll set up links, drops, and email capture in the next steps.</p>
+            <p className="subtitle-line">
+              You’ll set up links, drops, and email capture in the next steps.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="form">
@@ -133,7 +137,7 @@ export default function NewProfile() {
                     style={{ backgroundImage: `url(${avatarDataUrl})` }}
                   />
                 ) : (
-                  // **UPDATED SVG ICON: Camera with integrated Plus sign**
+                  // UPDATED SVG ICON: Camera with integrated Plus sign
                   <svg
                     className="avatar-icon"
                     viewBox="0 0 50 50"
@@ -142,44 +146,44 @@ export default function NewProfile() {
                     aria-hidden="true"
                   >
                     {/* Camera Body (Outline style) */}
-                    <path 
-                      d="M40.625 15.625H9.375C7.30058 15.625 5.625 17.3006 5.625 19.375V34.375C5.625 36.4494 7.30058 38.125 9.375 38.125H40.625C42.6994 38.125 44.375 36.4494 44.375 34.375V19.375C44.375 17.3006 42.6994 15.625 40.625 15.625Z" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
+                    <path
+                      d="M40.625 15.625H9.375C7.30058 15.625 5.625 17.3006 5.625 19.375V34.375C5.625 36.4494 7.30058 38.125 9.375 38.125H40.625C42.6994 38.125 44.375 36.4494 44.375 34.375V19.375C44.375 17.3006 42.6994 15.625 40.625 15.625Z"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                     {/* Lens/Viewfinder (Hollow inside) */}
-                    <circle 
-                      cx="25" 
-                      cy="28.125" 
-                      r="6.875" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
+                    <circle
+                      cx="25"
+                      cy="28.125"
+                      r="6.875"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                     {/* Flash/Accent */}
-                    <path 
-                      d="M33.75 15.625L36.25 10.625H29.375L31.875 15.625" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
+                    <path
+                      d="M33.75 15.625L36.25 10.625H29.375L31.875 15.625"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                     {/* Plus Sign (Integrated, bottom right of the camera body) */}
-                    <path 
-                      d="M39 31V35.5" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
+                    <path
+                      d="M39 31V35.5"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
                       strokeLinejoin="round"
                     />
-                    <path 
-                      d="M36.75 33.25H41.25" 
-                      stroke="currentColor" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round" 
+                    <path
+                      d="M36.75 33.25H41.25"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   </svg>
@@ -194,12 +198,8 @@ export default function NewProfile() {
                 onChange={handleFileChange}
               />
 
-              <p className="helper-text">
-                Drag &amp; drop or tap to upload image
-              </p>
-              <p className="helper-text helper-text-sub">
-                (JPG/PNG, up to 1MB).
-              </p>
+              <p className="helper-text">Drag &amp; drop or tap to upload image</p>
+              <p className="helper-text helper-text-sub">(JPG/PNG, up to 1MB).</p>
             </div>
 
             {/* Display name */}
@@ -347,7 +347,7 @@ export default function NewProfile() {
 
         /* 4. Subtitle Typography: 16px, separate lines */
         .subtitle-line {
-          font-size: 16px; 
+          font-size: 16px;
           color: #ffffff;
           margin: 0;
           line-height: 1.5;
@@ -363,9 +363,9 @@ export default function NewProfile() {
         }
 
         .content-rail {
-            width: 100%;
-            /* Matches new narrower card width minus padding */
-            max-width: 100%; 
+          width: 100%;
+          /* Matches new narrower card width minus padding */
+          max-width: 100%;
         }
 
         .avatar-block {
@@ -377,11 +377,11 @@ export default function NewProfile() {
           position: relative;
           border-radius: 999px;
           /* STYLING FOR THE MAIN CIRCLE/BUTTON */
-          border: 1px solid rgba(255, 255, 255, 0.1); 
+          border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow:
             0 0 0 1px rgba(0, 0, 0, 0.5) inset,
-            0 0 10px rgba(0, 0, 0, 0.5) inset; 
-          background: #0d0d15; 
+            0 0 10px rgba(0, 0, 0, 0.5) inset;
+          background: #0d0d15;
           width: 108px;
           height: 108px;
           display: flex;
@@ -390,9 +390,9 @@ export default function NewProfile() {
           margin: 0 auto 12px;
           cursor: pointer;
           overflow: hidden;
-          
+
           filter: drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.5));
-          
+
           transition: all 0.2s ease;
         }
 
@@ -400,14 +400,14 @@ export default function NewProfile() {
           border-color: rgba(255, 255, 255, 0.2);
           transform: scale(1.02);
         }
-        
+
         /* STYLING FOR THE CAMERA ICON */
         .avatar-icon {
           width: 60px; /* Size of the camera icon relative to the circle */
           height: 60px;
           color: #f5f6ff;
           stroke: #ffffff;
-          stroke-width: 2; 
+          stroke-width: 2;
           stroke-linecap: round;
           stroke-linejoin: round;
           fill: none;
@@ -448,10 +448,10 @@ export default function NewProfile() {
         .text-input,
         .textarea-input {
           width: 100%;
-          box-sizing: border-box; 
+          box-sizing: border-box;
           font-family: ${fontStack};
           font-size: 16px; /* Matched to subtitle */
-          color: #ffffff;  /* Matched to subtitle */
+          color: #ffffff; /* Matched to subtitle */
           border-radius: 999px;
           border: 1px solid #34384f;
           background: #090a12;
@@ -461,7 +461,7 @@ export default function NewProfile() {
 
         .text-input::placeholder,
         .textarea-input::placeholder {
-          color: #8b8fa5; 
+          color: #8b8fa5;
           opacity: 1;
         }
 
@@ -480,7 +480,7 @@ export default function NewProfile() {
           border-radius: 18px;
           min-height: 142px;
           resize: vertical;
-          padding-right: 64px; 
+          padding-right: 64px;
           line-height: 1.5;
         }
 
@@ -514,7 +514,8 @@ export default function NewProfile() {
           font-weight: 500;
           padding: 12px 16px;
           cursor: pointer;
-          transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+          transition: transform 0.08s ease, box-shadow 0.08s ease,
+            background 0.12s ease;
         }
 
         .btn-primary {

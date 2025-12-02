@@ -133,16 +133,49 @@ export default function NewProfile() {
                     style={{ backgroundImage: `url(${avatarDataUrl})` }}
                   />
                 ) : (
+                  // **REPLACED SVG ICON**
                   <svg
                     className="avatar-icon"
-                    viewBox="0 0 64 64"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
                     aria-hidden="true"
                   >
-                    <rect x="16" y="22" width="32" height="22" rx="8" />
-                    <path d="M24 22l3-5h10l3 5" />
-                    <circle cx="32" cy="33" r="7" />
-                    <path d="M41 34v7" />
-                    <path d="M37.5 37.5h7" />
+                    <path
+                      d="M20 5H4C2.89543 5 2 5.89543 2 7V17C2 18.1046 2.89543 19 4 19H20C21.1046 19 22 18.1046 22 17V7C22 5.89543 21.1046 5 20 5Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M8.5 10.5C8.5 9.11929 7.38071 8 6 8C4.61929 8 3.5 9.11929 3.5 10.5C3.5 11.8807 4.61929 13 6 13C7.38071 13 8.5 11.8807 8.5 10.5Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M2 15L6 11L12 17"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M17.5 12V15"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M16 13.5H19"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 )}
               </button>
@@ -337,11 +370,13 @@ export default function NewProfile() {
         .avatar-circle {
           position: relative;
           border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
+          /* **UPDATED STYLING FOR THE CIRCLE/BUTTON** */
+          /* Changed border and box-shadow to match the dark, slightly glowing effect */
+          border: 1px solid rgba(255, 255, 255, 0.1); 
           box-shadow:
-            0 0 0 1px rgba(0, 0, 0, 0.7) inset,
-            0 18px 50px rgba(0, 0, 0, 0.75);
-          background: radial-gradient(circle at top, #262b43 0, #161827 55%, #101221 100%);
+            0 0 0 1px rgba(0, 0, 0, 0.5) inset,
+            0 0 10px rgba(0, 0, 0, 0.5) inset; /* Removed larger outer shadow */
+          background: #0d0d15; /* Darker background */
           width: 108px;
           height: 108px;
           display: flex;
@@ -350,10 +385,33 @@ export default function NewProfile() {
           margin: 0 auto 12px;
           cursor: pointer;
           overflow: hidden;
+          
+          /* Added filter for subtle white outline glow as seen in the image */
+          filter: drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.5));
+          
+          transition: all 0.2s ease;
         }
 
         .avatar-circle:hover {
-          border-color: rgba(255, 255, 255, 0.32);
+          border-color: rgba(255, 255, 255, 0.2);
+          /* Added slight hover effect */
+          transform: scale(1.02);
+        }
+        
+        /* **UPDATED STYLING FOR THE ICON** */
+        .avatar-icon {
+          width: 48px; /* Slightly smaller to match the look */
+          height: 48px;
+          color: #f5f6ff;
+          stroke: #ffffff; /* Explicitly set stroke to white/light */
+          stroke-width: 1.5; /* Adjusted stroke width for a thinner line */
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          fill: none;
+          z-index: 1;
+          
+          /* Added subtle drop shadow to match the light glow */
+          filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.4));
         }
 
         .avatar-preview {
@@ -362,18 +420,6 @@ export default function NewProfile() {
           border-radius: 999px;
           background-size: cover;
           background-position: center;
-        }
-
-        .avatar-icon {
-          width: 52px;
-          height: 52px;
-          color: #f5f6ff;
-          stroke: currentColor;
-          stroke-width: 2.2;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          fill: none;
-          z-index: 1;
         }
 
         .hidden-file-input {

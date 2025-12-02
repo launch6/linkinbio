@@ -248,7 +248,7 @@ export default function NewProfile() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Choose a name for your url (l6.io/yourname). You can always change it later."
+                  placeholder="Choose URL ending (l6.io/yourname)"
                 />
               </div>
             </div>
@@ -334,7 +334,7 @@ export default function NewProfile() {
         .card {
           width: 100%;
           display: flex;
-          justifyContent: center;
+          justify-content: center; /* FIX: proper CSS property so card is centered */
         }
 
         .card-inner {

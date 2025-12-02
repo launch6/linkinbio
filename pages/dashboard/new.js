@@ -237,17 +237,19 @@ export default function NewProfile() {
 
 
       <style jsx>{`
-        .onboarding-root {
-          min-height: 100vh;
-          background: radial-gradient(circle at top, #15162a 0, #05050b 55%, #020208 100%);
-          color: #ffffff;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 12px 16px 40px;
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
-            'Inter', sans-serif;
-        }
+        
+      .onboarding-root {
+  min-height: 100vh;
+  background-color: #05050b; /* single, even background */
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 16px 40px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Inter', sans-serif;
+}
+
 
         .logo-row {
           margin-top: 4px;
@@ -504,11 +506,16 @@ export default function NewProfile() {
           transform: translateY(1px);
         }
 
-        .footer-note {
+     .footer-note {
           margin-top: 14px;
           font-size: 12px;
           color: #8b8fa5;
           text-align: center;
+        }
+
+        :global(html),
+        :global(body) {
+          background-color: #05050b;
         }
       `}</style>
     </main>

@@ -314,13 +314,14 @@ export default function NewProfile() {
 
                .form {
           width: 100%;
-          max-width: 560px;       /* shared inner width for inputs + buttons */
+          max-width: 520px;       /* rail width for inputs + buttons */
           margin-top: 26px;
           margin-left: auto;
           margin-right: auto;
-          padding: 0;             /* keep edges clean */
+          padding: 0;
           box-sizing: border-box;
         }
+
 
 
         .avatar-block {
@@ -390,9 +391,11 @@ export default function NewProfile() {
         }
 
              /* Shared inner width for inputs so they line up with the buttons */
-       .field-control {
+           .field-control {
           width: 100%;
-          margin: 0;          /* form already centers everything */
+          max-width: 520px;      /* match .form rail */
+          margin-left: auto;
+          margin-right: auto;
         }
 
 
@@ -440,13 +443,17 @@ export default function NewProfile() {
           color: #8b8fa5;
         }
 
-            .actions-row {
+         .actions-row {
           margin-top: 24px;
           display: flex;
           flex-direction: column;
           gap: 10px;
-          width: 100%;        /* fills the same 560px form rail */
+          width: 100%;
+          max-width: 520px;     /* same rail as inputs */
+          margin-left: auto;
+          margin-right: auto;
         }
+
 
         @media (min-width: 600px) {
           .actions-row {

@@ -19,6 +19,9 @@ export default function NewProfile() {
   const bioMax = 160;
   const bioCount = bio.length;
 
+  // Define common font stack for consistency
+  const fontStack = "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
+
   const handleAvatarClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
@@ -109,20 +112,21 @@ export default function NewProfile() {
           <p className="step-label">STEP 1 OF 3</p>
           <h1 className="title">Add profile details</h1>
 
-          <p className="subtitle-strong">
-            Add your profile image, name, and bio.
-          </p>
-          <p className="subtitle-strong">
-            You’ll set up links, drops, and email capture in the next steps.
-          </p>
+          {/* Combined subtitle for font consistency */}
+          <div className="subtitle-block">
+            <p>
+              Add your profile image, name, and bio.
+              You’ll set up links, drops, and email capture in the next steps.
+            </p>
+          </div>
 
           <form onSubmit={handleSubmit} className="form">
             {/* Avatar upload */}
             <div className="avatar-block">
-              <div 
+              <button
+                type="button"
                 className="avatar-circle"
                 onClick={handleAvatarClick}
-                role="button"
                 aria-label="Upload profile image"
               >
                 {avatarDataUrl ? (
@@ -131,31 +135,19 @@ export default function NewProfile() {
                     style={{ backgroundImage: `url(${avatarDataUrl})` }}
                   />
                 ) : (
-                  <>
-                    <svg
-                      className="avatar-icon"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      {/* Simple Camera Icon */}
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
-                    
-                    {/* The Plus Badge overlay */}
-                    <div className="plus-badge">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                      </svg>
-                    </div>
-                  </>
+                  <svg
+                    className="avatar-icon"
+                    viewBox="0 0 64 64"
+                    aria-hidden="true"
+                  >
+                    <rect x="16" y="22" width="32" height="22" rx="8" />
+                    <path d="M24 22l3-5h10l3 5" />
+                    <circle cx="32" cy="33" r="7" />
+                    <path d="M41 34v7" />
+                    <path d="M37.5 37.5h7" />
+                  </svg>
                 )}
-              </div>
+              </button>
 
               <input
                 ref={fileInputRef}
@@ -175,7 +167,7 @@ export default function NewProfile() {
 
             {/* Display name */}
             <div className="field">
-              <div className="field-control">
+              <div className="field-control content-rail">
                 <input
                   id="displayName"
                   aria-label="Display name"
@@ -190,7 +182,7 @@ export default function NewProfile() {
 
             {/* Short bio */}
             <div className="field">
-              <div className="field-control">
+              <div className="field-control content-rail">
                 <div className="textarea-wrap">
                   <textarea
                     id="bio"
@@ -212,7 +204,7 @@ export default function NewProfile() {
             </div>
 
             {/* Actions */}
-            <div className="actions-row">
+            <div className="actions-row content-rail">
               <button
                 type="submit"
                 className="btn btn-primary"
@@ -238,22 +230,27 @@ export default function NewProfile() {
       </div>
 
       <style jsx>{`
+        /* Ensure global background consistency */
+        :global(html),
+        :global(body) {
+          background-color: #05050b;
+          margin: 0;
+          padding: 0;
+        }
+
         .onboarding-root {
           min-height: 100vh;
-          /* UPDATED: Radial gradient to create the top purple glow */
-          background: radial-gradient(circle at 50% -20%, #2e2855 0%, #05050b 50%, #05050b 100%);
+          background-color: #05050b; /* Exact solid color */
           color: #ffffff;
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 12px 16px 40px;
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
-            'Inter', sans-serif;
+          padding: 20px 16px 40px; /* Adjusted top padding */
+          font-family: ${fontStack};
         }
 
         .logo-row {
-          margin-top: 4px;
-          margin-bottom: 10px;
+          margin-bottom: 20px;
         }
 
         .logo {
@@ -270,12 +267,10 @@ export default function NewProfile() {
         .card-inner {
           width: 100%;
           max-width: 620px;
-          /* UPDATED: Slightly more transparent background to let glow show through subtly */
-          background: rgba(9, 9, 18, 0.85);
-          backdrop-filter: blur(20px);
+          background: rgba(9, 9, 18, 0.96);
           border-radius: 32px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
           padding: 40px 40px 32px;
           display: flex;
           flex-direction: column;
@@ -300,29 +295,37 @@ export default function NewProfile() {
         .title {
           font-size: 24px;
           font-weight: 700;
-          margin: 0 0 10px;
+          margin: 0 0 16px;
           text-align: center;
         }
 
-        .subtitle-strong {
+        /* Combined subtitle styling for consistency */
+        .subtitle-block {
+          text-align: center;
+          max-width: 480px;
+          margin-bottom: 10px;
+        }
+        
+        .subtitle-block p {
           font-size: 14px;
           color: #ffffff;
-          text-align: center;
           margin: 0;
-        }
-
-        .subtitle-strong + .subtitle-strong {
-          margin-top: 2px;
+          line-height: 1.5;
+          font-weight: 400; /* Regular weight */
         }
 
         .form {
           width: 100%;
-          max-width: 520px;
           margin-top: 26px;
-          margin-left: auto;
-          margin-right: auto;
-          padding: 0;
-          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        /* Shared class for width alignment between inputs and buttons */
+        .content-rail {
+            width: 100%;
+            max-width: 480px; /* Reduced width for tighter alignment */
         }
 
         .avatar-block {
@@ -330,13 +333,14 @@ export default function NewProfile() {
           margin-bottom: 24px;
         }
 
-        /* Avatar Circle */
         .avatar-circle {
           position: relative;
-          border-radius: 50%;
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          /* UPDATED: Darker interior, subtle gradient */
-          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow:
+            0 0 0 1px rgba(0, 0, 0, 0.7) inset,
+            0 18px 50px rgba(0, 0, 0, 0.75);
+          background: radial-gradient(circle at top, #262b43 0, #161827 55%, #101221 100%);
           width: 108px;
           height: 108px;
           display: flex;
@@ -344,7 +348,7 @@ export default function NewProfile() {
           justify-content: center;
           margin: 0 auto 12px;
           cursor: pointer;
-          overflow: visible; /* Changed to visible so badge can overlap if needed, though positioned inside here */
+          overflow: hidden;
         }
 
         .avatar-circle:hover {
@@ -354,37 +358,21 @@ export default function NewProfile() {
         .avatar-preview {
           position: absolute;
           inset: 0;
-          border-radius: 50%;
+          border-radius: 999px;
           background-size: cover;
           background-position: center;
-          overflow: hidden;
         }
 
         .avatar-icon {
-          width: 36px;
-          height: 36px;
-          color: #a1a4c0;
-          opacity: 0.8;
+          width: 52px;
+          height: 52px;
+          color: #f5f6ff;
+          stroke: currentColor;
+          stroke-width: 2.2;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          fill: none;
           z-index: 1;
-        }
-
-        /* NEW: The Plus Badge Styling */
-        .plus-badge {
-          position: absolute;
-          bottom: 6px;
-          right: 6px;
-          width: 26px;
-          height: 26px;
-          background: rgba(255, 255, 255, 0.15);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(4px);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #fff;
-          z-index: 2;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         .hidden-file-input {
@@ -393,7 +381,7 @@ export default function NewProfile() {
 
         .helper-text {
           font-size: 12px;
-          color: #8b8fa5;
+          color: #a1a4c0;
           margin: 0;
         }
 
@@ -402,74 +390,72 @@ export default function NewProfile() {
         }
 
         .field {
+          width: 100%;
+          display: flex;
+          justify-content: center;
           margin-top: 18px;
         }
 
-        .field-control {
-          width: 100%;
-          max-width: 520px;
-          margin-left: auto;
-          margin-right: auto;
-        }
-
-        /* Inputs */
+        /* Inputs styling. 
+           Enforced font-family and size for consistency between placeholder and typed text.
+           Added box-sizing to ensure padding doesn't affect width alignment.
+        */
         .text-input,
         .textarea-input {
           width: 100%;
-          font-size: 14px;
+          box-sizing: border-box; /* Crucial for alignment */
+          font-family: ${fontStack}; /* Explicit font family */
+          font-size: 14px; /* Explicit font size */
           color: #ffffff;
           border-radius: 999px;
-          /* UPDATED: More transparent border and background */
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.03); 
-          padding: 12px 20px;
+          border: 1px solid #34384f;
+          background: #090a12;
+          padding: 12px 18px;
           outline: none;
-          transition: border-color 0.2s, background 0.2s;
         }
 
         .text-input::placeholder,
         .textarea-input::placeholder {
-          color: rgba(255, 255, 255, 0.7); /* Brighter placeholder */
+          color: #8b8fa5; /* Slightly darker placeholder for better contrast */
+          opacity: 1;
         }
 
         .text-input:focus,
         .textarea-input:focus {
           border-color: #7e8bff;
-          background: rgba(255, 255, 255, 0.06);
           box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
         }
 
         .textarea-wrap {
           position: relative;
+          width: 100%;
         }
 
         .textarea-input {
           border-radius: 18px;
           min-height: 142px;
           resize: vertical;
-          padding-right: 64px;
-          padding-top: 14px;
-          line-height: 1.5;
+          padding-right: 64px; /* Space for char count */
+          line-height: 1.45;
         }
 
         .char-count {
           position: absolute;
           right: 16px;
-          bottom: 12px;
+          bottom: 10px;
           font-size: 11px;
-          color: #6b6f85;
+          color: #8b8fa5;
         }
 
+        /* Actions row shares the .content-rail width constraint */
         .actions-row {
           margin-top: 24px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          width: 100%;
-          max-width: 520px;
-          margin-left: auto;
-          margin-right: auto;
+          gap: 10px;
+          /* width handled by content-rail class */
         }
+
 
         @media (min-width: 600px) {
           .actions-row {
@@ -481,7 +467,8 @@ export default function NewProfile() {
           flex: 1;
           border-radius: 999px;
           border: none;
-          font-size: 15px;
+          font-family: ${fontStack};
+          font-size: 14px;
           font-weight: 500;
           padding: 12px 16px;
           cursor: pointer;
@@ -489,10 +476,9 @@ export default function NewProfile() {
         }
 
         .btn-primary {
-          /* UPDATED: Gradient to match design 1 closer */
-          background: linear-gradient(90deg, #7c4dff, #b55aff);
+          background: linear-gradient(90deg, #6366ff, #a855f7);
           color: #ffffff;
-          box-shadow: 0 8px 24px rgba(124, 77, 255, 0.4);
+          box-shadow: 0 8px 24px rgba(88, 92, 255, 0.55);
         }
 
         .btn-primary:disabled {
@@ -503,13 +489,13 @@ export default function NewProfile() {
 
         .btn-primary:not(:disabled):active {
           transform: translateY(1px);
-          box-shadow: 0 4px 14px rgba(124, 77, 255, 0.3);
+          box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
         }
 
         .btn-secondary {
           background: transparent;
           color: #e5e7ff;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: 1px solid #3a3f5a;
         }
 
         .btn-secondary:disabled {
@@ -522,16 +508,11 @@ export default function NewProfile() {
         }
 
         .footer-note {
-          margin-top: 16px;
+          margin-top: 24px;
           font-size: 12px;
-          color: #6b6f85;
+          color: #8b8fa5;
           text-align: center;
-          line-height: 1.4;
-        }
-
-        :global(html),
-        :global(body) {
-          background-color: #05050b;
+          max-width: 480px;
         }
       `}</style>
     </main>

@@ -133,47 +133,53 @@ export default function NewProfile() {
                     style={{ backgroundImage: `url(${avatarDataUrl})` }}
                   />
                 ) : (
-                  // **REPLACED SVG ICON**
+                  // **REPLACED SVG ICON to match the outline style with + sign**
                   <svg
                     className="avatar-icon"
-                    viewBox="0 0 24 24"
+                    viewBox="0 0 50 50"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                     aria-hidden="true"
                   >
-                    <path
-                      d="M20 5H4C2.89543 5 2 5.89543 2 7V17C2 18.1046 2.89543 19 4 19H20C21.1046 19 22 18.1046 22 17V7C22 5.89543 21.1046 5 20 5Z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
+                    {/* Camera Body (Outline style) */}
+                    <path 
+                      d="M40.625 15.625H9.375C7.30058 15.625 5.625 17.3006 5.625 19.375V34.375C5.625 36.4494 7.30058 38.125 9.375 38.125H40.625C42.6994 38.125 44.375 36.4494 44.375 34.375V19.375C44.375 17.3006 42.6994 15.625 40.625 15.625Z" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round" 
                       strokeLinejoin="round"
                     />
-                    <path
-                      d="M8.5 10.5C8.5 9.11929 7.38071 8 6 8C4.61929 8 3.5 9.11929 3.5 10.5C3.5 11.8807 4.61929 13 6 13C7.38071 13 8.5 11.8807 8.5 10.5Z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
+                    {/* Lens/Viewfinder (Hollow inside) */}
+                    <circle 
+                      cx="25" 
+                      cy="28.125" 
+                      r="6.875" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round" 
                       strokeLinejoin="round"
                     />
-                    <path
-                      d="M2 15L6 11L12 17"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
+                    {/* Flash/Accent */}
+                    <path 
+                      d="M33.75 15.625L36.25 10.625H29.375L31.875 15.625" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round" 
                       strokeLinejoin="round"
                     />
-                    <path
-                      d="M17.5 12V15"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
+                    {/* Plus Sign (Smaller, offset to the side) */}
+                    <path 
+                      d="M40 31.25V35.625" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round" 
                       strokeLinejoin="round"
                     />
-                    <path
-                      d="M16 13.5H19"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
+                    <path 
+                      d="M37.8125 33.4375H42.1875" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round" 
                       strokeLinejoin="round"
                     />
                   </svg>
@@ -370,13 +376,12 @@ export default function NewProfile() {
         .avatar-circle {
           position: relative;
           border-radius: 999px;
-          /* **UPDATED STYLING FOR THE CIRCLE/BUTTON** */
-          /* Changed border and box-shadow to match the dark, slightly glowing effect */
+          /* UPDATED STYLING FOR THE CIRCLE/BUTTON */
           border: 1px solid rgba(255, 255, 255, 0.1); 
           box-shadow:
             0 0 0 1px rgba(0, 0, 0, 0.5) inset,
-            0 0 10px rgba(0, 0, 0, 0.5) inset; /* Removed larger outer shadow */
-          background: #0d0d15; /* Darker background */
+            0 0 10px rgba(0, 0, 0, 0.5) inset; 
+          background: #0d0d15; 
           width: 108px;
           height: 108px;
           display: flex;
@@ -398,13 +403,13 @@ export default function NewProfile() {
           transform: scale(1.02);
         }
         
-        /* **UPDATED STYLING FOR THE ICON** */
+        /* UPDATED STYLING FOR THE ICON */
         .avatar-icon {
-          width: 48px; /* Slightly smaller to match the look */
-          height: 48px;
+          width: 60px; /* Slightly larger for the detailed outline */
+          height: 60px;
           color: #f5f6ff;
           stroke: #ffffff; /* Explicitly set stroke to white/light */
-          stroke-width: 1.5; /* Adjusted stroke width for a thinner line */
+          stroke-width: 2; /* Adjusted stroke width for a slightly bolder outline */
           stroke-linecap: round;
           stroke-linejoin: round;
           fill: none;

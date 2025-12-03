@@ -228,12 +228,12 @@ export default function NewProfile() {
               <div className="field-control content-rail">
                 <input
                   id="displayName"
-                  aria-label="Name or studio name"
+                  aria-label="Display Name"
                   className="text-input"
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Name or Studio Name"
+                  placeholder="Display Name"
                 />
               </div>
             </div>
@@ -248,7 +248,7 @@ export default function NewProfile() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Choose URL ending (l6.io/yourname)"
+                  placeholder="Choose Username (l6.io/yourname)"
                 />
               </div>
             </div>

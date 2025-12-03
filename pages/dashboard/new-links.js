@@ -1,210 +1,144 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
-// Recognized social providers for header icons
-const PROVIDERS = ['instagram', 'facebook', 'tiktok', 'youtube', 'x', 'website'];
+// Social network detection by URL host
+const SOCIAL_CONFIG = [
+  {
+    key: 'instagram',
+    hosts: ['instagram.com'],
+    label: 'Instagram',
+    short: 'IG',
+  },
+  {
+    key: 'facebook',
+    hosts: ['facebook.com'],
+    label: 'Facebook',
+    short: 'Fb',
+  },
+  {
+    key: 'tiktok',
+    hosts: ['tiktok.com'],
+    label: 'TikTok',
+    short: 'TT',
+  },
+  {
+    key: 'youtube',
+    hosts: ['youtube.com', 'youtu.be'],
+    label: 'YouTube',
+    short: 'YT',
+  },
+  {
+    key: 'x',
+    hosts: ['twitter.com', 'x.com'],
+    label: 'X',
+    short: 'X',
+  },
+  {
+    key: 'website',
+    hosts: [], // catch-all “site” type
+    label: 'Website',
+    short: 'WWW',
+  },
+];
 
-function createEmptyLink(order) {
-  return {
-    id: `link-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    label: '',
-    url: '',
-    provider: null, // 'instagram' | 'facebook' | 'tiktok' | 'youtube' | 'x' | 'website' | null
-    kind: 'link', // future-proof if you want "drop" links etc.
-    showAsIcon: false,
-    showAsButton: true,
-    order,
-  };
-}
-
-function isValidUrl(value) {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
-// Infer provider from the URL
-function detectProvider(url) {
+function detectNetwork(url) {
   if (!url) return null;
-  const value = url.toLowerCase();
 
-  if (value.includes('instagram.com')) return 'instagram';
-  if (value.includes('facebook.com')) return 'facebook';
-  if (value.includes('tiktok.com')) return 'tiktok';
-  if (value.includes('youtube.com') || value.includes('youtu.be')) return 'youtube';
-  if (value.includes('x.com') || value.includes('twitter.com')) return 'x';
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
 
-  // Treat everything else as "website" if it looks like a valid URL
-  if (isValidUrl(url)) return 'website';
+    for (const net of SOCIAL_CONFIG) {
+      if (net.hosts.length && net.hosts.some((h) => host.endsWith(h))) {
+        return net.key;
+      }
+    }
 
-  return null;
-}
-
-// Simple icon glyph per provider (you can replace with SVGs later)
-function providerGlyph(provider) {
-  switch (provider) {
-    case 'instagram':
-      return 'IG';
-    case 'facebook':
-      return 'f';
-    case 'tiktok':
-      return '𝄞';
-    case 'youtube':
-      return '▶';
-    case 'x':
-      return 'X';
-    case 'website':
-      return 'www';
-    default:
-      return '?';
+    // If it is a normal https link that does not match any known host
+    return 'website';
+  } catch {
+    return null;
   }
 }
 
 export default function NewLinks() {
-  const [links, setLinks] = useState(() => [createEmptyLink(0), createEmptyLink(1)]);
+  const router = useRouter();
+  const { token } = router.query;
+
+  const [links, setLinks] = useState([
+    { id: 1, label: 'Shop my latest pieces', url: '' },
+    { id: 2, label: 'Join my email list', url: '' },
+    { id: 3, label: '', url: '' },
+  ]);
+
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [invalidIds, setInvalidIds] = useState([]);
 
-  const iconLinks = links
-    .filter(
-      (link) =>
-        link.showAsIcon &&
-        link.provider &&
-        PROVIDERS.includes(link.provider) &&
-        link.url
-    )
-    .sort((a, b) => a.order - b.order)
-    .slice(0, 4);
-
-  const handleChangeLabel = (id, value) => {
+  const handleChange = (id, field, value) => {
     setLinks((prev) =>
       prev.map((link) =>
-        link.id === id ? { ...link, label: value } : link
+        link.id === id ? { ...link, [field]: value } : link
       )
     );
   };
 
-  const handleChangeUrl = (id, value) => {
-    setLinks((prev) =>
-      prev.map((link) => {
-        if (link.id !== id) return link;
-        const provider = detectProvider(value);
-        return {
-          ...link,
-          url: value,
-          provider,
-          // Keep showAsIcon if still a valid provider, otherwise reset
-          showAsIcon:
-            provider && PROVIDERS.includes(provider) ? link.showAsIcon : false,
-        };
-      })
-    );
+  const handleRemove = (id) => {
+    setLinks((prev) => prev.filter((l) => l.id !== id));
   };
 
-  const handleToggleIcon = (id) => {
+  const handleAddRow = () => {
     setLinks((prev) => {
-      const current = prev.find((l) => l.id === id);
-      if (!current) return prev;
+      const nonEmpty = prev.filter((l) => l.label.trim() || l.url.trim());
+      // Cap at 5 initial links; they can add more in the full editor
+      if (nonEmpty.length >= 5) return prev;
 
-      // If turning on, enforce max 4 icons
-      const alreadyOn = prev.filter(
-        (l) =>
-          l.id !== id &&
-          l.showAsIcon &&
-          l.provider &&
-          PROVIDERS.includes(l.provider)
-      ).length;
-
-      // If this toggle would exceed 4, keep state and surface a message
-      if (!current.showAsIcon && alreadyOn >= 4) {
-        alert('You can highlight up to 4 social icons at the top.');
-        return prev;
-      }
-
-      return prev.map((link) =>
-        link.id === id ? { ...link, showAsIcon: !link.showAsIcon } : link
-      );
+      const nextId = prev.length ? Math.max(...prev.map((l) => l.id)) + 1 : 1;
+      return [...prev, { id: nextId, label: '', url: '' }];
     });
   };
 
-  const handleAddLink = () => {
-    setLinks((prev) => {
-      const nextOrder = prev.length ? prev[prev.length - 1].order + 1 : 0;
-      return [...prev, createEmptyLink(nextOrder)];
-    });
-  };
-
-  const handleRemoveLink = (id) => {
-    setLinks((prev) => prev.filter((link) => link.id !== id));
-  };
-
-  const validateLinks = () => {
-    const invalid = [];
-
-    links.forEach((link) => {
-      if (!link.url) return; // empty is allowed
-      if (!isValidUrl(link.url)) invalid.push(link.id);
-    });
-
-    setInvalidIds(invalid);
-
-    if (invalid.length) {
-      setError('Please enter valid URLs (include https://) for the highlighted links.');
-      return false;
-    }
-
-    setError('');
-    return true;
-  };
-
-  const handleContinue = async (e) => {
-    e.preventDefault();
+  const goToEditor = () => {
     if (saving) return;
-
-    const ok = validateLinks();
-    if (!ok) return;
-
     setSaving(true);
 
-    // Clean payload
-    const payload = links
-      .filter((l) => l.label.trim() || l.url.trim())
-      .map((link, index) => ({
-        id: link.id,
-        label: link.label.trim(),
-        url: link.url.trim(),
-        provider: link.provider,
-        kind: link.provider ? 'social' : 'link',
-        showAsIcon:
-          !!link.provider &&
-          PROVIDERS.includes(link.provider) &&
-          link.showAsIcon &&
-          index < 4,
-        showAsButton: true,
-        order: index,
-      }));
+    // Later we can POST these links/socials for initial setup.
+    // For now, send them straight into their editor.
+    if (token) {
+      window.location.href = `/dashboard/${token}`;
+    } else {
+      window.location.href = `/dashboard`;
+    }
+  };
 
-    // For now we log; wiring to backend can be a separate step
-    console.log('Onboarding links payload:', payload);
-
-    // Temporary progression target. Adjust when Step 3 route exists.
-    window.location.href = '/dashboard';
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    goToEditor();
   };
 
   const handleSkip = (e) => {
     e.preventDefault();
-    if (saving) return;
-    console.log('Onboarding links skipped; links = []');
-    window.location.href = '/dashboard';
+    goToEditor();
   };
 
-  const isInvalid = (id) => invalidIds.includes(id);
+  // Compute social preview (up to 4 icons) based on URLs entered
+  const socialPreview = (() => {
+    const items = [];
+    for (const link of links) {
+      const network = detectNetwork(link.url);
+      if (!network) continue;
+      const existing = items.find((i) => i.network === network);
+      if (!existing) {
+        items.push({ network, url: link.url });
+      }
+    }
+    return items.slice(0, 4);
+  })();
+
+  const getSocialMeta = (network) =>
+    SOCIAL_CONFIG.find((n) => n.key === network) ||
+    SOCIAL_CONFIG.find((n) => n.key === 'website');
 
   return (
     <main className="onboarding-root">
@@ -215,121 +149,92 @@ export default function NewLinks() {
       <div className="card">
         <div className="card-inner">
           <p className="step-label">STEP 2 OF 3</p>
-          <h1 className="title">Add links and socials</h1>
+          <h1 className="title">Add links & socials</h1>
 
           <div className="subtitle-block">
-            <p className="subtitle-line">Add your main links.</p>
             <p className="subtitle-line">
-              Social links show as icons under your name and buttons on your page.
+              Drop in the links you want under your art.
+            </p>
+            <p className="subtitle-line">
+              We’ll show up to 4 social icons at the top of your page.
             </p>
           </div>
 
-          {/* Social icon preview */}
-          <div className="icon-preview">
-            {iconLinks.length === 0 ? (
-              <p className="icon-preview-placeholder">
-                Turn on “Show as icon” for up to four socials to feature them here.
-              </p>
-            ) : (
-              iconLinks.map((link) => (
-                <div key={link.id} className="icon-pill" title={link.label || link.provider}>
-                  <span className="icon-glyph">
-                    {providerGlyph(link.provider)}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-
-          <form className="form" onSubmit={handleContinue}>
-            {error && <p className="error-text">{error}</p>}
-
-            <div className="links-list">
-              {links.map((link, index) => {
-                const provider = link.provider;
-                const isSocial =
-                  !!provider && PROVIDERS.includes(provider);
-
-                return (
-                  <div key={link.id} className="link-row content-rail">
-                    <div className="link-row-header">
-                      <span className="link-row-label">
-                        Link {index + 1}
-                      </span>
-                      {links.length > 1 && (
-                        <button
-                          type="button"
-                          className="link-remove"
-                          onClick={() => handleRemoveLink(link.id)}
-                        >
-                          Remove
-                        </button>
-                      )}
+          {/* Social preview row */}
+          <section className="social-section">
+            <p className="section-label">Social icon preview</p>
+            <div className="social-preview">
+              {socialPreview.length === 0 ? (
+                <p className="social-preview-empty">
+                  Paste Instagram, TikTok, YouTube, X, Facebook, or your site,
+                  and your icons will appear here.
+                </p>
+              ) : (
+                socialPreview.map((item, idx) => {
+                  const meta = getSocialMeta(item.network);
+                  return (
+                    <div
+                      key={`${item.network}-${idx}`}
+                      className={`social-pill social-pill-${item.network}`}
+                    >
+                      <span className="social-pill-short">{meta.short}</span>
+                      <span className="social-pill-label">{meta.label}</span>
                     </div>
-
-                    <div className="link-inputs">
-                      <input
-                        type="text"
-                        className="text-input link-label-input"
-                        placeholder="Link title (e.g., Shop, Portfolio, Newsletter)"
-                        value={link.label}
-                        onChange={(e) =>
-                          handleChangeLabel(link.id, e.target.value)
-                        }
-                      />
-
-                      <input
-                        type="url"
-                        className={`text-input link-url-input ${
-                          isInvalid(link.id) ? 'input-error' : ''
-                        }`}
-                        placeholder="https://example.com/your-link"
-                        value={link.url}
-                        onChange={(e) =>
-                          handleChangeUrl(link.id, e.target.value)
-                        }
-                      />
-                    </div>
-
-                    <div className="link-meta-row">
-                      {isSocial ? (
-                        <span className="provider-chip">
-                          {provider === 'website'
-                            ? 'Website'
-                            : provider.charAt(0).toUpperCase() +
-                              provider.slice(1)}
-                        </span>
-                      ) : (
-                        <span className="provider-chip provider-chip-muted">
-                          Regular link
-                        </span>
-                      )}
-
-                      {isSocial && (
-                        <label className="toggle-label">
-                          <input
-                            type="checkbox"
-                            checked={link.showAsIcon}
-                            onChange={() => handleToggleIcon(link.id)}
-                          />
-                          <span>Show as icon</span>
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
+          </section>
 
-            <div className="add-link-row content-rail">
+          <form onSubmit={handleSubmit} className="form">
+            <section className="links-section">
+              <p className="section-label">Links under your art</p>
+              <p className="section-helper">
+                Add a few key links. You can reorder and add more later in your
+                editor.
+              </p>
+
+              <div className="links-list">
+                {links.map((link) => (
+                  <div key={link.id} className="link-row">
+                    <input
+                      type="text"
+                      className="link-input link-label-input"
+                      placeholder="Link title (e.g. Backyards of Key West shop)"
+                      value={link.label}
+                      onChange={(e) =>
+                        handleChange(link.id, 'label', e.target.value)
+                      }
+                    />
+                    <input
+                      type="text"
+                      className="link-input link-url-input"
+                      placeholder="Paste URL (https://…)"
+                      value={link.url}
+                      onChange={(e) =>
+                        handleChange(link.id, 'url', e.target.value)
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="link-remove"
+                      onClick={() => handleRemove(link.id)}
+                      aria-label="Remove link"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+
               <button
                 type="button"
-                className="btn btn-ghost"
-                onClick={handleAddLink}
+                className="add-link-button"
+                onClick={handleAddRow}
               >
                 + Add another link
               </button>
-            </div>
+            </section>
 
             <div className="actions-row content-rail">
               <button
@@ -345,12 +250,12 @@ export default function NewLinks() {
                 onClick={handleSkip}
                 disabled={saving}
               >
-                Skip
+                Skip for now
               </button>
             </div>
 
             <p className="footer-note">
-              You can reorder and style these links from your editor after onboarding.
+              You can always edit links and socials later from your dashboard.
             </p>
           </form>
         </div>
@@ -371,12 +276,12 @@ export default function NewLinks() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 20px 16px 40px;
+          padding: 15px 16px 40px;
           font-family: ${fontStack};
         }
 
         .logo-row {
-          margin-bottom: 20px;
+          margin-bottom: 15px;
         }
 
         .logo {
@@ -429,7 +334,7 @@ export default function NewLinks() {
         .subtitle-block {
           text-align: center;
           width: 100%;
-          margin-bottom: 18px;
+          margin-bottom: 16px;
         }
 
         .subtitle-line {
@@ -440,42 +345,9 @@ export default function NewLinks() {
           font-weight: 400;
         }
 
-        .icon-preview {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          margin-bottom: 18px;
-          min-height: 40px;
-        }
-
-        .icon-preview-placeholder {
-          font-size: 12px;
-          color: #8b8fa5;
-          text-align: center;
-        }
-
-        .icon-pill {
-          width: 36px;
-          height: 36px;
-          border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: radial-gradient(circle at top, #262b43 0, #15172a 60%, #101221 100%);
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
-        }
-
-        .icon-glyph {
-          font-size: 13px;
-          font-weight: 600;
-        }
-
         .form {
           width: 100%;
-          margin-top: 8px;
+          margin-top: 18px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -486,60 +358,86 @@ export default function NewLinks() {
           max-width: 100%;
         }
 
-        .error-text {
+        .section-label {
+          font-size: 13px;
+          text-transform: uppercase;
+          letter-spacing: 0.16em;
+          color: #a1a4c0;
+          margin: 0 0 6px;
+        }
+
+        .section-helper {
+          font-size: 13px;
+          color: #898daf;
+          margin: 0 0 12px;
+        }
+
+        .social-section {
           width: 100%;
-          text-align: left;
-          font-size: 12px;
-          color: #f97373;
-          margin: 0 0 8px;
+          margin-bottom: 18px;
         }
 
-        .links-list {
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-          margin-top: 6px;
-        }
-
-        .link-row {
-          background: rgba(5, 5, 14, 0.9);
-          border-radius: 18px;
-          padding: 12px 14px 10px;
-          border: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .link-row-header {
+        .social-preview {
+          min-height: 52px;
+          border-radius: 999px;
+          border: 1px dashed rgba(255, 255, 255, 0.14);
+          background: #0b0b14;
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          margin-bottom: 8px;
-        }
-
-        .link-row-label {
-          font-size: 13px;
-          color: #a1a4c0;
-        }
-
-        .link-remove {
-          border: none;
-          background: transparent;
-          color: #8b8fa5;
-          font-size: 12px;
-          cursor: pointer;
-        }
-
-        .link-remove:hover {
-          color: #f97373;
-        }
-
-        .link-inputs {
-          display: flex;
-          flex-direction: column;
+          padding: 8px 14px;
           gap: 8px;
         }
 
-        .text-input {
+        .social-preview-empty {
+          font-size: 12px;
+          color: #8b8fa5;
+          margin: 0;
+        }
+
+        .social-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border-radius: 999px;
+          padding: 6px 10px;
+          font-size: 12px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .social-pill-short {
+          font-weight: 600;
+        }
+
+        .social-pill-label {
+          opacity: 0.9;
+        }
+
+        .links-section {
+          width: 100%;
+          margin-top: 10px;
+        }
+
+        .links-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .link-row {
+          display: grid;
+          grid-template-columns: 1.2fr 1.6fr auto;
+          gap: 8px;
+          align-items: center;
+        }
+
+        @media (max-width: 640px) {
+          .link-row {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .link-input {
           width: 100%;
           box-sizing: border-box;
           font-family: ${fontStack};
@@ -552,58 +450,50 @@ export default function NewLinks() {
           outline: none;
         }
 
-        .text-input::placeholder {
+        .link-input::placeholder {
           color: #8b8fa5;
-          opacity: 1;
         }
 
-        .text-input:focus {
+        .link-input:focus {
           border-color: #7e8bff;
           box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
         }
 
-        .input-error {
-          border-color: #f97373;
-        }
-
-        .link-meta-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: 8px;
-          gap: 12px;
-        }
-
-        .provider-chip {
-          padding: 4px 10px;
+        .link-remove {
+          width: 32px;
+          height: 32px;
           border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          font-size: 11px;
-          color: #e5e7ff;
-        }
-
-        .provider-chip-muted {
-          opacity: 0.7;
-        }
-
-        .toggle-label {
+          border: 1px solid #34384f;
+          background: transparent;
+          color: #a1a4c0;
+          font-size: 18px;
+          cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          color: #e5e7ff;
+          justify-content: center;
         }
 
-        .toggle-label input {
-          accent-color: #7e8bff;
+        .link-remove:hover {
+          border-color: #ff4b81;
+          color: #ff4b81;
         }
 
-        .add-link-row {
-          margin-top: 14px;
+        .add-link-button {
+          margin-top: 10px;
+          border: none;
+          background: transparent;
+          color: #c4c6ff;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+
+        .add-link-button:hover {
+          text-decoration: underline;
         }
 
         .actions-row {
-          margin-top: 22px;
+          margin-top: 24px;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -622,9 +512,10 @@ export default function NewLinks() {
           font-family: ${fontStack};
           font-size: 14px;
           font-weight: 500;
-          padding: 11px 16px;
+          padding: 12px 16px;
           cursor: pointer;
-          transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+          transition: transform 0.08s ease, box-shadow 0.08s ease,
+            background 0.12s ease;
         }
 
         .btn-primary {
@@ -659,18 +550,8 @@ export default function NewLinks() {
           transform: translateY(1px);
         }
 
-        .btn-ghost {
-          width: 100%;
-          border-radius: 999px;
-          border: 1px dashed #3a3f5a;
-          background: transparent;
-          color: #e5e7ff;
-          font-size: 13px;
-          padding: 9px 12px;
-        }
-
         .footer-note {
-          margin-top: 18px;
+          margin-top: 24px;
           font-size: 12px;
           color: #8b8fa5;
           text-align: center;

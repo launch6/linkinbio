@@ -304,33 +304,34 @@ export default function NewProfile() {
       </div>
 
       <style jsx>{`
-        :global(html),
-        :global(body) {
-          background-color: #121219;
-          margin: 0;
-          padding: 0;
-        }
+  :global(html),
+  :global(body) {
+    background-color: #121219;
+    margin: 0;
+    padding: 0;
+  }
 
-        .onboarding-root {
-          min-height: 100vh;
-          background-color: #121219;
-          color: #ffffff;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 20px 16px 40px;
-          font-family: ${fontStack};
-        }
+  .onboarding-root {
+    min-height: 100vh;
+    background-color: #121219;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* was 20px 16px 40px; */
+    padding: 15px 16px 40px;
+    font-family: ${fontStack};
+  }
 
-        .logo-row {
-          margin-bottom: 20px;
-        }
+  .logo-row {
+    /* was 20px; */
+    margin-bottom: 15px;
+  }
 
-        .logo {
-          height: 48px;
-          width: auto;
-        }
-
+  .logo {
+    height: 48px;
+    width: auto;
+  }
         .card {
           width: 100%;
           display: flex;

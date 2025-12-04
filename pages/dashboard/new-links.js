@@ -40,17 +40,22 @@ const SocialIconMap = {
     </svg>
   ),
 tiktok: (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      stroke="none"
-    >
-      <path d="M17 6c.5 1.6 1.7 2.7 3.3 3.1L21 9.3V12c-1.3 0-2.6-.4-3.7-1.1v3.8a5.2 5.2 0 1 1-4.7-5.2V11a2.2 2.2 0 0 0-1.7-.2 2.1 2.1 0 1 0 2.2 2.1V6h3z" />
-    </svg>
-  ),
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    // Adjusted viewBox to zoom in and center the icon, making it visually larger.
+    viewBox="3 3 18 18" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {/* This is the stylized line-art music note path */}
+    <path d="M9 1v17.4a.6.6 0 0 0 .6.6h.4a.6.6 0 0 0 .6-.6V9.4a.6.6 0 0 1 .6-.6h2.8a.6.6 0 0 0 .6-.6V1h-4.6v11.4c0 3.1-2.5 5.6-5.6 5.6H4c-3.1 0-5.6-2.5-5.6-5.6v-4c0-3.1 2.5-5.6 5.6-5.6h.5" />
+  </svg>
+),
   // YouTube: rounded rectangle with play triangle
   youtube: (
     <svg
@@ -66,6 +71,23 @@ tiktok: (
     >
       <rect x="3" y="5" width="18" height="14" rx="3" />
       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+ x: (
+    // Clean X logo: two crossing strokes
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 4l14 16" />
+      <path d="M5 20L19 4" />
     </svg>
   ),
   website: (

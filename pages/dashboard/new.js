@@ -105,7 +105,12 @@ export default function NewProfile() {
         return;
       }
 
-      window.location.href = `/dashboard/${data.editToken}`;
+      // SUCCESS: send them to Step 2 with the editToken in the URL
+      window.location.href = `/dashboard/new-links?token=${encodeURIComponent(
+        data.editToken
+      )}`;
+
+
     } catch (err) {
       console.error(err);
       alert('Something went wrong creating your profile.');

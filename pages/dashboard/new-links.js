@@ -99,16 +99,16 @@ export default function NewLinks() {
     });
   };
 
-  const goToEditor = () => {
+ const goToEditor = () => {
     if (saving) return;
     setSaving(true);
 
-    // Later we can POST these links/socials for initial setup.
-    // For now, send them straight into their editor.
     if (token) {
-      window.location.href = `/dashboard/${token}`;
+      // go to your existing editor
+      window.location.href = `/editor?editToken=${encodeURIComponent(token)}`;
     } else {
-      window.location.href = `/dashboard`;
+      // ultra-rare fallback, but keeps it safe
+      window.location.href = `/editor`;
     }
   };
 

@@ -13,7 +13,7 @@ const SOCIAL_CONFIG = [
   { key: 'website', label: 'Website', short: 'WWW' },
 ];
 
-// Base URL used for prefill and validation
+// Helper to get the base URL for pre-filling the input
 const getSocialBaseUrl = (key) => {
   switch (key) {
     case 'instagram':
@@ -31,13 +31,6 @@ const getSocialBaseUrl = (key) => {
     default:
       return '';
   }
-};
-
-// A social counts as "complete" only when it has more than the base URL
-const isSocialComplete = (key, urls) => {
-  const value = urls[key];
-  const base = getSocialBaseUrl(key);
-  return !!value && value !== base;
 };
 
 export default function NewLinks() {
@@ -63,12 +56,10 @@ export default function NewLinks() {
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
 
-  // For drag & drop reordering of link cards
+  // For simple drag & drop reordering of link cards
   const draggingIdRef = useRef(null);
 
-  const usedSocialCount = SOCIAL_CONFIG.filter((net) =>
-    isSocialComplete(net.key, socialUrls)
-  ).length;
+  const usedSocialCount = Object.values(socialUrls).filter(Boolean).length;
 
   const handleLinkChange = (id, field, value) => {
     setLinks((prev) =>
@@ -84,6 +75,7 @@ export default function NewLinks() {
 
   const handleAddRow = () => {
     setLinks((prev) => {
+      // allow up to 6 in this step
       if (prev.length >= 6) return prev;
       const nextId = prev.length ? Math.max(...prev.map((l) => l.id)) + 1 : 1;
       return [...prev, { id: nextId, label: '', url: '' }];
@@ -94,7 +86,8 @@ export default function NewLinks() {
     if (saving) return;
     setSaving(true);
 
-    // Later: POST links + socialUrls to API
+    // TODO: Later we can POST links + socialUrls to an API.
+    // For now we just send them to the editor.
     if (token) {
       window.location.href = `/dashboard/${token}`;
     } else {
@@ -115,47 +108,32 @@ export default function NewLinks() {
   // --- Social icon behavior ---
 
   const handleSocialIconClick = (key) => {
-    const complete = isSocialComplete(key, socialUrls);
+    const isActive = !!socialUrls[key];
 
-    // If trying to turn on a new icon and already at 4 complete, block it
-    if (!complete && usedSocialCount >= 4) {
+    // If this icon is inactive and the user already has 4 active, block new selection
+    if (!isActive && usedSocialCount >= 4) {
       return;
     }
 
     setActiveSocialKey(key);
 
     // Pre-populate the URL if it's currently empty
-    setSocialUrls((prev) => {
-      if (prev[key]) return prev;
+    if (!socialUrls[key]) {
       const baseUrl = getSocialBaseUrl(key);
-      return {
+      setSocialUrls((prev) => ({
         ...prev,
         [key]: baseUrl,
-      };
-    });
+      }));
+    }
   };
 
   const handleActiveSocialUrlChange = (e) => {
     if (!activeSocialKey) return;
-    const raw = e.target.value || '';
-    const base = getSocialBaseUrl(activeSocialKey);
-
-    let next = raw;
-
-    // Enforce the prefix so they cannot delete/mangle it.
-    if (!next.startsWith(base)) {
-      // If they tried to delete back into the base, snap back to base.
-      if (next.length <= base.length) {
-        next = base;
-      } else {
-        // If they pasted something weird, keep the base and let them type after.
-        next = base + next.slice(base.length);
-      }
-    }
+    const value = e.target.value;
 
     setSocialUrls((prev) => ({
       ...prev,
-      [activeSocialKey]: next,
+      [activeSocialKey]: value,
     }));
   };
 
@@ -168,9 +146,6 @@ export default function NewLinks() {
   };
 
   const activeSocialUrl = activeSocialKey ? socialUrls[activeSocialKey] || '' : '';
-  const activeSocialPlaceholder = activeSocialKey
-    ? `${getSocialBaseUrl(activeSocialKey)}yourname`
-    : 'https://...';
 
   // --- Drag & drop for link cards ---
 
@@ -197,6 +172,11 @@ export default function NewLinks() {
       return updated;
     });
   };
+
+  // Use the correct base URL as the placeholder
+  const activeSocialPlaceholder = activeSocialKey
+    ? getSocialBaseUrl(activeSocialKey) + 'yourname'
+    : 'https://...';
 
   return (
     <main className="onboarding-root">
@@ -226,8 +206,11 @@ export default function NewLinks() {
 
             <div className="social-icon-row">
               {SOCIAL_CONFIG.map((net) => {
-                const complete = isSocialComplete(net.key, socialUrls);
-                const isDisabled = !complete && usedSocialCount >= 4;
+                const base = getSocialBaseUrl(net.key);
+                const url = socialUrls[net.key] || '';
+                const isActive = url && url !== base; // Only active if URL is beyond the base URL
+                const isDisabled =
+                  !isActive && usedSocialCount >= 4; // cap at 4 icons
 
                 return (
                   <button
@@ -235,7 +218,7 @@ export default function NewLinks() {
                     type="button"
                     className={[
                       'social-icon-column',
-                      complete ? 'social-icon-active' : '',
+                      isActive ? 'social-icon-active' : '',
                       isDisabled ? 'social-icon-disabled' : '',
                       activeSocialKey === net.key ? 'social-icon-editing' : '',
                     ]
@@ -269,16 +252,17 @@ export default function NewLinks() {
                   value={activeSocialUrl}
                   onChange={handleActiveSocialUrlChange}
                 />
-                {isSocialComplete(activeSocialKey, socialUrls) && (
-                  <button
-                    type="button"
-                    className="social-url-clear"
-                    onClick={handleClearActiveSocial}
-                    aria-label="Clear social URL"
-                  >
-                    ×
-                  </button>
-                )}
+                {activeSocialUrl &&
+                  activeSocialUrl !== getSocialBaseUrl(activeSocialKey) && (
+                    <button
+                      type="button"
+                      className="social-url-clear"
+                      onClick={handleClearActiveSocial}
+                      aria-label="Clear social URL"
+                    >
+                      ×
+                    </button>
+                  )}
               </div>
             )}
           </section>
@@ -583,7 +567,7 @@ export default function NewLinks() {
           border: 1px solid #34384f;
           display: flex;
           align-items: center;
-          padding: 6px 14px;
+          padding: 8px 20px; /* more right padding so text + X breathe */
           gap: 10px;
         }
 
@@ -608,6 +592,7 @@ export default function NewLinks() {
           font-family: ${fontStack};
           font-size: 14px;
           outline: none;
+          padding-right: 8px; /* keeps text away from the X */
         }
 
         .social-url-input::placeholder {
@@ -707,8 +692,8 @@ export default function NewLinks() {
         }
 
         .link-url-input {
-          font-size: 12px;
-          color: #b0b4c7;
+          font-size: 14px;      /* MATCH title size */
+          color: #ffffff;       /* MAKE URL white like title */
         }
 
         .link-input::placeholder {

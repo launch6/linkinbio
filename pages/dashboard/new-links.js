@@ -191,11 +191,16 @@ export default function NewLinks() {
     });
   };
 
-  const goToEditor = () => {
-    if (saving) return;
-    setSaving(true);
+    // Step navigation helpers
+  const goToStep3 = () => {
+    if (token) {
+      window.location.href = `/dashboard/new-drop?token=${token}`;
+    } else {
+      window.location.href = `/dashboard/new-drop`;
+    }
+  };
 
-    // later: POST socialUrls + links to API
+  const goToEditor = () => {
     if (token) {
       window.location.href = `/dashboard/${token}`;
     } else {
@@ -205,15 +210,24 @@ export default function NewLinks() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    goToEditor();
+    if (saving) return;
+    setSaving(true);
+
+    // Continue → Step 3
+    goToStep3();
   };
 
   const handleSkip = (e) => {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+
+    // Skip for now → straight to editor
     goToEditor();
   };
 
   // --- social icons ---
+
 
   const handleSocialIconClick = (key) => {
     const complete = isSocialComplete(key, socialUrls);

@@ -40,7 +40,7 @@ const SocialIconMap = {
     </svg>
   ),
  tiktok: (
-    // FINAL: Stylized music note line-art.
+    // FINAL: line-art TikTok note, centered in the circle
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -52,7 +52,8 @@ const SocialIconMap = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M9 1v17.4a.6.6 0 0 0 .6.6h.4a.6.6 0 0 0 .6-.6V9.4a.6.6 0 0 1 .6-.6h2.8a.6.6 0 0 0 .6-.6V1h-4.6v11.4c0 3.1-2.5 5.6-5.6 5.6H4c-3.1 0-5.6-2.5-5.6-5.6v-4c0-3.1 2.5-5.6 5.6-5.6h.5" />
+      <path d="M9 2v13.8A3.2 3.2 0 0 1 5.8 19 3.8 3.8 0 0 1 2 15.2V11a4 4 0 0 1 4-4h.7" />
+      <path d="M13 3.5v6a2 2 0 0 0 2 2h2.1A3 3 0 0 0 20 8.5" />
     </svg>
   ),
   // YouTube: rounded rectangle with play triangle
@@ -72,21 +73,21 @@ const SocialIconMap = {
       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none" />
     </svg>
   ),
-  x: (
-    // FINAL CORRECTED X: Official, angled logo path, rendered as line-art.
+ x: (
+    // Clean X logo: two crossing strokes
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
       viewBox="0 0 24 24"
-      fill="none" // No fill
-      stroke="currentColor" // Outline using the theme color
+      fill="none"
+      stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {/* This is the official angled path data */}
-      <path d="M12.05 10.74L8.74 1.75H6.38L10.33 8.35L3.8 17.5H7.72L12.05 11.87L16.38 17.5H20.3L13.77 8.35L17.72 1.75H15.36L12.05 10.74Z" />
+      <path d="M5 4l14 16" />
+      <path d="M5 20L19 4" />
     </svg>
   ),
   website: (

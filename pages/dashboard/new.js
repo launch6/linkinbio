@@ -111,9 +111,9 @@ export default function NewProfile() {
       setSaving(false);
       return;
     }
+// After: send them to Step 2 with token as a query param
+window.location.href = `/dashboard/new-links?token=${data.editToken}`;
 
-    // ✅ On success → go to Step 2 (new-links)
-    window.location.href = `/dashboard/${data.editToken}/new-links`;
   } catch (err) {
     console.error(err);
     alert('Something went wrong creating your profile.');

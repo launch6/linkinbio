@@ -1,10 +1,11 @@
+// pages/dashboard/new-links.js
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
-// Social network detection by URL host
+// Social networks available for header icons
 const SOCIAL_CONFIG = [
   {
     key: 'instagram',
@@ -57,7 +58,7 @@ function detectNetwork(url) {
       }
     }
 
-    // If it is a normal https link that does not match any known host
+    // generic site
     return 'website';
   } catch {
     return null;
@@ -74,6 +75,7 @@ export default function NewLinks() {
     { id: 3, label: '', url: '' },
   ]);
 
+  const [activeSocialKey, setActiveSocialKey] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const handleChange = (id, field, value) => {
@@ -91,7 +93,7 @@ export default function NewLinks() {
   const handleAddRow = () => {
     setLinks((prev) => {
       const nonEmpty = prev.filter((l) => l.label.trim() || l.url.trim());
-      // Cap at 5 initial links; they can add more in the full editor
+      // Cap at 5 initial links; they can add more later in the full editor
       if (nonEmpty.length >= 5) return prev;
 
       const nextId = prev.length ? Math.max(...prev.map((l) => l.id)) + 1 : 1;
@@ -99,15 +101,13 @@ export default function NewLinks() {
     });
   };
 
- const goToEditor = () => {
+  const goToEditor = () => {
     if (saving) return;
     setSaving(true);
 
     if (token) {
-      // go to your existing editor
       window.location.href = `/editor?editToken=${encodeURIComponent(token)}`;
     } else {
-      // ultra-rare fallback, but keeps it safe
       window.location.href = `/editor`;
     }
   };
@@ -122,23 +122,105 @@ export default function NewLinks() {
     goToEditor();
   };
 
-  // Compute social preview (up to 4 icons) based on URLs entered
-  const socialPreview = (() => {
-    const items = [];
-    for (const link of links) {
-      const network = detectNetwork(link.url);
-      if (!network) continue;
-      const existing = items.find((i) => i.network === network);
-      if (!existing) {
-        items.push({ network, url: link.url });
-      }
-    }
-    return items.slice(0, 4);
-  })();
-
   const getSocialMeta = (network) =>
     SOCIAL_CONFIG.find((n) => n.key === network) ||
     SOCIAL_CONFIG.find((n) => n.key === 'website');
+
+  // Which networks are currently represented by any link URLs? (max 4)
+  const activeNetworks = (() => {
+    const set = new Set();
+    for (const link of links) {
+      const net = detectNetwork(link.url);
+      if (net) set.add(net);
+    }
+    return Array.from(set).slice(0, 4);
+  })();
+
+  const socialLimit = 4;
+
+  const handleSocialIconClick = (key) => {
+    const isActive = activeNetworks.includes(key);
+
+    // Clicking an active icon toggles it into "edit" mode
+    if (isActive) {
+      setActiveSocialKey((prev) => (prev === key ? null : key));
+      return;
+    }
+
+    // If it is inactive and the limit is reached, ignore
+    if (!isActive && activeNetworks.length >= socialLimit) return;
+
+    // Activate this icon for editing
+    setActiveSocialKey(key);
+
+    // If there is no link for this network yet, seed an empty slot with its label
+    const existingForNetwork = links.find(
+      (l) => detectNetwork(l.url) === key
+    );
+    if (!existingForNetwork) {
+      const empty = links.find((l) => !l.url && !l.label);
+      if (empty) {
+        const meta = getSocialMeta(key);
+        handleChange(empty.id, 'label', meta.label);
+      }
+    }
+  };
+
+  // Link whose URL currently maps to the active social key
+  const activeSocialLink =
+    activeSocialKey &&
+    links.find((link) => detectNetwork(link.url) === activeSocialKey);
+
+  const handleSocialUrlChange = (e) => {
+    if (!activeSocialKey) return;
+
+    const url = e.target.value;
+    const targetNetwork = activeSocialKey;
+    const meta = getSocialMeta(targetNetwork);
+
+    const existingLink = links.find(
+      (l) => detectNetwork(l.url) === targetNetwork
+    );
+
+    // Clearing the URL removes the network from activeNetworks
+    if (!url) {
+      if (existingLink) {
+        handleChange(existingLink.id, 'url', '');
+        // If the label was auto-seeded, clear it too
+        if (existingLink.label === meta.label) {
+          handleChange(existingLink.id, 'label', '');
+        }
+      }
+      setActiveSocialKey(null);
+      return;
+    }
+
+    if (existingLink) {
+      handleChange(existingLink.id, 'url', url);
+      if (!existingLink.label) {
+        handleChange(existingLink.id, 'label', meta.label);
+      }
+    } else {
+      // Use empty slot or create a new one if within limit
+      const empty = links.find((l) => !l.url && !l.label);
+      if (empty) {
+        handleChange(empty.id, 'label', meta.label);
+        handleChange(empty.id, 'url', url);
+      } else {
+        // Last resort: append a new link row if under 5
+        setLinks((prev) => {
+          if (prev.length >= 5) return prev;
+          const nextId = prev.length
+            ? Math.max(...prev.map((l) => l.id)) + 1
+            : 1;
+          return [
+            ...prev,
+            { id: nextId, label: meta.label, url },
+          ];
+        });
+      }
+    }
+  };
 
   return (
     <main className="onboarding-root">
@@ -148,73 +230,108 @@ export default function NewLinks() {
 
       <div className="card">
         <div className="card-inner">
+          {/* Progress Bar */}
+          <div className="progress-bar-container">
+            <div className="progress-bar-fill" />
+          </div>
+
           <p className="step-label">STEP 2 OF 3</p>
-          <h1 className="title">Add links & socials</h1>
+          <h1 className="title">Add links &amp; socials</h1>
 
           <div className="subtitle-block">
             <p className="subtitle-line">
-              Drop in the links you want under your art.
-            </p>
-            <p className="subtitle-line">
-              We’ll show up to 4 social icons at the top of your page.
+              Let&apos;s light up your social icons and stack your content buttons.
             </p>
           </div>
 
-          {/* Social preview row */}
-          <section className="social-section">
-            <p className="section-label">Social icon preview</p>
-            <div className="social-preview">
-              {socialPreview.length === 0 ? (
-                <p className="social-preview-empty">
-                  Paste Instagram, TikTok, YouTube, X, Facebook, or your site,
-                  and your icons will appear here.
-                </p>
-              ) : (
-                socialPreview.map((item, idx) => {
-                  const meta = getSocialMeta(item.network);
-                  return (
-                    <div
-                      key={`${item.network}-${idx}`}
-                      className={`social-pill social-pill-${item.network}`}
-                    >
-                      <span className="social-pill-short">{meta.short}</span>
-                      <span className="social-pill-label">{meta.label}</span>
-                    </div>
-                  );
-                })
-              )}
+          {/* SOCIAL ICON SECTION */}
+          <section className="social-selection-section">
+            <p className="section-label">Your social icons</p>
+            <p className="social-helper-text">
+              Select up to 4 to display in your header.
+            </p>
+
+            <div className="social-icon-row">
+              {SOCIAL_CONFIG.map((net) => {
+                const isActive = activeNetworks.includes(net.key);
+                const isDisabled =
+                  !isActive && activeNetworks.length >= socialLimit;
+                const isEditing = activeSocialKey === net.key;
+
+                return (
+                  <button
+                    type="button"
+                    key={net.key}
+                    className={`social-icon-wrapper ${
+                      isActive ? 'active' : ''
+                    } ${isDisabled ? 'disabled' : ''} ${
+                      isEditing ? 'editing' : ''
+                    }`}
+                    onClick={() =>
+                      !isDisabled && handleSocialIconClick(net.key)
+                    }
+                    aria-label={net.label}
+                  >
+                    <span className="social-icon-placeholder">
+                      {net.short}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+
+            {activeSocialKey && (
+              <div className="social-url-input-container">
+                <p className="social-input-label">
+                  {getSocialMeta(activeSocialKey).label} URL
+                </p>
+                <input
+                  type="text"
+                  className="link-input social-link-input"
+                  placeholder="Paste URL (https://…)"
+                  value={activeSocialLink ? activeSocialLink.url : ''}
+                  onChange={handleSocialUrlChange}
+                />
+              </div>
+            )}
           </section>
 
           <form onSubmit={handleSubmit} className="form">
+            {/* LINK BUTTONS SECTION */}
             <section className="links-section">
-              <p className="section-label">Links under your art</p>
+              <p className="section-label">Link buttons</p>
               <p className="section-helper">
-                Add a few key links. You can reorder and add more later in your
-                editor.
+                Add a few key links. Drag to reorder later in your editor.
               </p>
 
               <div className="links-list">
                 {links.map((link) => (
-                  <div key={link.id} className="link-row">
-                    <input
-                      type="text"
-                      className="link-input link-label-input"
-                      placeholder="Link title (e.g. Backyards of Key West shop)"
-                      value={link.label}
-                      onChange={(e) =>
-                        handleChange(link.id, 'label', e.target.value)
-                      }
-                    />
-                    <input
-                      type="text"
-                      className="link-input link-url-input"
-                      placeholder="Paste URL (https://…)"
-                      value={link.url}
-                      onChange={(e) =>
-                        handleChange(link.id, 'url', e.target.value)
-                      }
-                    />
+                  <div key={link.id} className="link-card">
+                    <div className="drag-handle" aria-hidden="true">
+                      <span className="drag-dots">⣿</span>
+                    </div>
+
+                    <div className="link-inputs-wrapper">
+                      <input
+                        type="text"
+                        className="link-input link-label-input"
+                        placeholder="My portfolio"
+                        value={link.label}
+                        onChange={(e) =>
+                          handleChange(link.id, 'label', e.target.value)
+                        }
+                      />
+                      <input
+                        type="text"
+                        className="link-input link-url-input"
+                        placeholder="https://…"
+                        value={link.url}
+                        onChange={(e) =>
+                          handleChange(link.id, 'url', e.target.value)
+                        }
+                      />
+                    </div>
+
                     <button
                       type="button"
                       className="link-remove"
@@ -239,20 +356,21 @@ export default function NewLinks() {
             <div className="actions-row content-rail">
               <button
                 type="submit"
-                className="btn btn-primary"
+                className="btn btn-primary btn-full-width"
                 disabled={saving}
               >
                 {saving ? 'Saving…' : 'Continue'}
               </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleSkip}
-                disabled={saving}
-              >
-                Skip for now
-              </button>
             </div>
+
+            <button
+              type="button"
+              className="skip-link-button"
+              onClick={handleSkip}
+              disabled={saving}
+            >
+              Skip for now
+            </button>
 
             <p className="footer-note">
               You can always edit links and socials later from your dashboard.
@@ -315,6 +433,23 @@ export default function NewLinks() {
           }
         }
 
+        /* Progress bar */
+        .progress-bar-container {
+          width: 100%;
+          max-width: 400px;
+          height: 4px;
+          background: #252837;
+          border-radius: 2px;
+          margin: 0 auto 16px;
+        }
+
+        .progress-bar-fill {
+          width: 66.6%;
+          height: 100%;
+          background: linear-gradient(90deg, #6366ff, #a855f7);
+          border-radius: 2px;
+        }
+
         .step-label {
           font-size: 11px;
           letter-spacing: 0.18em;
@@ -372,81 +507,147 @@ export default function NewLinks() {
           margin: 0 0 12px;
         }
 
-        .social-section {
+        /* Social selection */
+        .social-selection-section {
           width: 100%;
-          margin-bottom: 18px;
+          margin-bottom: 24px;
         }
 
-        .social-preview {
-          min-height: 52px;
-          border-radius: 999px;
-          border: 1px dashed rgba(255, 255, 255, 0.14);
-          background: #0b0b14;
+        .social-helper-text {
+          font-size: 13px;
+          color: #898daf;
+          margin: 0 0 12px;
+        }
+
+        .social-icon-row {
+          display: flex;
+          gap: 12px;
+          justify-content: center;
+          margin-bottom: 20px;
+        }
+
+        .social-icon-wrapper {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
-          padding: 8px 14px;
-          gap: 8px;
-        }
-
-        .social-preview-empty {
-          font-size: 12px;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: 2px solid transparent;
+          background-color: #212431;
           color: #8b8fa5;
-          margin: 0;
         }
 
-        .social-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          border-radius: 999px;
-          padding: 6px 10px;
-          font-size: 12px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.14);
+        .social-icon-wrapper.active {
+          background: linear-gradient(45deg, #6366ff, #a855f7);
+          color: #ffffff;
+          border-color: #a855f7;
         }
 
-        .social-pill-short {
+        .social-icon-wrapper.disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+        }
+
+        .social-icon-wrapper:hover:not(.active):not(.disabled) {
+          background-color: #34384f;
+        }
+
+        .social-icon-wrapper.editing {
+          box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.4);
+        }
+
+        .social-icon-placeholder {
+          font-size: 14px;
           font-weight: 600;
         }
 
-        .social-pill-label {
-          opacity: 0.9;
-        }
-
-        .links-section {
+        .social-url-input-container {
           width: 100%;
           margin-top: 10px;
+          animation: slideIn 0.3s ease-out;
+        }
+
+        .social-input-label {
+          font-size: 13px;
+          color: #a1a4c0;
+          margin: 0 0 4px 10px;
+        }
+
+        .social-link-input {
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* Link buttons */
+        .links-section {
+          width: 100%;
+          margin-top: 24px;
         }
 
         .links-list {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
-        .link-row {
-          display: grid;
-          grid-template-columns: 1.2fr 1.6fr auto;
-          gap: 8px;
+        .link-card {
+          display: flex;
           align-items: center;
+          background: #1c1f2e;
+          border-radius: 12px;
+          padding: 8px;
+          border: 1px solid #2e3247;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+          position: relative;
         }
 
-        @media (max-width: 640px) {
-          .link-row {
-            grid-template-columns: 1fr;
-          }
+        .drag-handle {
+          width: 24px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: grab;
+          color: #5d617d;
+          padding: 0 8px;
+        }
+
+        .drag-dots {
+          font-size: 16px;
+          line-height: 1;
+        }
+
+        .link-inputs-wrapper {
+          flex-grow: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          padding-right: 12px;
         }
 
         .link-input {
-          width: 100%;
-          box-sizing: border-box;
-          font-family: ${fontStack};
+          border-radius: 8px;
+          border: 1px solid transparent;
+          background: transparent;
+          padding: 6px 8px;
           font-size: 14px;
+          line-height: 1.4;
+          font-family: ${fontStack};
           color: #ffffff;
-          border-radius: 999px;
-          border: 1px solid #34384f;
-          background: #090a12;
-          padding: 10px 16px;
           outline: none;
         }
 
@@ -454,27 +655,32 @@ export default function NewLinks() {
           color: #8b8fa5;
         }
 
+        .link-label-input {
+          font-weight: 600;
+        }
+
+        .link-url-input {
+          font-size: 12px;
+          color: #b0b4c7;
+        }
+
         .link-input:focus {
-          border-color: #7e8bff;
-          box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
+          border-color: #3e445b;
+          box-shadow: none;
         }
 
         .link-remove {
-          width: 32px;
-          height: 32px;
-          border-radius: 999px;
-          border: 1px solid #34384f;
+          margin-left: auto;
+          width: 30px;
+          height: 30px;
+          border: none;
           background: transparent;
           color: #a1a4c0;
-          font-size: 18px;
+          font-size: 24px;
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
         }
 
         .link-remove:hover {
-          border-color: #ff4b81;
           color: #ff4b81;
         }
 
@@ -492,17 +698,12 @@ export default function NewLinks() {
           text-decoration: underline;
         }
 
+        /* Buttons & footer */
         .actions-row {
-          margin-top: 24px;
+          margin-top: 30px;
           display: flex;
           flex-direction: column;
           gap: 10px;
-        }
-
-        @media (min-width: 600px) {
-          .actions-row {
-            flex-direction: row;
-          }
         }
 
         .btn {
@@ -535,19 +736,22 @@ export default function NewLinks() {
           box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
         }
 
-        .btn-secondary {
+        .btn-full-width {
+          width: 100%;
+        }
+
+        .skip-link-button {
+          margin-top: 10px;
+          border: none;
           background: transparent;
-          color: #e5e7ff;
-          border: 1px solid #3a3f5a;
+          color: #8b8fa5;
+          font-size: 13px;
+          cursor: pointer;
+          text-decoration: underline;
         }
 
-        .btn-secondary:disabled {
-          opacity: 0.7;
-          cursor: default;
-        }
-
-        .btn-secondary:not(:disabled):active {
-          transform: translateY(1px);
+        .skip-link-button:hover {
+          color: #ffffff;
         }
 
         .footer-note {

@@ -39,8 +39,8 @@ const SocialIconMap = {
       <path d="M15 2h-2.5A3.5 3.5 0 0 0 9 5.5V9H6v4h3v8h4v-8h3l1-4h-4V5.5A1.5 1.5 0 0 1 14.5 4H18V2z" />
     </svg>
   ),
-  tiktok: (
-    // ✨ CORRECTED TIKTOK: Stylized music note line-art to match the screenshot.
+ tiktok: (
+    // FINAL: Stylized music note line-art.
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -73,19 +73,20 @@ const SocialIconMap = {
     </svg>
   ),
   x: (
-    // ✨ CORRECTED X: Stylized diagonal line-art to match the screenshot.
+    // FINAL CORRECTED X: Official, angled logo path, rendered as line-art.
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
+      fill="none" // No fill
+      stroke="currentColor" // Outline using the theme color
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M13.5 6L21 3L18 10.5M3 21L10.5 13.5M21 3L13.5 10.5M3 21L10.5 13.5" />
+      {/* This is the official angled path data */}
+      <path d="M12.05 10.74L8.74 1.75H6.38L10.33 8.35L3.8 17.5H7.72L12.05 11.87L16.38 17.5H20.3L13.77 8.35L17.72 1.75H15.36L12.05 10.74Z" />
     </svg>
   ),
   website: (

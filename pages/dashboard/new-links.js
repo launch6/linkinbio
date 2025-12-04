@@ -147,10 +147,9 @@ export default function NewLinks() {
   const router = useRouter();
   const { token } = router.query;
 
-  const [links, setLinks] = useState([
-    { id: 1, label: 'Shop my latest pieces', url: '' },
-    { id: 2, label: 'Join my email list', url: '' },
-  ]);
+ const [links, setLinks] = useState([
+  { id: 1, label: 'Shop my latest pieces', url: '' },
+]);
 
   const [socialUrls, setSocialUrls] = useState({
     instagram: '',
@@ -164,6 +163,30 @@ export default function NewLinks() {
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
   const draggingIdRef = useRef(null);
+
+  // Normalize link URLs: if missing protocol, assume https://
+const normalizeLinkUrl = (value) => {
+  let url = (value || '').trim();
+  if (!url) return '';
+
+  // If the user didn't type http/https, assume https://
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  return url;
+};
+
+// Basic URL validation: require a hostname with a dot (.com, .org, .art, etc.)
+const isValidLinkUrl = (value) => {
+  const normalized = normalizeLinkUrl(value);
+  try {
+    const parsed = new URL(normalized);
+    // Must have a hostname and at least one dot (e.g. example.com)
+    return !!parsed.hostname && parsed.hostname.includes('.');
+  } catch {
+    return false;
+  }
+};
 
   // only count completed socials, not bare prefixes
   const usedSocialCount = SOCIAL_CONFIG.reduce(
@@ -211,25 +234,36 @@ export default function NewLinks() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+ const handleSubmit = (e) => {
+  e.preventDefault();
 
-    // Require at least one *real* link (URL), label can be optional.
-    const hasAtLeastOneLink = links.some(
-      (link) => link.url && link.url.trim().length > 0
+  // Count rows where label OR url has something
+  const filledLinks = links.filter(
+    (l) => l.label.trim() || l.url.trim()
+  );
+
+  if (filledLinks.length === 0) {
+    alert('Add at least one link before continuing.');
+    return;
+  }
+
+  // If a URL is present, it must be valid
+  // (allows bare domains like example.com, gallery.art, etc.)
+  const invalidLinks = filledLinks.filter(
+    (l) => l.url.trim() && !isValidLinkUrl(l.url)
+  );
+
+  if (invalidLinks.length > 0) {
+    alert(
+      'One or more links have an invalid URL. Try something like backyardsofkeywest.com or https://example.com.'
     );
+    return;
+  }
 
-    if (!hasAtLeastOneLink) {
-      alert('Add at least one link before continuing.');
-      return;
-    }
+  // Let goToEditor handle the saving guard and redirect
+  goToEditor();
+};
 
-    if (saving) return;
-    setSaving(true);
-
-    // Continue → Step 3 (drops / next onboarding step)
-    goToStep3();
-  };
 
   // Note: Skip removed – users must add at least one link.
   // --- social icons ---

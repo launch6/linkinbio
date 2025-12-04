@@ -233,24 +233,21 @@ const isValidLinkUrl = (value) => {
       window.location.href = `/dashboard`;
     }
   };
-
- const handleSubmit = (e) => {
+const handleSubmit = (e) => {
   e.preventDefault();
 
-  // Count rows where label OR url has something
-  const filledLinks = links.filter(
-    (l) => l.label.trim() || l.url.trim()
-  );
+  // Only care about rows where the URL has something
+  const linksWithUrls = links.filter((l) => l.url.trim());
 
-  if (filledLinks.length === 0) {
-    alert('Add at least one link before continuing.');
+  // 1) Require at least one URL
+  if (linksWithUrls.length === 0) {
+    alert('Add at least one link URL before continuing.');
     return;
   }
 
-  // If a URL is present, it must be valid
-  // (allows bare domains like example.com, gallery.art, etc.)
-  const invalidLinks = filledLinks.filter(
-    (l) => l.url.trim() && !isValidLinkUrl(l.url)
+  // 2) Any URL that exists must be a valid domain/URL
+  const invalidLinks = linksWithUrls.filter(
+    (l) => !isValidLinkUrl(l.url)
   );
 
   if (invalidLinks.length > 0) {
@@ -260,12 +257,12 @@ const isValidLinkUrl = (value) => {
     return;
   }
 
-  // Let goToEditor handle the saving guard and redirect
-  goToEditor();
+  // 3) All good → move to Step 3 (drops), not the editor
+  if (saving) return;
+  setSaving(true);
+  goToStep3();
 };
 
-
-  // Note: Skip removed – users must add at least one link.
   // --- social icons ---
 
   const handleSocialIconClick = (key) => {

@@ -4,6 +4,112 @@ import { useRouter } from 'next/router';
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
+// -------------------------------------------------------------------------
+// SVG ICONS
+// -------------------------------------------------------------------------
+const SocialIconMap = {
+  instagram: (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  ),
+  facebook: (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    </svg>
+  ),
+  tiktok: (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 2h-6a2 2 0 0 0-2 2v7a2 2 0 0 1-2 2H6v3a4 4 0 0 0 4 4v-4h3a2 2 0 0 0 2-2V7h-4" />
+    </svg>
+  ),
+  youtube: (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2.5" y="6.5" width="19" height="11" rx="1.5" ry="1.5" />
+      <polygon
+        points="10 16 16 12 10 8 10 16"
+        fill="currentColor"
+        stroke="none"
+      />
+    </svg>
+  ),
+  x: (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 2 6 22M6 2l12 20" />
+    </svg>
+  ),
+  website: (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  ),
+};
+
+// Short is still used for the little pill icon + defaults
 const SOCIAL_CONFIG = [
   { key: 'instagram', label: 'Instagram', short: 'IG' },
   { key: 'facebook', label: 'Facebook', short: 'Fb' },
@@ -13,7 +119,9 @@ const SOCIAL_CONFIG = [
   { key: 'website', label: 'Website', short: 'WWW' },
 ];
 
-// Helper to get the base URL for pre-filling the input
+// -------------------------------------------------------------------------
+// BASE URL HELPERS
+// -------------------------------------------------------------------------
 const getSocialBaseUrl = (key) => {
   switch (key) {
     case 'instagram':
@@ -37,13 +145,11 @@ export default function NewLinks() {
   const router = useRouter();
   const { token } = router.query;
 
-  // Initial link buttons under art
   const [links, setLinks] = useState([
     { id: 1, label: 'Shop my latest pieces', url: '' },
     { id: 2, label: 'Join my email list', url: '' },
   ]);
 
-  // Social URLs keyed by network
   const [socialUrls, setSocialUrls] = useState({
     instagram: '',
     facebook: '',
@@ -56,10 +162,15 @@ export default function NewLinks() {
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
 
-  // For simple drag & drop reordering of link cards
   const draggingIdRef = useRef(null);
 
-  const usedSocialCount = Object.values(socialUrls).filter(Boolean).length;
+  // Count only *active* icons (beyond base URL)
+  const usedSocialCount = Object.entries(socialUrls).filter(
+    ([key, url]) => {
+      const base = getSocialBaseUrl(key);
+      return !!url && url !== base;
+    }
+  ).length;
 
   const handleLinkChange = (id, field, value) => {
     setLinks((prev) =>
@@ -75,7 +186,6 @@ export default function NewLinks() {
 
   const handleAddRow = () => {
     setLinks((prev) => {
-      // allow up to 6 in this step
       if (prev.length >= 6) return prev;
       const nextId = prev.length ? Math.max(...prev.map((l) => l.id)) + 1 : 1;
       return [...prev, { id: nextId, label: '', url: '' }];
@@ -86,8 +196,7 @@ export default function NewLinks() {
     if (saving) return;
     setSaving(true);
 
-    // TODO: Later we can POST links + socialUrls to an API.
-    // For now we just send them to the editor.
+    // TODO: post links + socialUrls later
     if (token) {
       window.location.href = `/dashboard/${token}`;
     } else {
@@ -105,21 +214,20 @@ export default function NewLinks() {
     goToEditor();
   };
 
-  // --- Social icon behavior ---
+  // --- SOCIAL ICONS ---
 
   const handleSocialIconClick = (key) => {
-    const isActive = !!socialUrls[key];
+    const baseUrl = getSocialBaseUrl(key);
+    const url = socialUrls[key] || '';
+    const isActive = !!url && url !== baseUrl;
 
-    // If this icon is inactive and the user already has 4 active, block new selection
     if (!isActive && usedSocialCount >= 4) {
       return;
     }
 
     setActiveSocialKey(key);
 
-    // Pre-populate the URL if it's currently empty
     if (!socialUrls[key]) {
-      const baseUrl = getSocialBaseUrl(key);
       setSocialUrls((prev) => ({
         ...prev,
         [key]: baseUrl,
@@ -147,7 +255,7 @@ export default function NewLinks() {
 
   const activeSocialUrl = activeSocialKey ? socialUrls[activeSocialKey] || '' : '';
 
-  // --- Drag & drop for link cards ---
+  // --- DRAG & DROP ---
 
   const handleDragStart = (id) => {
     draggingIdRef.current = id;
@@ -173,7 +281,6 @@ export default function NewLinks() {
     });
   };
 
-  // Use the correct base URL as the placeholder
   const activeSocialPlaceholder = activeSocialKey
     ? getSocialBaseUrl(activeSocialKey) + 'yourname'
     : 'https://...';
@@ -186,7 +293,6 @@ export default function NewLinks() {
 
       <div className="card">
         <div className="card-inner">
-          {/* Progress bar */}
           <div className="progress-bar-container">
             <div className="progress-bar-fill" />
           </div>
@@ -206,11 +312,10 @@ export default function NewLinks() {
 
             <div className="social-icon-row">
               {SOCIAL_CONFIG.map((net) => {
-                const base = getSocialBaseUrl(net.key);
+                const baseUrl = getSocialBaseUrl(net.key);
                 const url = socialUrls[net.key] || '';
-                const isActive = url && url !== base; // Only active if URL is beyond the base URL
-                const isDisabled =
-                  !isActive && usedSocialCount >= 4; // cap at 4 icons
+                const isActive = !!url && url !== baseUrl;
+                const isDisabled = !isActive && usedSocialCount >= 4;
 
                 return (
                   <button
@@ -228,7 +333,13 @@ export default function NewLinks() {
                     disabled={isDisabled}
                   >
                     <span className="social-icon-circle">
-                      <span className="social-icon-short">{net.short}</span>
+                      <span className="social-icon-svg-wrapper">
+                        {SocialIconMap[net.key] || (
+                          <span className="social-icon-fallback">
+                            {net.short}
+                          </span>
+                        )}
+                      </span>
                     </span>
                     <span className="social-icon-label">{net.label}</span>
                   </button>
@@ -238,12 +349,13 @@ export default function NewLinks() {
 
             <p className="social-helper-text">Choose up to 4 icons.</p>
 
-            {/* URL pill */}
             {activeSocialKey && (
               <div className="social-url-pill">
                 <span className="social-url-pill-icon">
-                  {SOCIAL_CONFIG.find((s) => s.key === activeSocialKey)?.short ||
-                    ''}
+                  {
+                    SOCIAL_CONFIG.find((s) => s.key === activeSocialKey)
+                      ?.short
+                  }
                 </span>
                 <input
                   type="text"
@@ -414,7 +526,6 @@ export default function NewLinks() {
           }
         }
 
-        /* --- Progress Bar --- */
         .progress-bar-container {
           width: 100%;
           max-width: 250px;
@@ -524,10 +635,18 @@ export default function NewLinks() {
           transition: all 0.2s ease;
         }
 
-        .social-icon-short {
+        .social-icon-svg-wrapper {
+          color: #c4c7ff;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .social-icon-fallback {
           font-size: 14px;
           font-weight: 600;
-          color: #c4c7ff;
         }
 
         .social-icon-label {
@@ -540,6 +659,10 @@ export default function NewLinks() {
           box-shadow:
             0 0 0 1px rgba(255, 255, 255, 0.14),
             0 6px 16px rgba(80, 60, 200, 0.6);
+        }
+
+        .social-icon-active .social-icon-svg-wrapper {
+          color: #ffffff;
         }
 
         .social-icon-disabled .social-icon-circle {
@@ -567,7 +690,7 @@ export default function NewLinks() {
           border: 1px solid #34384f;
           display: flex;
           align-items: center;
-          padding: 8px 20px; /* more right padding so text + X breathe */
+          padding: 8px 20px;
           gap: 10px;
         }
 
@@ -592,7 +715,7 @@ export default function NewLinks() {
           font-family: ${fontStack};
           font-size: 14px;
           outline: none;
-          padding-right: 8px; /* keeps text away from the X */
+          padding-right: 8px;
         }
 
         .social-url-input::placeholder {
@@ -692,8 +815,8 @@ export default function NewLinks() {
         }
 
         .link-url-input {
-          font-size: 14px;      /* MATCH title size */
-          color: #ffffff;       /* MAKE URL white like title */
+          font-size: 14px;
+          color: #ffffff;
         }
 
         .link-input::placeholder {
@@ -727,8 +850,6 @@ export default function NewLinks() {
         .add-link-button:hover {
           text-decoration: underline;
         }
-
-        /* ACTIONS */
 
         .actions-row {
           margin-top: 28px;

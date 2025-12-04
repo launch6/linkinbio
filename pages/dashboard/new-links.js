@@ -192,7 +192,9 @@ export default function NewLinks() {
   };
 
     // Step navigation helpers
+    // Step navigation helpers
   const goToStep3 = () => {
+    // Later you can branch here based on plan (e.g. canCreateDrops)
     if (token) {
       window.location.href = `/dashboard/new-drop?token=${token}`;
     } else {
@@ -200,6 +202,7 @@ export default function NewLinks() {
     }
   };
 
+  // If you still want a direct path to the editor later, keep this helper:
   const goToEditor = () => {
     if (token) {
       window.location.href = `/dashboard/${token}`;
@@ -210,24 +213,26 @@ export default function NewLinks() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Require at least one *real* link (URL), label can be optional.
+    const hasAtLeastOneLink = links.some(
+      (link) => link.url && link.url.trim().length > 0
+    );
+
+    if (!hasAtLeastOneLink) {
+      alert('Add at least one link before continuing.');
+      return;
+    }
+
     if (saving) return;
     setSaving(true);
 
-    // Continue → Step 3
+    // Continue → Step 3 (drops / next onboarding step)
     goToStep3();
   };
 
-  const handleSkip = (e) => {
-    e.preventDefault();
-    if (saving) return;
-    setSaving(true);
-
-    // Skip for now → straight to editor
-    goToEditor();
-  };
-
+  // Note: Skip removed – users must add at least one link.
   // --- social icons ---
-
 
   const handleSocialIconClick = (key) => {
     const complete = isSocialComplete(key, socialUrls);
@@ -488,18 +493,10 @@ export default function NewLinks() {
               </button>
             </div>
 
-            <button
-              type="button"
-              className="skip-link-button"
-              onClick={handleSkip}
-              disabled={saving}
-            >
-              Skip for now
-            </button>
-
             <p className="footer-note">
               You can always edit links and socials later from your dashboard.
             </p>
+
           </form>
         </div>
       </div>

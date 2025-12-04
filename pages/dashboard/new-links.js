@@ -72,7 +72,7 @@ export default function NewLinks() {
   const [links, setLinks] = useState([
     { id: 1, label: 'Shop my latest pieces', url: '' },
     { id: 2, label: 'Join my email list', url: '' },
-    { id: 3, label: '', url: '' },
+    { id: 3, label: 'My Portfolio', url: '' },
   ]);
 
   const [activeSocialKey, setActiveSocialKey] = useState(null);
@@ -147,13 +147,13 @@ export default function NewLinks() {
       return;
     }
 
-    // If it is inactive and the limit is reached, ignore
+    // If inactive and limit reached, ignore
     if (!isActive && activeNetworks.length >= socialLimit) return;
 
     // Activate this icon for editing
     setActiveSocialKey(key);
 
-    // If there is no link for this network yet, seed an empty slot with its label
+    // Seed an empty link label with the network name if none yet
     const existingForNetwork = links.find(
       (l) => detectNetwork(l.url) === key
     );
@@ -171,10 +171,8 @@ export default function NewLinks() {
     activeSocialKey &&
     links.find((link) => detectNetwork(link.url) === activeSocialKey);
 
-  const handleSocialUrlChange = (e) => {
+  const clearActiveSocialUrl = () => {
     if (!activeSocialKey) return;
-
-    const url = e.target.value;
     const targetNetwork = activeSocialKey;
     const meta = getSocialMeta(targetNetwork);
 
@@ -182,18 +180,31 @@ export default function NewLinks() {
       (l) => detectNetwork(l.url) === targetNetwork
     );
 
-    // Clearing the URL removes the network from activeNetworks
-    if (!url) {
-      if (existingLink) {
-        handleChange(existingLink.id, 'url', '');
-        // If the label was auto-seeded, clear it too
-        if (existingLink.label === meta.label) {
-          handleChange(existingLink.id, 'label', '');
-        }
+    if (existingLink) {
+      handleChange(existingLink.id, 'url', '');
+      if (existingLink.label === meta.label) {
+        handleChange(existingLink.id, 'label', '');
       }
-      setActiveSocialKey(null);
+    }
+    setActiveSocialKey(null);
+  };
+
+  const handleSocialUrlChange = (e) => {
+    if (!activeSocialKey) return;
+
+    const url = e.target.value;
+    const targetNetwork = activeSocialKey;
+    const meta = getSocialMeta(targetNetwork);
+
+    // Clearing handled separately
+    if (!url) {
+      clearActiveSocialUrl();
       return;
     }
+
+    const existingLink = links.find(
+      (l) => detectNetwork(l.url) === targetNetwork
+    );
 
     if (existingLink) {
       handleChange(existingLink.id, 'url', url);
@@ -207,7 +218,6 @@ export default function NewLinks() {
         handleChange(empty.id, 'label', meta.label);
         handleChange(empty.id, 'url', url);
       } else {
-        // Last resort: append a new link row if under 5
         setLinks((prev) => {
           if (prev.length >= 5) return prev;
           const nextId = prev.length
@@ -230,11 +240,6 @@ export default function NewLinks() {
 
       <div className="card">
         <div className="card-inner">
-          {/* Progress Bar */}
-          <div className="progress-bar-container">
-            <div className="progress-bar-fill" />
-          </div>
-
           <p className="step-label">STEP 2 OF 3</p>
           <h1 className="title">Add links &amp; socials</h1>
 
@@ -244,65 +249,90 @@ export default function NewLinks() {
             </p>
           </div>
 
+          {/* Progress Bar under subtitle, like the mock */}
+          <div className="progress-bar-container">
+            <div className="progress-bar-fill" />
+          </div>
+
           {/* SOCIAL ICON SECTION */}
           <section className="social-selection-section">
-            <p className="section-label">Your social icons</p>
-            <p className="social-helper-text">
-              Select up to 4 to display in your header.
-            </p>
+            <div className="social-card">
+              <p className="section-label section-label-row">
+                <span>YOUR SOCIAL ICONS</span>
+              </p>
 
-            <div className="social-icon-row">
-              {SOCIAL_CONFIG.map((net) => {
-                const isActive = activeNetworks.includes(net.key);
-                const isDisabled =
-                  !isActive && activeNetworks.length >= socialLimit;
-                const isEditing = activeSocialKey === net.key;
+              <div className="social-icon-row">
+                {SOCIAL_CONFIG.map((net) => {
+                  const isActive = activeNetworks.includes(net.key);
+                  const isDisabled =
+                    !isActive && activeNetworks.length >= socialLimit;
+                  const isEditing = activeSocialKey === net.key;
 
-                return (
+                  return (
+                    <button
+                      type="button"
+                      key={net.key}
+                      className={`social-icon-wrapper ${
+                        isActive ? 'active' : ''
+                      } ${isDisabled ? 'disabled' : ''} ${
+                        isEditing ? 'editing' : ''
+                      }`}
+                      onClick={() =>
+                        !isDisabled && handleSocialIconClick(net.key)
+                      }
+                      aria-label={net.label}
+                    >
+                      <span className="social-icon-circle">
+                        {net.short}
+                      </span>
+                      <span className="social-icon-label">
+                        {net.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="social-helper-text">
+                Choose up to 4 icons.
+              </p>
+
+              {activeSocialKey && (
+                <div className="social-url-chip">
+                  <div className="chip-icon">
+                    <span className="chip-icon-inner">
+                      {getSocialMeta(activeSocialKey).short}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    className="chip-input"
+                    placeholder="https://instagram.com/yourname"
+                    value={activeSocialLink ? activeSocialLink.url : ''}
+                    onChange={handleSocialUrlChange}
+                  />
                   <button
                     type="button"
-                    key={net.key}
-                    className={`social-icon-wrapper ${
-                      isActive ? 'active' : ''
-                    } ${isDisabled ? 'disabled' : ''} ${
-                      isEditing ? 'editing' : ''
-                    }`}
-                    onClick={() =>
-                      !isDisabled && handleSocialIconClick(net.key)
-                    }
-                    aria-label={net.label}
+                    className="chip-clear"
+                    onClick={clearActiveSocialUrl}
+                    aria-label="Clear social URL"
                   >
-                    <span className="social-icon-placeholder">
-                      {net.short}
-                    </span>
+                    ×
                   </button>
-                );
-              })}
+                </div>
+              )}
             </div>
-
-            {activeSocialKey && (
-              <div className="social-url-input-container">
-                <p className="social-input-label">
-                  {getSocialMeta(activeSocialKey).label} URL
-                </p>
-                <input
-                  type="text"
-                  className="link-input social-link-input"
-                  placeholder="Paste URL (https://…)"
-                  value={activeSocialLink ? activeSocialLink.url : ''}
-                  onChange={handleSocialUrlChange}
-                />
-              </div>
-            )}
           </section>
 
           <form onSubmit={handleSubmit} className="form">
             {/* LINK BUTTONS SECTION */}
             <section className="links-section">
-              <p className="section-label">Link buttons</p>
-              <p className="section-helper">
-                Add a few key links. Drag to reorder later in your editor.
-              </p>
+              <div className="links-header">
+                <p className="section-label">LINK BUTTONS</p>
+                <p className="section-helper inline-helper">
+                  Add key links. Drag to reorder.
+                </p>
+              </div>
 
               <div className="links-list">
                 {links.map((link) => (
@@ -315,7 +345,7 @@ export default function NewLinks() {
                       <input
                         type="text"
                         className="link-input link-label-input"
-                        placeholder="My portfolio"
+                        placeholder="Shop my latest pieces"
                         value={link.label}
                         onChange={(e) =>
                           handleChange(link.id, 'label', e.target.value)
@@ -433,23 +463,6 @@ export default function NewLinks() {
           }
         }
 
-        /* Progress bar */
-        .progress-bar-container {
-          width: 100%;
-          max-width: 400px;
-          height: 4px;
-          background: #252837;
-          border-radius: 2px;
-          margin: 0 auto 16px;
-        }
-
-        .progress-bar-fill {
-          width: 66.6%;
-          height: 100%;
-          background: linear-gradient(90deg, #6366ff, #a855f7);
-          border-radius: 2px;
-        }
-
         .step-label {
           font-size: 11px;
           letter-spacing: 0.18em;
@@ -462,14 +475,14 @@ export default function NewLinks() {
         .title {
           font-size: 24px;
           font-weight: 700;
-          margin: 0 0 16px;
+          margin: 0 0 8px;
           text-align: center;
         }
 
         .subtitle-block {
           text-align: center;
           width: 100%;
-          margin-bottom: 16px;
+          margin-bottom: 10px;
         }
 
         .subtitle-line {
@@ -480,9 +493,25 @@ export default function NewLinks() {
           font-weight: 400;
         }
 
+        .progress-bar-container {
+          width: 100%;
+          max-width: 400px;
+          height: 4px;
+          background: #252837;
+          border-radius: 999px;
+          margin: 18px auto 22px;
+        }
+
+        .progress-bar-fill {
+          width: 66.6%;
+          height: 100%;
+          background: linear-gradient(90deg, #6366ff, #a855f7);
+          border-radius: 999px;
+        }
+
         .form {
           width: 100%;
-          margin-top: 18px;
+          margin-top: 14px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -501,49 +530,54 @@ export default function NewLinks() {
           margin: 0 0 6px;
         }
 
+        .section-label-row {
+          text-align: left;
+        }
+
         .section-helper {
           font-size: 13px;
           color: #898daf;
           margin: 0 0 12px;
         }
 
-        /* Social selection */
+        .inline-helper {
+          margin: 0;
+        }
+
+        /* SOCIAL SECTION */
+
         .social-selection-section {
           width: 100%;
           margin-bottom: 24px;
         }
 
-        .social-helper-text {
-          font-size: 13px;
-          color: #898daf;
-          margin: 0 0 12px;
+        .social-card {
+          width: 100%;
+          background: #0e0f18;
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 16px 18px 18px;
         }
 
         .social-icon-row {
           display: flex;
-          gap: 12px;
-          justify-content: center;
-          margin-bottom: 20px;
+          gap: 10px;
+          justify-content: space-between;
+          margin-bottom: 10px;
+          flex-wrap: nowrap;
         }
 
         .social-icon-wrapper {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
+          flex: 1;
           display: flex;
+          flex-direction: column;
           align-items: center;
-          justify-content: center;
+          gap: 6px;
+          background: transparent;
+          border: none;
+          padding: 4px 0;
           cursor: pointer;
-          transition: all 0.2s ease;
-          border: 2px solid transparent;
-          background-color: #212431;
-          color: #8b8fa5;
-        }
-
-        .social-icon-wrapper.active {
-          background: linear-gradient(45deg, #6366ff, #a855f7);
-          color: #ffffff;
-          border-color: #a855f7;
+          transition: transform 0.12s ease, opacity 0.12s ease;
         }
 
         .social-icon-wrapper.disabled {
@@ -551,51 +585,116 @@ export default function NewLinks() {
           cursor: not-allowed;
         }
 
-        .social-icon-wrapper:hover:not(.active):not(.disabled) {
-          background-color: #34384f;
+        .social-icon-wrapper:not(.disabled):hover {
+          transform: translateY(-1px);
         }
 
-        .social-icon-wrapper.editing {
-          box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.4);
+        .social-icon-wrapper.editing .social-icon-circle {
+          box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.4);
         }
 
-        .social-icon-placeholder {
+        .social-icon-circle {
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           font-size: 14px;
           font-weight: 600;
+          color: #cfd2ff;
+          background: radial-gradient(circle at 30% 0%, #555bff, #202338);
+          border: 2px solid transparent;
+          opacity: 0.55;
         }
 
-        .social-url-input-container {
+        .social-icon-wrapper.active .social-icon-circle {
+          opacity: 1;
+          border-color: rgba(255, 255, 255, 0.9);
+        }
+
+        .social-icon-label {
+          font-size: 11px;
+          color: #c7cae7;
+        }
+
+        .social-helper-text {
+          font-size: 12px;
+          color: #898daf;
+          margin: 4px 0 8px;
+        }
+
+        /* Social URL chip */
+
+        .social-url-chip {
+          margin-top: 4px;
           width: 100%;
-          margin-top: 10px;
-          animation: slideIn 0.3s ease-out;
+          display: flex;
+          align-items: center;
+          border-radius: 999px;
+          background: #11121d;
+          border: 1px solid #34384f;
+          padding: 4px 10px;
+          gap: 10px;
         }
 
-        .social-input-label {
-          font-size: 13px;
+        .chip-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 999px;
+          background: linear-gradient(135deg, #6366ff, #a855f7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .chip-icon-inner {
+          font-size: 12px;
+          font-weight: 600;
+          color: #ffffff;
+        }
+
+        .chip-input {
+          flex: 1;
+          border: none;
+          outline: none;
+          background: transparent;
+          color: #ffffff;
+          font-size: 14px;
+          font-family: ${fontStack};
+        }
+
+        .chip-input::placeholder {
+          color: #8b8fa5;
+        }
+
+        .chip-clear {
+          border: none;
+          background: transparent;
           color: #a1a4c0;
-          margin: 0 0 4px 10px;
+          font-size: 18px;
+          cursor: pointer;
+          padding: 0 4px;
         }
 
-        .social-link-input {
-          width: 100%;
-          box-sizing: border-box;
+        .chip-clear:hover {
+          color: #ff4b81;
         }
 
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
+        /* LINK BUTTONS */
 
-        /* Link buttons */
         .links-section {
           width: 100%;
           margin-top: 24px;
+        }
+
+        .links-header {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 10px;
         }
 
         .links-list {
@@ -608,26 +707,25 @@ export default function NewLinks() {
           display: flex;
           align-items: center;
           background: #1c1f2e;
-          border-radius: 12px;
-          padding: 8px;
+          border-radius: 18px;
+          padding: 10px 10px 10px 6px;
           border: 1px solid #2e3247;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
           position: relative;
         }
 
         .drag-handle {
-          width: 24px;
-          height: 40px;
+          width: 32px;
+          height: 44px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: grab;
           color: #5d617d;
-          padding: 0 8px;
         }
 
         .drag-dots {
-          font-size: 16px;
+          font-size: 18px;
           line-height: 1;
         }
 
@@ -636,14 +734,14 @@ export default function NewLinks() {
           display: flex;
           flex-direction: column;
           gap: 2px;
-          padding-right: 12px;
+          padding-right: 8px;
         }
 
         .link-input {
           border-radius: 8px;
           border: 1px solid transparent;
           background: transparent;
-          padding: 6px 8px;
+          padding: 4px 6px;
           font-size: 14px;
           line-height: 1.4;
           font-family: ${fontStack};
@@ -685,22 +783,24 @@ export default function NewLinks() {
         }
 
         .add-link-button {
-          margin-top: 10px;
+          margin-top: 12px;
           border: none;
           background: transparent;
           color: #c4c6ff;
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
+          text-align: left;
         }
 
         .add-link-button:hover {
           text-decoration: underline;
         }
 
-        /* Buttons & footer */
+        /* BUTTONS & FOOTER */
+
         .actions-row {
-          margin-top: 30px;
+          margin-top: 32px;
           display: flex;
           flex-direction: column;
           gap: 10px;
@@ -755,7 +855,7 @@ export default function NewLinks() {
         }
 
         .footer-note {
-          margin-top: 24px;
+          margin-top: 18px;
           font-size: 12px;
           color: #8b8fa5;
           text-align: center;

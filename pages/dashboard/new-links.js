@@ -41,6 +41,7 @@ const SocialIconMap = {
     </svg>
   ),
   tiktok: (
+    // ✨ CORRECTED TIKTOK ICON ✨
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -52,7 +53,7 @@ const SocialIconMap = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M21 2h-6a2 2 0 0 0-2 2v7a2 2 0 0 1-2 2H6v3a4 4 0 0 0 4 4v-4h3a2 2 0 0 0 2-2V7h-4" />
+      <path d="M22 17h-2.5a4.5 4.5 0 0 0-4.5 4.5V23c0-3.5 1-6.7 4-9V9c0-1.5-.5-3-2-4.5S15 3 13.5 3c-1.5 0-3 .5-4.5 2S7 7.5 7 9v11.5A3.5 3.5 0 0 0 10.5 24h-.5" />
     </svg>
   ),
   youtube: (
@@ -75,19 +76,17 @@ const SocialIconMap = {
       />
     </svg>
   ),
-  x: (
+x: (
+    // ✨ CORRECTED 'X' ICON ✨ (Stylized logo)
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      fill="currentColor"
+      stroke="none"
     >
-      <path d="M18 2 6 22M6 2l12 20" />
+      <path d="M18.244 2.25h3.308l-7.227 8.257 8.57 11.517h-1.571l-6.287-8.587-4.791 8.587h-3.307l7.658-10.421-8.229-8.588h1.572l5.65 5.867 4.793-5.867zm-1.82 17.5l-.837-.84h-2.072l-5.6 5.867H1.36L9.65 1.5H3.64L.92 2.25h-.1l6.78 9.297L1.5 22.5h3.332l5.77-6.27l4.791 6.27h3.308l-7.658-10.421 8.229 8.588H20.7z" />
     </svg>
   ),
   website: (

@@ -39,21 +39,16 @@ const SocialIconMap = {
       <path d="M15 2h-2.5A3.5 3.5 0 0 0 9 5.5V9H6v4h3v8h4v-8h3l1-4h-4V5.5A1.5 1.5 0 0 1 14.5 4H18V2z" />
     </svg>
   ),
- tiktok: (
-    // FINAL: line-art TikTok note, centered in the circle
+tiktok: (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      fill="currentColor"
+      stroke="none"
     >
-      <path d="M9 2v13.8A3.2 3.2 0 0 1 5.8 19 3.8 3.8 0 0 1 2 15.2V11a4 4 0 0 1 4-4h.7" />
-      <path d="M13 3.5v6a2 2 0 0 0 2 2h2.1A3 3 0 0 0 20 8.5" />
+      <path d="M17 6c.5 1.6 1.7 2.7 3.3 3.1L21 9.3V12c-1.3 0-2.6-.4-3.7-1.1v3.8a5.2 5.2 0 1 1-4.7-5.2V11a2.2 2.2 0 0 0-1.7-.2 2.1 2.1 0 1 0 2.2 2.1V6h3z" />
     </svg>
   ),
   // YouTube: rounded rectangle with play triangle
@@ -71,23 +66,6 @@ const SocialIconMap = {
     >
       <rect x="3" y="5" width="18" height="14" rx="3" />
       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none" />
-    </svg>
-  ),
- x: (
-    // Clean X logo: two crossing strokes
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 4l14 16" />
-      <path d="M5 20L19 4" />
     </svg>
   ),
   website: (

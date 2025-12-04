@@ -59,29 +59,20 @@ export default function NewDrop() {
               </p>
             </div>
 
-            <div className="actions-row content-rail">
+                        <div className="actions-row content-rail">
               <button
                 type="submit"
                 className="btn btn-primary btn-full-width"
                 disabled={saving}
               >
-                {saving ? 'Opening editor…' : 'Continue'}
+                {saving ? 'Saving…' : 'Continue'}
               </button>
             </div>
 
-            <button
-              type="button"
-              className="skip-link-button"
-              onClick={handleSkip}
-              disabled={saving}
-            >
-              Skip for now
-            </button>
-
             <p className="footer-note">
-              You can always edit your drops and email capture later from your
-              dashboard.
+              You can always edit links and socials later from your dashboard.
             </p>
+
           </form>
         </div>
       </div>

@@ -50,78 +50,77 @@ export default function NewProfile() {
   };
 
   const createProfile = async () => {
-    if (saving) return;
-    setSaving(true);
-    setUsernameError('');
+  if (saving) return;
+  setSaving(true);
+  setUsernameError('');
 
-    const name = displayName.trim();
-    const description = bio.trim();
-    let slugSource = username.trim();
+  const rawName = displayName.trim();
+  let slugSource = username.trim();
+  const description = bio.trim();
 
-    if (!name) {
-      alert('Please add your name or studio name.');
-      setSaving(false);
-      return;
-    }
+  // ✅ Username / slug is REQUIRED
+  if (!slugSource) {
+    setUsernameError('Choose your username (you can change it later).');
+    setSaving(false);
+    return;
+  }
 
-    // Require username / slug selection
+  // Allow @handle style, but still require something real
+  if (slugSource.startsWith('@')) {
+    slugSource = slugSource.slice(1).trim();
     if (!slugSource) {
       setUsernameError('Choose your username (you can change it later).');
       setSaving(false);
       return;
     }
+  }
 
-    // Strip leading @ if they paste a handle style
-    if (slugSource.startsWith('@')) {
-      slugSource = slugSource.slice(1).trim();
-      if (!slugSource) {
-        setUsernameError('Choose your username (you can change it later).');
-        setSaving(false);
-        return;
-      }
-    }
+  const slug = slugify(slugSource);
 
-    const slug = slugify(slugSource);
+  // ✅ Name is OPTIONAL – if empty, fall back to slugSource
+  const finalName = rawName || slugSource;
 
-    try {
-      const res = await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          slug,
-          description,
-          avatarUrl: avatarDataUrl || '',
-        }),
-      });
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: finalName,
+        slug,
+        description,
+        avatarUrl: avatarDataUrl || '',
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        const rawError =
-          data && typeof data.error === 'string' ? data.error : '';
+    if (!res.ok) {
+      const rawError =
+        data && typeof data.error === 'string' ? data.error : '';
 
-        // Slug already taken → show inline message under username
-        if (
-          res.status === 409 ||
-          (rawError && rawError.toLowerCase().includes('slug'))
-        ) {
-          setUsernameError('That URL is already taken. Try another username.');
-        } else {
-          alert(rawError || 'Failed to create profile');
-        }
-
-        setSaving(false);
-        return;
+      // Slug / username taken → inline message under username input
+      if (
+        res.status === 409 ||
+        (rawError && rawError.toLowerCase().includes('slug'))
+      ) {
+        setUsernameError('That URL is already taken. Try another username.');
+      } else {
+        alert(rawError || 'Failed to create profile');
       }
 
-      window.location.href = `/dashboard/${data.editToken}/new-links`;
-    } catch (err) {
-      console.error(err);
-      alert('Something went wrong creating your profile.');
       setSaving(false);
+      return;
     }
-  };
+
+    // ✅ On success → go to Step 2 (new-links)
+    window.location.href = `/dashboard/${data.editToken}/new-links`;
+  } catch (err) {
+    console.error(err);
+    alert('Something went wrong creating your profile.');
+    setSaving(false);
+  }
+};
+
 
   const handleSubmit = (e) => {
     e.preventDefault();

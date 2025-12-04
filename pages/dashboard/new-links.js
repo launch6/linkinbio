@@ -41,55 +41,52 @@ const SocialIconMap = {
     </svg>
   ),
   tiktok: (
-    // CORRECTED: Specific, filled TikTok logo path
+    // FINAL CORRECTED: Line art of the stylized music note (matches screenshot)
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
       viewBox="0 0 24 24"
-      fill="currentColor"
-      stroke="none"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M12.5 1.1c.9.2 1.6 1.1 1.6 2.1v4.7c0 .1-.1.2-.2.2H8.3c-.7 0-1.4.3-1.8.8-.2.2-.3.4-.3.7 0 .3.1.5.3.7.4.5 1.1.8 1.8.8h2.3v1.8c0 .2.1.3.3.3h2.1c.1 0 .3-.1.3-.3v-1.8h2.3c.7 0 1.4-.3 1.8-.8.2-.2.3-.4.3-.7 0-.3-.1-.5-.3-.7-.4-.5-1.1-.8-1.8-.8h-2.3v-2.1h2.1c.2 0 .4-.1.4-.3V1.5c0-.9-.7-1.7-1.6-1.9H12.5zM7 11.6c-.3 0-.6-.1-.8-.3-.2-.2-.3-.5-.3-.8v-2.5c0-.3.1-.6.3-.8.2-.2.5-.3.8-.3h2.5v4.7H7zM17.4 17.6c-.3 0-.6-.1-.8-.3-.2-.2-.3-.5-.3-.8v-2.5c0-.3.1-.6.3-.8.2-.2.5-.3.8-.3h2.5v4.7h-2.5z" />
-      <path d="M15.5 12.3v6.6c0 .7-.6 1.3-1.3 1.3h-2.9c-.7 0-1.3-.6-1.3-1.3v-6.6c0-.1.1-.2.2-.2h5.2c.1 0 .2.1.2.2zM8 12v6.9c0 .1.1.2.2.2h.9c.1 0 .2-.1.2-.2V12c0-.1-.1-.2-.2-.2h-1.1c-.1 0-.2.1-.2.2z" />
+      <path d="M9 1v17.4a.6.6 0 0 0 .6.6h.4a.6.6 0 0 0 .6-.6V9.4a.6.6 0 0 1 .6-.6h2.8a.6.6 0 0 0 .6-.6V1h-4.6v11.4c0 3.1-2.5 5.6-5.6 5.6H4c-3.1 0-5.6-2.5-5.6-5.6v-4c0-3.1 2.5-5.6 5.6-5.6h.5" />
     </svg>
   ),
-
   youtube: (
-    // CORRECTED: Standard YouTube icon (filled player inside rectangle)
+    // Line art screen with filled play button
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
       viewBox="0 0 24 24"
-      fill="currentColor"
-      stroke="none"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <rect
-        x="2"
-        y="5"
-        width="20"
-        height="14"
-        rx="3"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
+      <rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none" />
     </svg>
   ),
-
   x: (
-    // CORRECTED: Specific, filled X (Twitter) logo path
+    // FINAL CORRECTED: Line art of the stylized X logo (matches screenshot)
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
       viewBox="0 0 24 24"
-      fill="currentColor"
-      stroke="none"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path d="M18.244 2.25h3.308l-7.227 8.257 8.57 11.517h-1.571l-6.287-8.587-4.791 8.587h-3.307l7.658-10.421-8.229-8.588h1.572l5.65 5.867 4.793-5.867zm-1.82 17.5l-.837-.84h-2.072l-5.6 5.867H1.36L9.65 1.5H3.64L.92 2.25h-.1l6.78 9.297L1.5 22.5h3.332l5.77-6.27 4.791 6.27h3.308l-7.658-10.421 8.229 8.588H20.7z" />
+      <path d="M10 3L14 21M4 4L20 20" />
     </svg>
   ),
   website: (

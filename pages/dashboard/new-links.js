@@ -39,8 +39,8 @@ const SocialIconMap = {
       <path d="M15 2h-2.5A3.5 3.5 0 0 0 9 5.5V9H6v4h3v8h4v-8h3l1-4h-4V5.5A1.5 1.5 0 0 1 14.5 4H18V2z" />
     </svg>
   ),
-  // TikTok: music-note style line icon
   tiktok: (
+    // ✨ CORRECTED TIKTOK: Stylized music note line-art to match the screenshot.
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -52,9 +52,7 @@ const SocialIconMap = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M9 2v12.4A3.6 3.6 0 0 1 5.4 18 3.6 3.6 0 0 1 2 14.6V12a4 4 0 0 1 4-4h.5" />
-      <path d="M10.6 6.8h3a.6.6 0 0 0 .6-.6V2h3.8v4.2a4 4 0 0 0 3 3.9" />
-      <path d="M14 8.8v7.6A3.6 3.6 0 0 1 10.4 20" />
+      <path d="M9 1v17.4a.6.6 0 0 0 .6.6h.4a.6.6 0 0 0 .6-.6V9.4a.6.6 0 0 1 .6-.6h2.8a.6.6 0 0 0 .6-.6V1h-4.6v11.4c0 3.1-2.5 5.6-5.6 5.6H4c-3.1 0-5.6-2.5-5.6-5.6v-4c0-3.1 2.5-5.6 5.6-5.6h.5" />
     </svg>
   ),
   // YouTube: rounded rectangle with play triangle
@@ -74,8 +72,8 @@ const SocialIconMap = {
       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none" />
     </svg>
   ),
-  // X: clean diagonal cross
   x: (
+    // ✨ CORRECTED X: Stylized diagonal line-art to match the screenshot.
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -87,7 +85,7 @@ const SocialIconMap = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M4 4l16 16M8 20L20 8" />
+      <path d="M13.5 6L21 3L18 10.5M3 21L10.5 13.5M21 3L13.5 10.5M3 21L10.5 13.5" />
     </svg>
   ),
   website: (

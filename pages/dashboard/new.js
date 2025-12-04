@@ -15,6 +15,7 @@ export default function NewProfile() {
   const [bio, setBio] = useState('');
   const [avatarDataUrl, setAvatarDataUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
   const fileInputRef = useRef(null);
 
   const bioMax = 160;
@@ -51,9 +52,11 @@ export default function NewProfile() {
   const createProfile = async () => {
     if (saving) return;
     setSaving(true);
+    setUsernameError('');
 
     const name = displayName.trim();
     const description = bio.trim();
+    let slugSource = username.trim();
 
     if (!name) {
       alert('Please add your name or studio name.');
@@ -61,16 +64,21 @@ export default function NewProfile() {
       return;
     }
 
-    // Username / slug source:
-    // 1. Prefer the username field
-    // 2. Strip leading @ if present
-    // 3. Fallback to name if username is blank
-    let slugSource = username.trim();
+    // Require username / slug selection
+    if (!slugSource) {
+      setUsernameError('Choose your username (you can change it later).');
+      setSaving(false);
+      return;
+    }
+
+    // Strip leading @ if they paste a handle style
     if (slugSource.startsWith('@')) {
       slugSource = slugSource.slice(1).trim();
-    }
-    if (!slugSource) {
-      slugSource = name;
+      if (!slugSource) {
+        setUsernameError('Choose your username (you can change it later).');
+        setSaving(false);
+        return;
+      }
     }
 
     const slug = slugify(slugSource);
@@ -90,13 +98,15 @@ export default function NewProfile() {
       const data = await res.json();
 
       if (!res.ok) {
-        const rawError = data && typeof data.error === 'string' ? data.error : '';
+        const rawError =
+          data && typeof data.error === 'string' ? data.error : '';
 
+        // Slug already taken → show inline message under username
         if (
           res.status === 409 ||
           (rawError && rawError.toLowerCase().includes('slug'))
         ) {
-          alert('That URL is already taken. Try another username.');
+          setUsernameError('That URL is already taken. Try another username.');
         } else {
           alert(rawError || 'Failed to create profile');
         }
@@ -105,12 +115,7 @@ export default function NewProfile() {
         return;
       }
 
-      // SUCCESS: send them to Step 2 with the editToken in the URL
-      window.location.href = `/dashboard/new-links?token=${encodeURIComponent(
-        data.editToken
-      )}`;
-
-
+      window.location.href = `/dashboard/${data.editToken}/new-links`;
     } catch (err) {
       console.error(err);
       alert('Something went wrong creating your profile.');
@@ -123,12 +128,6 @@ export default function NewProfile() {
     createProfile();
   };
 
-  const handleSkip = (e) => {
-    e.preventDefault();
-    // Skip still requires a name, it simply moves on without avatar/bio pressure
-    createProfile();
-  };
-
   return (
     <main className="onboarding-root">
       <div className="logo-row">
@@ -137,6 +136,11 @@ export default function NewProfile() {
 
       <div className="card">
         <div className="card-inner">
+          {/* Progress bar – STEP 1 of 3 (33.3%) */}
+          <div className="progress-bar-container">
+            <div className="progress-bar-fill" />
+          </div>
+
           <p className="step-label">STEP 1 OF 3</p>
           <h1 className="title">Add profile details</h1>
 
@@ -145,7 +149,7 @@ export default function NewProfile() {
               Add your profile image, name, and bio.
             </p>
             <p className="subtitle-line">
-              You’ll set up links, drops, and email capture in the next steps.
+              Next you’ll add links, socials, and drops.
             </p>
           </div>
 
@@ -238,7 +242,7 @@ export default function NewProfile() {
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Display Name"
+                  placeholder="Name or studio name"
                 />
               </div>
             </div>
@@ -252,9 +256,15 @@ export default function NewProfile() {
                   className="text-input"
                   type="text"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Choose Username (l6.io/yourname)"
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    if (usernameError) setUsernameError('');
+                  }}
+                  placeholder="Choose URL ending (l6.io/yourname)"
                 />
+                {usernameError && (
+                  <p className="field-error">{usernameError}</p>
+                )}
               </div>
             </div>
 
@@ -281,7 +291,7 @@ export default function NewProfile() {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions – only Continue, no Skip */}
             <div className="actions-row content-rail">
               <button
                 type="submit"
@@ -290,57 +300,48 @@ export default function NewProfile() {
               >
                 {saving ? 'Creating…' : 'Continue'}
               </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleSkip}
-                disabled={saving}
-              >
-                Skip
-              </button>
             </div>
 
             <p className="footer-note">
-              After this step you’ll land in your editor to add links, social
-              icons, drops, and email capture.
+              After this step you’ll move on to add links, social icons, and
+              drops.
             </p>
           </form>
         </div>
       </div>
 
       <style jsx>{`
-  :global(html),
-  :global(body) {
-    background-color: #121219;
-    margin: 0;
-    padding: 0;
-  }
+        :global(html),
+        :global(body) {
+          background-color: #121219;
+          margin: 0;
+          padding: 0;
+        }
 
-  .onboarding-root {
-    min-height: 100vh;
-    background-color: #121219;
-    color: #ffffff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    /* was 20px 16px 40px; */
-    padding: 15px 16px 40px;
-    font-family: ${fontStack};
-  }
+        .onboarding-root {
+          min-height: 100vh;
+          background-color: #121219;
+          color: #ffffff;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 20px 16px 40px;
+          font-family: ${fontStack};
+        }
 
-  .logo-row {
-    /* was 20px; */
-    margin-bottom: 15px;
-  }
+        .logo-row {
+          margin-bottom: 15px;
+        }
 
-  .logo {
-    height: 48px;
-    width: auto;
-  }
+        .logo {
+          height: 48px;
+          width: auto;
+        }
+
         .card {
           width: 100%;
           display: flex;
-          justify-content: center; /* FIX: proper CSS property so card is centered */
+          justify-content: center;
         }
 
         .card-inner {
@@ -361,6 +362,23 @@ export default function NewProfile() {
             padding: 28px 18px 24px;
             border-radius: 24px;
           }
+        }
+
+        /* Progress bar – same style as Step 2, but 33.3% */
+        .progress-bar-container {
+          width: 100%;
+          max-width: 260px;
+          height: 4px;
+          background: #252837;
+          border-radius: 2px;
+          margin: 0 auto 16px;
+        }
+
+        .progress-bar-fill {
+          width: 33.3%;
+          height: 100%;
+          background: linear-gradient(90deg, #6366ff, #a855f7);
+          border-radius: 2px;
         }
 
         .step-label {
@@ -525,17 +543,18 @@ export default function NewProfile() {
           color: #8b8fa5;
         }
 
+        .field-error {
+          margin-top: 6px;
+          font-size: 12px;
+          color: #ff9bbf;
+          text-align: left;
+        }
+
         .actions-row {
           margin-top: 24px;
           display: flex;
           flex-direction: column;
           gap: 10px;
-        }
-
-        @media (min-width: 600px) {
-          .actions-row {
-            flex-direction: row;
-          }
         }
 
         .btn {
@@ -566,21 +585,6 @@ export default function NewProfile() {
         .btn-primary:not(:disabled):active {
           transform: translateY(1px);
           box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
-        }
-
-        .btn-secondary {
-          background: transparent;
-          color: #e5e7ff;
-          border: 1px solid #3a3f5a;
-        }
-
-        .btn-secondary:disabled {
-          opacity: 0.7;
-          cursor: default;
-        }
-
-        .btn-secondary:not(:disabled):active {
-          transform: translateY(1px);
         }
 
         .footer-note {

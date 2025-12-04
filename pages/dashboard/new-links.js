@@ -13,6 +13,26 @@ const SOCIAL_CONFIG = [
   { key: 'website', label: 'Website', short: 'WWW' },
 ];
 
+// Helper to get the base URL for pre-filling the input
+const getSocialBaseUrl = (key) => {
+  switch (key) {
+    case 'instagram':
+      return 'https://www.instagram.com/';
+    case 'facebook':
+      return 'https://www.facebook.com/';
+    case 'tiktok':
+      return 'https://www.tiktok.com/@';
+    case 'youtube':
+      return 'https://www.youtube.com/';
+    case 'x':
+      return 'https://x.com/';
+    case 'website':
+      return 'https://';
+    default:
+      return '';
+  }
+};
+
 export default function NewLinks() {
   const router = useRouter();
   const { token } = router.query;
@@ -96,6 +116,15 @@ export default function NewLinks() {
     }
 
     setActiveSocialKey(key);
+
+    // TECHNICAL FIX: Pre-populate the URL if it's currently empty
+    if (!socialUrls[key]) {
+      const baseUrl = getSocialBaseUrl(key);
+      setSocialUrls((prev) => ({
+        ...prev,
+        [key]: baseUrl,
+      }));
+    }
   };
 
   const handleActiveSocialUrlChange = (e) => {
@@ -144,6 +173,11 @@ export default function NewLinks() {
     });
   };
 
+  // Use the correct base URL as the placeholder
+  const activeSocialPlaceholder = activeSocialKey
+    ? getSocialBaseUrl(activeSocialKey) + 'yourname'
+    : 'https://...';
+
   return (
     <main className="onboarding-root">
       <div className="logo-row">
@@ -172,7 +206,7 @@ export default function NewLinks() {
 
             <div className="social-icon-row">
               {SOCIAL_CONFIG.map((net) => {
-                const isActive = !!socialUrls[net.key];
+                const isActive = !!socialUrls[net.key] && socialUrls[net.key] !== getSocialBaseUrl(net.key); // Only active if URL is beyond the base URL
                 const isDisabled =
                   !isActive && usedSocialCount >= 4; // cap at 4 icons
 
@@ -212,11 +246,11 @@ export default function NewLinks() {
                 <input
                   type="text"
                   className="social-url-input"
-                  placeholder={`https://${activeSocialKey}.com/yourname`}
+                  placeholder={activeSocialPlaceholder}
                   value={activeSocialUrl}
                   onChange={handleActiveSocialUrlChange}
                 />
-                {activeSocialUrl && (
+                {activeSocialUrl && activeSocialUrl !== getSocialBaseUrl(activeSocialKey) && (
                   <button
                     type="button"
                     className="social-url-clear"
@@ -377,9 +411,10 @@ export default function NewLinks() {
           }
         }
 
+        /* --- Progress Bar --- */
         .progress-bar-container {
           width: 100%;
-          max-width: 400px;
+          max-width: 250px; /* Adjusted to match design visual width */
           height: 4px;
           background: #252837;
           border-radius: 2px;
@@ -403,7 +438,7 @@ export default function NewLinks() {
         }
 
         .title {
-          font-size: 24px;
+          font-size: 28px; /* Slightly larger title for impact */
           font-weight: 700;
           margin: 0 0 10px;
           text-align: center;
@@ -412,7 +447,7 @@ export default function NewLinks() {
         .subtitle-block {
           text-align: center;
           width: 100%;
-          margin-bottom: 18px;
+          margin-bottom: 24px; /* Increased margin */
         }
 
         .subtitle-line {
@@ -448,13 +483,14 @@ export default function NewLinks() {
           text-transform: uppercase;
           letter-spacing: 0.16em;
           color: #a1a4c0;
-          margin: 0 0 6px;
+          margin: 0 0 16px; /* Centered label with more space */
+          text-align: center;
         }
 
         .social-icon-row {
           display: flex;
-          justify-content: space-between;
-          gap: 10px;
+          justify-content: center; /* Centered icons */
+          gap: 12px; /* Adjusted gap */
           margin-bottom: 8px;
         }
 
@@ -474,14 +510,15 @@ export default function NewLinks() {
         }
 
         .social-icon-circle {
-          width: 52px;
-          height: 52px;
+          width: 48px; /* Slightly smaller size for better alignment */
+          height: 48px;
           border-radius: 999px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: radial-gradient(circle at top, #26293b, #11121b);
+          background: #26293b; /* Darker background for inactive */
           box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+          transition: all 0.2s ease;
         }
 
         .social-icon-short {
@@ -496,7 +533,7 @@ export default function NewLinks() {
         }
 
         .social-icon-active .social-icon-circle {
-          background: radial-gradient(circle at top, #7f5dff, #a855f7);
+          background: linear-gradient(45deg, #a855f7, #6366ff); /* Use the primary gradient */
           box-shadow:
             0 0 0 1px rgba(255, 255, 255, 0.14),
             0 6px 16px rgba(80, 60, 200, 0.6);
@@ -508,20 +545,22 @@ export default function NewLinks() {
 
         .social-icon-editing .social-icon-circle {
           box-shadow:
-            0 0 0 2px rgba(168, 85, 247, 0.5),
+            0 0 0 2px rgba(168, 85, 247, 0.5), /* Focus ring */
             0 6px 16px rgba(80, 60, 200, 0.6);
+          transform: scale(1.05);
         }
 
         .social-helper-text {
           font-size: 12px;
           color: #8b8fa5;
-          margin: 4px 0 10px;
+          margin: 4px 0 18px; /* Added spacing */
+          text-align: center;
         }
 
         .social-url-pill {
           width: 100%;
           border-radius: 999px;
-          background: #11131f;
+          background: #181a26; /* Darker interior background */
           border: 1px solid #34384f;
           display: flex;
           align-items: center;
@@ -539,6 +578,7 @@ export default function NewLinks() {
           justify-content: center;
           font-size: 12px;
           font-weight: 600;
+          color: #ffffff;
         }
 
         .social-url-input {
@@ -561,6 +601,11 @@ export default function NewLinks() {
           color: #8b8fa5;
           font-size: 18px;
           cursor: pointer;
+          transition: color 0.15s ease;
+        }
+        
+        .social-url-clear:hover {
+          color: #ffffff;
         }
 
         /* LINKS */
@@ -593,11 +638,16 @@ export default function NewLinks() {
         .link-card {
           display: flex;
           align-items: center;
-          background: #181a26;
+          background: #1c1f2e; /* Darker card background for contrast */
           border-radius: 16px;
           padding: 8px 10px;
           border: 1px solid #2e3247;
-          box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .link-card[draggable="true"]:active {
+            opacity: 0.8;
+            cursor: grabbing;
         }
 
         .drag-handle {
@@ -607,11 +657,12 @@ export default function NewLinks() {
           justify-content: center;
           color: #62667f;
           cursor: grab;
-          margin-right: 4px;
+          margin-right: 8px; /* Increased margin */
         }
 
         .drag-dots {
-          font-size: 14px;
+          font-size: 20px; /* Larger dots for drag handle */
+          line-height: 1;
         }
 
         .link-inputs-wrapper {
@@ -666,6 +717,7 @@ export default function NewLinks() {
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
+          padding: 0;
         }
 
         .add-link-button:hover {
@@ -720,10 +772,11 @@ export default function NewLinks() {
           color: #8b8fa5;
           font-size: 13px;
           cursor: pointer;
-          text-decoration: underline;
+          text-decoration: none; /* Removed default underline */
         }
 
         .skip-link-button:hover {
+          text-decoration: underline;
           color: #ffffff;
         }
 

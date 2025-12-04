@@ -41,43 +41,7 @@ const SocialIconMap = {
     </svg>
   ),
   tiktok: (
-    // ✨ CORRECTED TIKTOK ICON ✨
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 17h-2.5a4.5 4.5 0 0 0-4.5 4.5V23c0-3.5 1-6.7 4-9V9c0-1.5-.5-3-2-4.5S15 3 13.5 3c-1.5 0-3 .5-4.5 2S7 7.5 7 9v11.5A3.5 3.5 0 0 0 10.5 24h-.5" />
-    </svg>
-  ),
-  youtube: (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="2.5" y="6.5" width="19" height="11" rx="1.5" ry="1.5" />
-      <polygon
-        points="10 16 16 12 10 8 10 16"
-        fill="currentColor"
-        stroke="none"
-      />
-    </svg>
-  ),
-x: (
-    // ✨ CORRECTED 'X' ICON ✨ (Stylized logo)
+    // CORRECTED: Specific, filled TikTok logo path
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -86,7 +50,46 @@ x: (
       fill="currentColor"
       stroke="none"
     >
-      <path d="M18.244 2.25h3.308l-7.227 8.257 8.57 11.517h-1.571l-6.287-8.587-4.791 8.587h-3.307l7.658-10.421-8.229-8.588h1.572l5.65 5.867 4.793-5.867zm-1.82 17.5l-.837-.84h-2.072l-5.6 5.867H1.36L9.65 1.5H3.64L.92 2.25h-.1l6.78 9.297L1.5 22.5h3.332l5.77-6.27l4.791 6.27h3.308l-7.658-10.421 8.229 8.588H20.7z" />
+      <path d="M12.5 1.1c.9.2 1.6 1.1 1.6 2.1v4.7c0 .1-.1.2-.2.2H8.3c-.7 0-1.4.3-1.8.8-.2.2-.3.4-.3.7 0 .3.1.5.3.7.4.5 1.1.8 1.8.8h2.3v1.8c0 .2.1.3.3.3h2.1c.1 0 .3-.1.3-.3v-1.8h2.3c.7 0 1.4-.3 1.8-.8.2-.2.3-.4.3-.7 0-.3-.1-.5-.3-.7-.4-.5-1.1-.8-1.8-.8h-2.3v-2.1h2.1c.2 0 .4-.1.4-.3V1.5c0-.9-.7-1.7-1.6-1.9H12.5zM7 11.6c-.3 0-.6-.1-.8-.3-.2-.2-.3-.5-.3-.8v-2.5c0-.3.1-.6.3-.8.2-.2.5-.3.8-.3h2.5v4.7H7zM17.4 17.6c-.3 0-.6-.1-.8-.3-.2-.2-.3-.5-.3-.8v-2.5c0-.3.1-.6.3-.8.2-.2.5-.3.8-.3h2.5v4.7h-2.5z" />
+      <path d="M15.5 12.3v6.6c0 .7-.6 1.3-1.3 1.3h-2.9c-.7 0-1.3-.6-1.3-1.3v-6.6c0-.1.1-.2.2-.2h5.2c.1 0 .2.1.2.2zM8 12v6.9c0 .1.1.2.2.2h.9c.1 0 .2-.1.2-.2V12c0-.1-.1-.2-.2-.2h-1.1c-.1 0-.2.1-.2.2z" />
+    </svg>
+  ),
+
+  youtube: (
+    // CORRECTED: Standard YouTube icon (filled player inside rectangle)
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="none"
+    >
+      <rect
+        x="2"
+        y="5"
+        width="20"
+        height="14"
+        rx="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+
+  x: (
+    // CORRECTED: Specific, filled X (Twitter) logo path
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="none"
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.257 8.57 11.517h-1.571l-6.287-8.587-4.791 8.587h-3.307l7.658-10.421-8.229-8.588h1.572l5.65 5.867 4.793-5.867zm-1.82 17.5l-.837-.84h-2.072l-5.6 5.867H1.36L9.65 1.5H3.64L.92 2.25h-.1l6.78 9.297L1.5 22.5h3.332l5.77-6.27 4.791 6.27h3.308l-7.658-10.421 8.229 8.588H20.7z" />
     </svg>
   ),
   website: (
@@ -108,7 +111,6 @@ x: (
   ),
 };
 
-// Short is still used for the little pill icon + defaults
 const SOCIAL_CONFIG = [
   { key: 'instagram', label: 'Instagram', short: 'IG' },
   { key: 'facebook', label: 'Facebook', short: 'Fb' },
@@ -118,9 +120,7 @@ const SOCIAL_CONFIG = [
   { key: 'website', label: 'Website', short: 'WWW' },
 ];
 
-// -------------------------------------------------------------------------
-// BASE URL HELPERS
-// -------------------------------------------------------------------------
+// base URLs for locking prefixes
 const getSocialBaseUrl = (key) => {
   switch (key) {
     case 'instagram':
@@ -160,16 +160,13 @@ export default function NewLinks() {
 
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
-
   const draggingIdRef = useRef(null);
 
-  // Count only *active* icons (beyond base URL)
-  const usedSocialCount = Object.entries(socialUrls).filter(
-    ([key, url]) => {
-      const base = getSocialBaseUrl(key);
-      return !!url && url !== base;
-    }
-  ).length;
+  // count only complete socials (more than base URL)
+  const usedSocialCount = Object.entries(socialUrls).filter(([key, url]) => {
+    const base = getSocialBaseUrl(key);
+    return !!url && url !== base;
+  }).length;
 
   const handleLinkChange = (id, field, value) => {
     setLinks((prev) =>
@@ -195,7 +192,7 @@ export default function NewLinks() {
     if (saving) return;
     setSaving(true);
 
-    // TODO: post links + socialUrls later
+    // TODO: POST socials + links later
     if (token) {
       window.location.href = `/dashboard/${token}`;
     } else {
@@ -220,12 +217,12 @@ export default function NewLinks() {
     const url = socialUrls[key] || '';
     const isActive = !!url && url !== baseUrl;
 
-    if (!isActive && usedSocialCount >= 4) {
-      return;
-    }
+    // enforce 4-complete-icons max
+    if (!isActive && usedSocialCount >= 4) return;
 
     setActiveSocialKey(key);
 
+    // prefill base if empty
     if (!socialUrls[key]) {
       setSocialUrls((prev) => ({
         ...prev,
@@ -234,13 +231,28 @@ export default function NewLinks() {
     }
   };
 
+  // lock prefix so user can only edit after it
   const handleActiveSocialUrlChange = (e) => {
     if (!activeSocialKey) return;
-    const value = e.target.value;
+    const base = getSocialBaseUrl(activeSocialKey);
+    const raw = e.target.value ?? '';
+
+    let suffix = '';
+    if (raw.length <= base.length) {
+      // they tried to backspace into the prefix area – keep base only
+      suffix = '';
+    } else if (raw.startsWith(base)) {
+      suffix = raw.slice(base.length);
+    } else {
+      // if they typed something weird, treat it as suffix and reattach base
+      suffix = raw;
+    }
+
+    const next = base + suffix;
 
     setSocialUrls((prev) => ({
       ...prev,
-      [activeSocialKey]: value,
+      [activeSocialKey]: next,
     }));
   };
 
@@ -351,10 +363,10 @@ export default function NewLinks() {
             {activeSocialKey && (
               <div className="social-url-pill">
                 <span className="social-url-pill-icon">
-                  {
-                    SOCIAL_CONFIG.find((s) => s.key === activeSocialKey)
-                      ?.short
-                  }
+                  {/* same SVG icon inside the pill */}
+                  <span className="social-url-pill-icon-inner">
+                    {SocialIconMap[activeSocialKey]}
+                  </span>
                 </span>
                 <input
                   type="text"
@@ -694,15 +706,21 @@ export default function NewLinks() {
         }
 
         .social-url-pill-icon {
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           border-radius: 999px;
           background: linear-gradient(90deg, #6366ff, #a855f7);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
-          font-weight: 600;
+        }
+
+        .social-url-pill-icon-inner {
+          width: 18px;
+          height: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           color: #ffffff;
         }
 

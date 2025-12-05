@@ -280,19 +280,25 @@ export default function NewDrop() {
           justify-content: center;
         }
 
-        .card-inner {
-          width: 100%;
-          max-width: 440px;
-          background: rgba(9, 9, 18, 0.96);
-          border-radius: 32px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-          padding: 32px 32px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
+.card-inner {
+  width: 100%;
+  max-width: 540px; /* match step 1 & 2 */
+  background: rgba(9, 9, 18, 0.96);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  padding: 32px 40px 32px; /* match step 2 horizontal padding */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
+@media (max-width: 600px) {
+  .card-inner {
+    padding: 28px 18px 24px;
+    border-radius: 24px;
+  }
+}
         .progress-bar-container {
           width: 100%;
           max-width: 260px;

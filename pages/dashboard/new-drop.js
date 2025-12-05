@@ -1,5 +1,5 @@
 // pages/dashboard/new-drop.js
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 
 const fontStack =
@@ -22,12 +22,77 @@ export default function NewDrop() {
 
   const [saving, setSaving] = useState(false);
 
+  // --- Drop image state ---
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  const [imageError, setImageError] = useState('');
+  const fileInputRef = useRef(null);
+
+  // Clean up object URL when component unmounts or preview changes
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
+
   // --- Helpers -------------------------------------------------------------
 
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
     const target = token ? `${base}?token=${token}` : base;
     window.location.href = target;
+  };
+
+  const handleImageSelect = (file) => {
+    if (!file) return;
+
+    setImageError('');
+
+    // 1) Must be an image
+    if (!file.type.startsWith('image/')) {
+      setImageError('Please upload an image file (JPG, PNG, GIF).');
+      return;
+    }
+
+    // 2) Max size = 1 MB
+    const maxBytes = 1024 * 1024; // 1 MB
+    if (file.size > maxBytes) {
+      setImageError('Image must be under 1 MB. Try a smaller JPG or PNG.');
+      return;
+    }
+
+    // 3) Create preview URL
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setImageFile(file);
+    setImagePreviewUrl(objectUrl);
+  };
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    handleImageSelect(file);
+  };
+
+  const handleImageBoxClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleImageDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleImageDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    handleImageSelect(file);
   };
 
   const handleSubmit = (e) => {
@@ -64,7 +129,7 @@ export default function NewDrop() {
     setSaving(true);
 
     // TODO: later POST drop details (image, quantity, product, timer, etc.)
-    // For now, go straight to Step 4 (Email / marketing)
+    // imageFile is available here to send to your API/S3 when you’re ready.
     goToStep4();
   };
 
@@ -94,32 +159,98 @@ export default function NewDrop() {
             {/* 1. Drop Image (hero) */}
             <section className="input-group">
               <label className="label">Drop image</label>
-              <div className="image-upload-box">
-                <div className="upload-icon">
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
-                </div>
-                <p className="upload-text">Tap to upload art</p>
-                <p className="upload-subtext">Max 10MB (JPG, PNG, GIF)</p>
+              <div
+                className={`image-upload-box ${
+                  imagePreviewUrl ? 'has-image' : ''
+                }`}
+                onClick={handleImageBoxClick}
+                onDragOver={handleImageDragOver}
+                onDrop={handleImageDrop}
+              >
+                {imagePreviewUrl ? (
+                  <img
+                    src={imagePreviewUrl}
+                    alt="Drop preview"
+                    className="drop-image-preview"
+                  />
+                ) : (
+                  <>
+                    <div className="upload-icon">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                    </div>
+                    <p className="upload-text">Tap or drop art here</p>
+                    <p className="upload-subtext">Max 1 MB (JPG, PNG, GIF)</p>
+                  </>
+                )}
               </div>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleFileInputChange}
+              />
               <p className="helper-text">
                 This image appears at the top of your drop card.
               </p>
+              {imageError && <p className="field-error">{imageError}</p>}
             </section>
 
-            {/* 2. Quantity (scarcity) */}
+            {/* 2. Stripe connection block (Mandatory Requirement) */}
+            <section className="connection-section">
+              <div className="connection-info">
+                <h3 className="connection-title">Connect Stripe (required)</h3>
+                <p className="connection-desc">
+                  Connect Stripe to finalize the drop and enable payments.
+                </p>
+              </div>
+              <button
+                type="button"
+                className={`connect-btn ${
+                  stripeConnected ? 'stripe-connected' : 'stripe-connect'
+                }`}
+                onClick={() => setStripeConnected((v) => !v)}
+              >
+                {stripeConnected ? '✓ Stripe connected' : 'Connect Stripe'}
+              </button>
+            </section>
+
+            <div className="divider" />
+
+            {/* 3. Select Stripe product */}
+            <section className="input-group">
+              <label className="label">Select Stripe product</label>
+              <select
+                className="input-field"
+                value={selectedProductId}
+                onChange={(e) => setSelectedProductId(e.target.value)}
+              >
+                <option value="">Choose a product…</option>
+                {/* Placeholder options – later populate from Stripe API */}
+                <option value="prod_1">
+                  My Amazing Art Piece (Price: $150)
+                </option>
+                <option value="prod_2">Another Product ($50)</option>
+              </select>
+              <p className="helper-text">
+                Product name and price are managed in your Stripe Dashboard.
+              </p>
+            </section>
+
+            {/* 4. Quantity (scarcity) */}
             <section className="input-group">
               <label className="label">Quantity available</label>
               <input
@@ -135,52 +266,21 @@ export default function NewDrop() {
               </p>
             </section>
 
-            {/* 3. Connect Stripe + (after connect) select product */}
-            <section className="connection-section">
-              <div className="connection-info">
-                <h3 className="connection-title">Connect Stripe</h3>
-                <p className="connection-desc">
-                  Connect Stripe to finalize the drop and enable payments.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className={`connect-btn ${
-                  stripeConnected ? 'stripe-connected' : 'stripe-connect'
-                }`}
-                onClick={() => setStripeConnected((v) => !v)}
-              >
-                {stripeConnected ? '✓ Stripe connected' : 'Connect Stripe'}
-              </button>
-
-              {stripeConnected && (
-                <>
-                  <label className="label connection-label">
-                    Stripe product
-                  </label>
-                  <select
-                    className="input-field connection-select"
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                  >
-                    <option value="">Choose a product…</option>
-                    {/* Placeholder options – later populate from Stripe API */}
-                    <option value="prod_1">
-                      My Amazing Art Piece (Price: $150)
-                    </option>
-                    <option value="prod_2">Another Product ($50)</option>
-                  </select>
-                  <p className="helper-text">
-                    Product name and price are managed in your Stripe Dashboard.
-                  </p>
-                </>
-              )}
-            </section>
-
             <div className="divider" />
 
-            {/* 4. Countdown timer (optional) */}
+            {/* 5. Buy button text */}
+            <section className="input-group">
+              <label className="label">Buy button text</label>
+              <input
+                type="text"
+                className="input-field"
+                value={btnText}
+                onChange={(e) => setBtnText(e.target.value)}
+                placeholder="Buy Now"
+              />
+            </section>
+
+            {/* 6. Optional countdown timer */}
             <section className="input-group">
               <div className="toggle-row">
                 <label className="label no-margin">
@@ -218,18 +318,6 @@ export default function NewDrop() {
                   </div>
                 </div>
               )}
-            </section>
-
-            {/* 5. Buy button text */}
-            <section className="input-group">
-              <label className="label">Buy button text</label>
-              <input
-                type="text"
-                className="input-field"
-                value={btnText}
-                onChange={(e) => setBtnText(e.target.value)}
-                placeholder="Buy Now"
-              />
             </section>
 
             {/* Primary CTA */}
@@ -280,25 +368,19 @@ export default function NewDrop() {
           justify-content: center;
         }
 
-.card-inner {
-  width: 100%;
-  max-width: 540px; /* match step 1 & 2 */
-  background: rgba(9, 9, 18, 0.96);
-  border-radius: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-  padding: 32px 40px 32px; /* match step 2 horizontal padding */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+        .card-inner {
+          width: 100%;
+          max-width: 540px;
+          background: rgba(9, 9, 18, 0.96);
+          border-radius: 32px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+          padding: 32px 40px 32px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
 
-@media (max-width: 600px) {
-  .card-inner {
-    padding: 28px 18px 24px;
-    border-radius: 24px;
-  }
-}
         .progress-bar-container {
           width: 100%;
           max-width: 260px;
@@ -379,9 +461,16 @@ export default function NewDrop() {
           margin: 0 0 0 4px;
         }
 
+        .field-error {
+          margin-top: 4px;
+          font-size: 12px;
+          color: #f97373;
+          margin-left: 4px;
+        }
+
         .image-upload-box {
           width: 100%;
-          height: 160px;
+          height: 180px;
           border-radius: 16px;
           border: 2px dashed #34384f;
           background: #181a26;
@@ -391,11 +480,23 @@ export default function NewDrop() {
           justify-content: center;
           cursor: pointer;
           transition: all 0.2s;
+          overflow: hidden;
         }
 
         .image-upload-box:hover {
           border-color: #6366ff;
           background: rgba(99, 102, 255, 0.05);
+        }
+
+        .image-upload-box.has-image {
+          border-style: solid;
+        }
+
+        .drop-image-preview {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 12px;
         }
 
         .upload-icon {
@@ -478,14 +579,13 @@ export default function NewDrop() {
 
         .timer-inputs {
           display: flex;
-          justify-content: space-between;
           gap: 12px;
           margin-top: 8px;
         }
 
-        /* narrower pair of inputs */
+        /* Split timer inputs evenly */
         .half-input {
-          flex: 0 0 48%;
+          flex: 1 1 0%;
         }
 
         .sub-label {
@@ -509,7 +609,7 @@ export default function NewDrop() {
           border: 1px solid #2e3247;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
         .connection-title {
@@ -522,15 +622,7 @@ export default function NewDrop() {
         .connection-desc {
           font-size: 12px;
           color: #8b8fa5;
-          margin: 0 0 4px;
-        }
-
-        .connection-label {
-          margin-top: 8px;
-        }
-
-        .connection-select {
-          margin-top: 2px;
+          margin: 0;
         }
 
         .connect-btn {

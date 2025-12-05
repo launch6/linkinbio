@@ -163,6 +163,8 @@ export default function NewLinks() {
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
   const draggingIdRef = useRef(null);
+// 👇 ADD THIS
+const [linkError, setLinkError] = useState('');
 
   // Normalize link URLs: if missing protocol, assume https://
 const normalizeLinkUrl = (value) => {
@@ -233,15 +235,19 @@ const isValidLinkUrl = (value) => {
       window.location.href = `/dashboard`;
     }
   };
-const handleSubmit = (e) => {
+
+  const handleSubmit = (e) => {
   e.preventDefault();
+
+  // clear any previous error
+  setLinkError('');
 
   // Only care about rows where the URL has something
   const linksWithUrls = links.filter((l) => l.url.trim());
 
   // 1) Require at least one URL
   if (linksWithUrls.length === 0) {
-    alert('Add at least one link URL before continuing.');
+    setLinkError('Add at least one link URL before continuing.');
     return;
   }
 
@@ -251,7 +257,7 @@ const handleSubmit = (e) => {
   );
 
   if (invalidLinks.length > 0) {
-    alert(
+    setLinkError(
       'One or more links have an invalid URL. Try something like backyardsofkeywest.com or https://example.com.'
     );
     return;
@@ -262,6 +268,7 @@ const handleSubmit = (e) => {
   setSaving(true);
   goToStep3();
 };
+
 
   // --- social icons ---
 
@@ -512,7 +519,11 @@ const handleSubmit = (e) => {
               >
                 + Add another link
               </button>
-            </section>
+              {linkError && (
+    <p className="field-error">{linkError}</p>
+  )}
+</section>
+
 
             <div className="actions-row content-rail">
               <button
@@ -737,6 +748,14 @@ const handleSubmit = (e) => {
           margin: 4px 0 14px;
           text-align: center;
         }
+          .field-error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #f97373; /* soft red */
+  text-align: left;
+  padding-left: 4px;
+}
+
 
         /* aligned pill with link cards */
         .social-url-pill {

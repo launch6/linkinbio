@@ -135,30 +135,14 @@ export default function NewDrop() {
               </p>
             </section>
 
-            {/* 3. Connect Stripe + select product (matches mock placement) */}
+            {/* 3. Connect Stripe + (after connect) select product */}
             <section className="connection-section">
               <div className="connection-info">
                 <h3 className="connection-title">Connect Stripe</h3>
                 <p className="connection-desc">
-                  This defines your product price and enables sales.
+                  Connect Stripe to finalize the drop and enable payments.
                 </p>
               </div>
-
-              <select
-                className="input-field connection-select"
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-              >
-                <option value="">Choose a product…</option>
-                {/* Placeholder options – later populate from Stripe API */}
-                <option value="prod_1">
-                  My Amazing Art Piece (Price: $150)
-                </option>
-                <option value="prod_2">Another Product ($50)</option>
-              </select>
-              <p className="helper-text">
-                Product name and price are managed in your Stripe Dashboard.
-              </p>
 
               <button
                 type="button"
@@ -169,6 +153,29 @@ export default function NewDrop() {
               >
                 {stripeConnected ? '✓ Stripe connected' : 'Connect Stripe'}
               </button>
+
+              {stripeConnected && (
+                <>
+                  <label className="label connection-label">
+                    Stripe product
+                  </label>
+                  <select
+                    className="input-field connection-select"
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(e.target.value)}
+                  >
+                    <option value="">Choose a product…</option>
+                    {/* Placeholder options – later populate from Stripe API */}
+                    <option value="prod_1">
+                      My Amazing Art Piece (Price: $150)
+                    </option>
+                    <option value="prod_2">Another Product ($50)</option>
+                  </select>
+                  <p className="helper-text">
+                    Product name and price are managed in your Stripe Dashboard.
+                  </p>
+                </>
+              )}
             </section>
 
             <div className="divider" />
@@ -213,7 +220,7 @@ export default function NewDrop() {
               )}
             </section>
 
-            {/* 5. Buy button text (customization) */}
+            {/* 5. Buy button text */}
             <section className="input-group">
               <label className="label">Buy button text</label>
               <input
@@ -465,13 +472,14 @@ export default function NewDrop() {
 
         .timer-inputs {
           display: flex;
+          justify-content: space-between;
           gap: 12px;
           margin-top: 8px;
         }
 
-        /* Split timer inputs evenly */
+        /* narrower pair of inputs */
         .half-input {
-          flex: 1 1 0%;
+          flex: 0 0 48%;
         }
 
         .sub-label {
@@ -508,11 +516,15 @@ export default function NewDrop() {
         .connection-desc {
           font-size: 12px;
           color: #8b8fa5;
-          margin: 0;
+          margin: 0 0 4px;
+        }
+
+        .connection-label {
+          margin-top: 8px;
         }
 
         .connection-select {
-          margin-top: 4px;
+          margin-top: 2px;
         }
 
         .connect-btn {

@@ -1,6 +1,8 @@
 // pages/dashboard/new-drop.js
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
 
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
@@ -95,6 +97,37 @@ export default function NewDrop() {
     handleImageSelect(file);
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (JPG, PNG, GIF).');
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      alert('Image is too large. Please upload a file under 1MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearImage = (e) => {
+    // prevent triggering the label click underneath
+    e.stopPropagation();
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -156,58 +189,72 @@ export default function NewDrop() {
           </p>
 
           <form onSubmit={handleSubmit} className="stack-form">
-            {/* 1. Drop Image (hero) */}
-            <section className="input-group">
-              <label className="label">Drop image</label>
-              <div
-                className={`image-upload-box ${
-                  imagePreviewUrl ? 'has-image' : ''
-                }`}
-                onClick={handleImageBoxClick}
-                onDragOver={handleImageDragOver}
-                onDrop={handleImageDrop}
-              >
-                {imagePreviewUrl ? (
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Drop preview"
-                    className="drop-image-preview"
-                  />
-                ) : (
-                  <>
-                    <div className="upload-icon">
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
-                    </div>
-                    <p className="upload-text">Tap or drop art here</p>
-                    <p className="upload-subtext">Max 1 MB (JPG, PNG, GIF)</p>
-                  </>
-                )}
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                onChange={handleFileInputChange}
-              />
-              <p className="helper-text">
-                This image appears at the top of your drop card.
-              </p>
-              {imageError && <p className="field-error">{imageError}</p>}
-            </section>
+            
+{/* 1. Drop Image (hero) */}
+<section className="input-group">
+  <label className="label">Drop image</label>
+
+  {/* Whole box is clickable label */}
+  <label
+    htmlFor="drop-image-input"
+    className={`image-upload-box ${imagePreview ? 'has-image' : ''}`}
+  >
+    <input
+      id="drop-image-input"
+      type="file"
+      accept="image/*"
+      ref={fileInputRef}
+      onChange={handleImageChange}
+      style={{ display: 'none' }}
+    />
+
+    {imagePreview ? (
+      <>
+        <img
+          src={imagePreview}
+          alt="Drop art preview"
+          className="drop-image-preview"
+        />
+        <div className="image-overlay">
+          <span className="image-overlay-text">Tap to change</span>
+          <button
+            type="button"
+            className="image-clear-btn"
+            onClick={handleClearImage}
+          >
+            Remove
+          </button>
+        </div>
+      </>
+    ) : (
+      <>
+        <div className="upload-icon">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        </div>
+        <p className="upload-text">Tap to upload art</p>
+        <p className="upload-subtext">Max 1MB (JPG, PNG, GIF)</p>
+      </>
+    )}
+  </label>
+
+  <p className="helper-text">
+    This image appears at the top of your drop card. For best results, use a
+    wide image (landscape).
+  </p>
+</section>
 
             {/* 2. Stripe connection block (Mandatory Requirement) */}
             <section className="connection-section">
@@ -499,17 +546,77 @@ export default function NewDrop() {
   padding: 12px;
 }
 
-/* when an image is present we still keep the same box but let the image fill it */
+.image-upload-box {
+  width: 100%;
+  height: 200px;                 /* fixed height = stable layout */
+  border-radius: 20px;
+  border: 2px dashed #34384f;
+  background: #181a26;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;              /* round corners apply to image */
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.08s;
+}
+
+.image-upload-box:hover {
+  border-color: #6366ff;
+  background: rgba(99, 102, 255, 0.06);
+}
+
+/* when an image is present, keep same box but use solid border */
 .image-upload-box.has-image {
   border-style: solid;
 }
 
+/* Image fully fills the box; verticals are cropped like a card hero */
 .drop-image-preview {
   width: 100%;
-  max-height: 260px;      /* gives it more vertical room */
-  object-fit: contain;    /* <-- show the entire artwork, no cropping */
-  border-radius: 12px;
+  height: 100%;
+  object-fit: cover;             /* key change: no letterboxing */
   display: block;
+}
+
+/* Overlay for “Tap to change / Remove” */
+.image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.45),
+    rgba(0, 0, 0, 0.05)
+  );
+  opacity: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 10px 14px;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.image-upload-box.has-image:hover .image-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.image-overlay-text {
+  font-size: 12px;
+  color: #e5e7ff;
+}
+
+.image-clear-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(12, 12, 20, 0.75);
+  color: #fca5a5;
+  cursor: pointer;
 }
 
         .upload-icon {

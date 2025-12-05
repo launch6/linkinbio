@@ -1,11 +1,11 @@
 // pages/dashboard/new-drop.js
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-  const [imagePreview, setImagePreview] = useState(null);
-  const fileInputRef = useRef(null);
 
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
+
+const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1 MB
 
 export default function NewDrop() {
   const router = useRouter();
@@ -59,8 +59,7 @@ export default function NewDrop() {
     }
 
     // 2) Max size = 1 MB
-    const maxBytes = 1024 * 1024; // 1 MB
-    if (file.size > maxBytes) {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
       setImageError('Image must be under 1 MB. Try a smaller JPG or PNG.');
       return;
     }
@@ -97,36 +96,17 @@ export default function NewDrop() {
     handleImageSelect(file);
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file (JPG, PNG, GIF).');
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      alert('Image is too large. Please upload a file under 1MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleClearImage = (e) => {
-    // prevent triggering the label click underneath
-    e.stopPropagation();
-    setImagePreview(null);
+    e.stopPropagation(); // don’t re-open file picker
+    setImageFile(null);
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+    }
+    setImagePreviewUrl('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -161,8 +141,7 @@ export default function NewDrop() {
     if (saving) return;
     setSaving(true);
 
-    // TODO: later POST drop details (image, quantity, product, timer, etc.)
-    // imageFile is available here to send to your API/S3 when you’re ready.
+    // TODO: later POST drop details (imageFile, quantity, product, timer, etc.)
     goToStep4();
   };
 
@@ -189,72 +168,75 @@ export default function NewDrop() {
           </p>
 
           <form onSubmit={handleSubmit} className="stack-form">
-            
-{/* 1. Drop Image (hero) */}
-<section className="input-group">
-  <label className="label">Drop image</label>
+            {/* 1. Drop Image (hero) */}
+            <section className="input-group">
+              <label className="label">Drop image</label>
 
-  {/* Whole box is clickable label */}
-  <label
-    htmlFor="drop-image-input"
-    className={`image-upload-box ${imagePreview ? 'has-image' : ''}`}
-  >
-    <input
-      id="drop-image-input"
-      type="file"
-      accept="image/*"
-      ref={fileInputRef}
-      onChange={handleImageChange}
-      style={{ display: 'none' }}
-    />
+              <div
+                className={`image-upload-box ${
+                  imagePreviewUrl ? 'has-image' : ''
+                }`}
+                onClick={handleImageBoxClick}
+                onDragOver={handleImageDragOver}
+                onDrop={handleImageDrop}
+              >
+                <input
+                  id="drop-image-input"
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={handleFileInputChange}
+                  style={{ display: 'none' }}
+                />
 
-    {imagePreview ? (
-      <>
-        <img
-          src={imagePreview}
-          alt="Drop art preview"
-          className="drop-image-preview"
-        />
-        <div className="image-overlay">
-          <span className="image-overlay-text">Tap to change</span>
-          <button
-            type="button"
-            className="image-clear-btn"
-            onClick={handleClearImage}
-          >
-            Remove
-          </button>
-        </div>
-      </>
-    ) : (
-      <>
-        <div className="upload-icon">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <polyline points="21 15 16 10 5 21" />
-          </svg>
-        </div>
-        <p className="upload-text">Tap to upload art</p>
-        <p className="upload-subtext">Max 1MB (JPG, PNG, GIF)</p>
-      </>
-    )}
-  </label>
+                {imagePreviewUrl ? (
+                  <>
+                    <img
+                      src={imagePreviewUrl}
+                      alt="Drop art preview"
+                      className="drop-image-preview"
+                    />
+                    <div className="image-overlay">
+                      <span className="image-overlay-text">Tap to change</span>
+                      <button
+                        type="button"
+                        className="image-clear-btn"
+                        onClick={handleClearImage}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="upload-icon">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                    </div>
+                    <p className="upload-text">Tap to upload art</p>
+                    <p className="upload-subtext">Max 1MB (JPG, PNG, GIF)</p>
+                  </>
+                )}
+              </div>
 
-  <p className="helper-text">
-    This image appears at the top of your drop card. For best results, use a
-    wide image (landscape).
-  </p>
-</section>
+              <p className="helper-text">
+                This image appears at the top of your drop card. For best
+                results, use a wide (landscape) image.
+              </p>
+              {imageError && <p className="field-error">{imageError}</p>}
+            </section>
 
             {/* 2. Stripe connection block (Mandatory Requirement) */}
             <section className="connection-section">
@@ -517,107 +499,76 @@ export default function NewDrop() {
 
         .image-upload-box {
           width: 100%;
-          height: 180px;
-          border-radius: 16px;
+          height: 200px; /* fixed height = stable layout */
+          border-radius: 20px;
           border: 2px dashed #34384f;
           background: #181a26;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
+          position: relative;
+          overflow: hidden; /* round corners apply to image */
           cursor: pointer;
-          transition: all 0.2s;
-          overflow: hidden;
+          transition: border-color 0.2s, background 0.2s, transform 0.08s;
         }
 
-.image-upload-box {
-  width: 100%;
-  /* let the content define the height instead of hard-locking it */
-  min-height: 160px;
-  border-radius: 16px;
-  border: 2px dashed #34384f;
-  background: #181a26;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 12px;
-}
+        .image-upload-box:hover {
+          border-color: #6366ff;
+          background: rgba(99, 102, 255, 0.06);
+        }
 
-.image-upload-box {
-  width: 100%;
-  height: 200px;                 /* fixed height = stable layout */
-  border-radius: 20px;
-  border: 2px dashed #34384f;
-  background: #181a26;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;              /* round corners apply to image */
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, transform 0.08s;
-}
+        /* when an image is present, keep same box but use solid border */
+        .image-upload-box.has-image {
+          border-style: solid;
+        }
 
-.image-upload-box:hover {
-  border-color: #6366ff;
-  background: rgba(99, 102, 255, 0.06);
-}
+        /* Image fully fills the box; verticals are cropped like a card hero */
+        .drop-image-preview {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
 
-/* when an image is present, keep same box but use solid border */
-.image-upload-box.has-image {
-  border-style: solid;
-}
+        /* Overlay for “Tap to change / Remove” */
+        .image-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            to top,
+            rgba(0, 0, 0, 0.45),
+            rgba(0, 0, 0, 0.05)
+          );
+          opacity: 0;
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          padding: 10px 14px;
+          pointer-events: none;
+          transition: opacity 0.15s ease;
+        }
 
-/* Image fully fills the box; verticals are cropped like a card hero */
-.drop-image-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;             /* key change: no letterboxing */
-  display: block;
-}
+        .image-upload-box.has-image:hover .image-overlay {
+          opacity: 1;
+          pointer-events: auto;
+        }
 
-/* Overlay for “Tap to change / Remove” */
-.image-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.45),
-    rgba(0, 0, 0, 0.05)
-  );
-  opacity: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 10px 14px;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
+        .image-overlay-text {
+          font-size: 12px;
+          color: #e5e7ff;
+        }
 
-.image-upload-box.has-image:hover .image-overlay {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.image-overlay-text {
-  font-size: 12px;
-  color: #e5e7ff;
-}
-
-.image-clear-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  background: rgba(12, 12, 20, 0.75);
-  color: #fca5a5;
-  cursor: pointer;
-}
+        .image-clear-btn {
+          border: none;
+          border-radius: 999px;
+          padding: 6px 10px;
+          font-size: 11px;
+          font-weight: 500;
+          background: rgba(12, 12, 20, 0.75);
+          color: #fca5a5;
+          cursor: pointer;
+        }
 
         .upload-icon {
           color: #6366ff;

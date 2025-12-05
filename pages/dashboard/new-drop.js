@@ -10,7 +10,7 @@ export default function NewDrop() {
   const { token } = router.query;
 
   // Core drop fields
-  const [quantity, setQuantity] = useState('1');          // blank = open edition
+  const [quantity, setQuantity] = useState('1'); // blank = open edition
   const [btnText, setBtnText] = useState('Buy Now');
   const [isTimerEnabled, setIsTimerEnabled] = useState(false);
   const [startsAt, setStartsAt] = useState('');
@@ -54,7 +54,7 @@ export default function NewDrop() {
       }
     }
 
-    // (Optional) basic timer sanity check – only if both are filled
+    // 4) basic timer sanity check – only if both are filled
     if (startsAt && endsAt && new Date(startsAt) >= new Date(endsAt)) {
       alert('End time must be after the start time.');
       return;
@@ -78,7 +78,7 @@ export default function NewDrop() {
 
       <div className="card">
         <div className="card-inner">
-          {/* Progress bar – STEP 3 OF 4 (75%) */}
+          {/* Progress bar – STEP 3 OF 4 (75% filled) */}
           <div className="progress-bar-container">
             <div className="progress-bar-fill step-3" />
           </div>
@@ -145,7 +145,9 @@ export default function NewDrop() {
               >
                 <option value="">Choose a product…</option>
                 {/* Placeholder options – later populate from Stripe API */}
-                <option value="prod_1">My Amazing Art Piece (Price: $150)</option>
+                <option value="prod_1">
+                  My Amazing Art Piece (Price: $150)
+                </option>
                 <option value="prod_2">Another Product ($50)</option>
               </select>
               <p className="helper-text">
@@ -171,7 +173,8 @@ export default function NewDrop() {
             <section className="input-group">
               <div className="toggle-row">
                 <label className="label no-margin">
-                  Countdown timer <span className="label-optional">(optional)</span>
+                  Countdown timer{' '}
+                  <span className="label-optional">(optional)</span>
                 </label>
                 <button
                   type="button"
@@ -301,9 +304,9 @@ export default function NewDrop() {
           height: 100%;
           background: linear-gradient(90deg, #6366ff, #a855f7);
           border-radius: 2px;
-          width: 50%;
         }
 
+        /* 75% width for Step 3 of 4 */
         .progress-bar-fill.step-3 {
           width: 75%;
         }
@@ -471,8 +474,9 @@ export default function NewDrop() {
           margin-top: 8px;
         }
 
+        /* Split timer inputs evenly */
         .half-input {
-          flex: 1;
+          flex: 1 1 0%;
         }
 
         .sub-label {

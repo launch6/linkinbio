@@ -135,11 +135,17 @@ export default function NewDrop() {
               </p>
             </section>
 
-            {/* 3. Stripe product selection */}
-            <section className="input-group">
-              <label className="label">Select Stripe product</label>
+            {/* 3. Connect Stripe + select product (matches mock placement) */}
+            <section className="connection-section">
+              <div className="connection-info">
+                <h3 className="connection-title">Connect Stripe</h3>
+                <p className="connection-desc">
+                  This defines your product price and enables sales.
+                </p>
+              </div>
+
               <select
-                className="input-field"
+                className="input-field connection-select"
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
               >
@@ -153,23 +159,21 @@ export default function NewDrop() {
               <p className="helper-text">
                 Product name and price are managed in your Stripe Dashboard.
               </p>
+
+              <button
+                type="button"
+                className={`connect-btn ${
+                  stripeConnected ? 'stripe-connected' : 'stripe-connect'
+                }`}
+                onClick={() => setStripeConnected((v) => !v)}
+              >
+                {stripeConnected ? '✓ Stripe connected' : 'Connect Stripe'}
+              </button>
             </section>
 
             <div className="divider" />
 
-            {/* 4. Buy button text */}
-            <section className="input-group">
-              <label className="label">Buy button text</label>
-              <input
-                type="text"
-                className="input-field"
-                value={btnText}
-                onChange={(e) => setBtnText(e.target.value)}
-                placeholder="Buy Now"
-              />
-            </section>
-
-            {/* 5. Optional countdown timer */}
+            {/* 4. Countdown timer (optional) */}
             <section className="input-group">
               <div className="toggle-row">
                 <label className="label no-margin">
@@ -209,25 +213,16 @@ export default function NewDrop() {
               )}
             </section>
 
-            <div className="divider" />
-
-            {/* 6. Stripe connection block */}
-            <section className="connection-section">
-              <div className="connection-info">
-                <h3 className="connection-title">Connect Stripe (required)</h3>
-                <p className="connection-desc">
-                  Connect Stripe to finalize the drop and enable payments.
-                </p>
-              </div>
-              <button
-                type="button"
-                className={`connect-btn ${
-                  stripeConnected ? 'stripe-connected' : 'stripe-connect'
-                }`}
-                onClick={() => setStripeConnected((v) => !v)}
-              >
-                {stripeConnected ? '✓ Stripe connected' : 'Connect Stripe'}
-              </button>
+            {/* 5. Buy button text (customization) */}
+            <section className="input-group">
+              <label className="label">Buy button text</label>
+              <input
+                type="text"
+                className="input-field"
+                value={btnText}
+                onChange={(e) => setBtnText(e.target.value)}
+                placeholder="Buy Now"
+              />
             </section>
 
             {/* Primary CTA */}
@@ -500,7 +495,7 @@ export default function NewDrop() {
           border: 1px solid #2e3247;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
 
         .connection-title {
@@ -514,6 +509,10 @@ export default function NewDrop() {
           font-size: 12px;
           color: #8b8fa5;
           margin: 0;
+        }
+
+        .connection-select {
+          margin-top: 4px;
         }
 
         .connect-btn {

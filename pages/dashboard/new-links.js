@@ -341,13 +341,19 @@ const isValidLinkUrl = (value) => {
 
   // --- drag + drop for link cards ---
 
-  const handleDragStart = (id) => {
-    draggingIdRef.current = id;
-  };
+  const handleDragStart = (id) => (event) => {
+  draggingIdRef.current = id;
 
-  const handleDragEnd = () => {
-    draggingIdRef.current = null;
-  };
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    // Some browsers require *something* to be set
+    event.dataTransfer.setData('text/plain', String(id));
+  }
+};
+
+const handleDragEnd = () => {
+  draggingIdRef.current = null;
+};
 
   const handleDropOn = (targetId) => {
     const sourceId = draggingIdRef.current;
@@ -377,7 +383,7 @@ const isValidLinkUrl = (value) => {
             <div className="progress-bar-fill" />
           </div>
 
-          <p className="step-label">STEP 2 OF 3</p>
+          <p className="step-label">STEP 2 OF 4</p>
           <h1 className="title">Add links &amp; socials</h1>
 
           <div className="subtitle-block">
@@ -467,14 +473,15 @@ const isValidLinkUrl = (value) => {
               <div className="links-list">
                 {links.map((link) => (
                   <div
-                    key={link.id}
-                    className="link-card"
-                    draggable
-                    onDragStart={() => handleDragStart(link.id)}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleDropOn(link.id)}
-                  >
+  key={link.id}
+  className="link-card"
+  draggable
+  onDragStart={handleDragStart(link.id)}
+  onDragEnd={handleDragEnd}
+  onDragOver={(e) => e.preventDefault()}
+  onDrop={() => handleDropOn(link.id)}
+>
+
                     <div className="drag-handle" aria-hidden="true">
                       <span className="drag-dots">⋮⋮</span>
                     </div>
@@ -590,12 +597,7 @@ const isValidLinkUrl = (value) => {
           align-items: center;
         }
 
-        @media (max-width: 600px) {
-          .card-inner {
-            padding: 28px 18px 24px;
-            border-radius: 24px;
-          }
-        }
+@media (max-width: 600px)
 
         .progress-bar-container {
           width: 100%;
@@ -606,12 +608,13 @@ const isValidLinkUrl = (value) => {
           margin: 0 auto 16px;
         }
 
-        .progress-bar-fill {
-          width: 66.6%;
-          height: 100%;
-          background: linear-gradient(90deg, #6366ff, #a855f7);
-          border-radius: 2px;
-        }
+       .progress-bar-fill {
+  width: 50%; /* 2 of 4 steps */
+  height: 100%;
+  background: linear-gradient(90deg, #6366ff, #a855f7);
+  border-radius: 2px;
+}
+
 
         .step-label {
           font-size: 11px;

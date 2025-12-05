@@ -483,21 +483,34 @@ export default function NewDrop() {
           overflow: hidden;
         }
 
-        .image-upload-box:hover {
-          border-color: #6366ff;
-          background: rgba(99, 102, 255, 0.05);
-        }
+.image-upload-box {
+  width: 100%;
+  /* let the content define the height instead of hard-locking it */
+  min-height: 160px;
+  border-radius: 16px;
+  border: 2px dashed #34384f;
+  background: #181a26;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 12px;
+}
 
-        .image-upload-box.has-image {
-          border-style: solid;
-        }
+/* when an image is present we still keep the same box but let the image fill it */
+.image-upload-box.has-image {
+  border-style: solid;
+}
 
-        .drop-image-preview {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          border-radius: 12px;
-        }
+.drop-image-preview {
+  width: 100%;
+  max-height: 260px;      /* gives it more vertical room */
+  object-fit: contain;    /* <-- show the entire artwork, no cropping */
+  border-radius: 12px;
+  display: block;
+}
 
         .upload-icon {
           color: #6366ff;

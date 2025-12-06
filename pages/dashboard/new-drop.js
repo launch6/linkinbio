@@ -9,7 +9,7 @@ const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1MB
 
 export default function NewDrop() {
   const router = useRouter();
-  const { token, stripe_connected } = router.query || {};
+  const { token, stripe_connected } = router.query;
 
   // Core drop fields
   const [quantity, setQuantity] = useState('1'); // blank = open edition
@@ -25,19 +25,26 @@ export default function NewDrop() {
   const [saving, setSaving] = useState(false);
 
   // Drop image state
-  const [imageFile, setImageFile] = useState(null); // ready for future API upload
+  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null); // data URL for display
   const [imageError, setImageError] = useState('');
   const fileInputRef = useRef(null);
 
-  // Mark Stripe as connected when we return from Stripe with ?stripe_connected=1
+  // When returning from Stripe with ?stripe_connected=1, mark as connected
   useEffect(() => {
     if (stripe_connected === '1') {
       setStripeConnected(true);
     }
   }, [stripe_connected]);
 
-  // --- Navigation helper ---------------------------------------------------
+  // Clean up preview if we ever change strategy later
+  useEffect(() => {
+    return () => {
+      setImagePreview(null);
+    };
+  }, []);
+
+  // --- Helpers -------------------------------------------------------------
 
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
@@ -45,26 +52,21 @@ export default function NewDrop() {
     window.location.href = target;
   };
 
-  // --- Image handlers ------------------------------------------------------
-
   const handleImageSelect = (file) => {
     if (!file) return;
 
     setImageError('');
 
-    // 1) Must be an image
     if (!file.type.startsWith('image/')) {
       setImageError('Please upload an image file (JPG, PNG, GIF).');
       return;
     }
 
-    // 2) Max size = 1 MB
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setImageError('Image must be under 1MB. Try a smaller JPG or PNG.');
       return;
     }
 
-    // 3) Read as data URL for preview (safe: we’re not executing any code)
     const reader = new FileReader();
     reader.onloadend = () => {
       setImageFile(file);
@@ -74,7 +76,7 @@ export default function NewDrop() {
   };
 
   const handleFileInputChange = (e) => {
-    const file = e.target.files?.[0] || null;
+    const file = e.target.files && e.target.files[0];
     handleImageSelect(file);
   };
 
@@ -85,12 +87,11 @@ export default function NewDrop() {
 
   const handleImageDrop = (e) => {
     e.preventDefault();
-    const file = e.dataTransfer.files?.[0] || null;
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
     handleImageSelect(file);
   };
 
   const handleClearImage = (e) => {
-    // prevent triggering the label click underneath
     e.stopPropagation();
     setImageFile(null);
     setImagePreview(null);
@@ -100,8 +101,7 @@ export default function NewDrop() {
     }
   };
 
-  // --- Stripe connect handler ---------------------------------------------
-
+  // Connect Stripe → call API → redirect to Stripe
   const handleConnectStripe = async () => {
     if (connectingStripe) return;
 
@@ -119,7 +119,6 @@ export default function NewDrop() {
         throw new Error(data.error || 'Unable to start Stripe connection.');
       }
 
-      // Redirect to Stripe's onboarding flow
       window.location.href = data.url;
     } catch (err) {
       console.error(err);
@@ -127,8 +126,6 @@ export default function NewDrop() {
       setConnectingStripe(false);
     }
   };
-
-  // --- Submit handler ------------------------------------------------------
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -167,7 +164,7 @@ export default function NewDrop() {
     goToStep4();
   };
 
-  // --- Render --------------------------------------------------------------
+  // --- Render -------------------------------------------------------------
 
   return (
     <main className="onboarding-root">
@@ -381,9 +378,7 @@ export default function NewDrop() {
               <button
                 type="submit"
                 className="btn btn-primary btn-full-width"
-                disabled={
-                  saving || !stripeConnected || !selectedProductId
-                }
+                disabled={saving || !stripeConnected}
               >
                 {saving ? 'Saving…' : 'Next: Email setup →'}
               </button>
@@ -428,7 +423,7 @@ export default function NewDrop() {
 
         .card-inner {
           width: 100%;
-          max-width: 540px; /* matches Step 1 & 2 */
+          max-width: 540px;
           background: rgba(9, 9, 18, 0.96);
           border-radius: 32px;
           border: 1px solid rgba(255, 255, 255, 0.16);
@@ -529,7 +524,7 @@ export default function NewDrop() {
 
         .image-upload-box {
           width: 100%;
-          height: 200px; /* fixed height = stable layout */
+          height: 200px;
           border-radius: 20px;
           border: 2px dashed #34384f;
           background: #181a26;
@@ -555,7 +550,7 @@ export default function NewDrop() {
         .drop-image-preview {
           width: 100%;
           height: 100%;
-          object-fit: cover; /* card-hero style crop */
+          object-fit: cover;
           display: block;
         }
 
@@ -743,11 +738,22 @@ export default function NewDrop() {
           display: flex;
           gap: 12px;
           margin-top: 8px;
-          width: 100%; /* keep aligned with other inputs */
+          width: 100%; /* align with other inputs */
         }
 
         .half-input {
           flex: 1;
+        }
+
+        @media (max-width: 600px) {
+          .timer-inputs {
+            flex-direction: column;
+            gap: 10px;
+          }
+
+          .half-input {
+            width: 100%;
+          }
         }
 
         .sub-label {
@@ -793,23 +799,6 @@ export default function NewDrop() {
 
         .btn-full-width {
           width: 100%;
-        }
-
-        /* Mobile tweaks */
-        @media (max-width: 600px) {
-          .card-inner {
-            padding: 28px 18px 24px;
-            border-radius: 24px;
-          }
-
-          .timer-inputs {
-            flex-direction: column;
-            gap: 10px;
-          }
-
-          .half-input {
-            width: 100%;
-          }
         }
       `}</style>
     </main>

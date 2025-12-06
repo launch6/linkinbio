@@ -696,16 +696,28 @@ export default function NewDrop() {
         }
 
         .timer-inputs {
-          display: flex;
-          gap: 12px;
-          margin-top: 8px;
-          width: 100%;
-        }
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  width: 100%;        /* keep it aligned with other inputs */
+}
 
-        .half-input {
-          flex: 1 1 0%;
-          min-width: 0;
-        }
+/* Desktop / default: side-by-side, equal width */
+.half-input {
+  flex: 1;
+}
+
+/* Mobile: stack them, full width like other fields */
+@media (max-width: 600px) {
+  .timer-inputs {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .half-input {
+    width: 100%;
+  }
+}
 
         .sub-label {
           display: block;

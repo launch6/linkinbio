@@ -9,7 +9,7 @@ const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1MB
 
 export default function NewDrop() {
   const router = useRouter();
-  const { token } = router.query;
+  const { token, stripe_connected } = router.query || {};
 
   // Core drop fields
   const [quantity, setQuantity] = useState('1'); // blank = open edition
@@ -18,26 +18,26 @@ export default function NewDrop() {
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
 
-  // Stripe / product state (placeholder – later comes from API + OAuth)
+  // Stripe / product state
   const [stripeConnected, setStripeConnected] = useState(false);
+  const [connectingStripe, setConnectingStripe] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState('');
-
   const [saving, setSaving] = useState(false);
 
   // Drop image state
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFile, setImageFile] = useState(null); // ready for future API upload
   const [imagePreview, setImagePreview] = useState(null); // data URL for display
   const [imageError, setImageError] = useState('');
   const fileInputRef = useRef(null);
 
-  // Clean up data URLs if we ever change strategy later
+  // Mark Stripe as connected when we return from Stripe with ?stripe_connected=1
   useEffect(() => {
-    return () => {
-      setImagePreview(null);
-    };
-  }, []);
+    if (stripe_connected === '1') {
+      setStripeConnected(true);
+    }
+  }, [stripe_connected]);
 
-  // --- Helpers -------------------------------------------------------------
+  // --- Navigation helper ---------------------------------------------------
 
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
@@ -45,21 +45,26 @@ export default function NewDrop() {
     window.location.href = target;
   };
 
+  // --- Image handlers ------------------------------------------------------
+
   const handleImageSelect = (file) => {
     if (!file) return;
 
     setImageError('');
 
+    // 1) Must be an image
     if (!file.type.startsWith('image/')) {
       setImageError('Please upload an image file (JPG, PNG, GIF).');
       return;
     }
 
+    // 2) Max size = 1 MB
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setImageError('Image must be under 1MB. Try a smaller JPG or PNG.');
       return;
     }
 
+    // 3) Read as data URL for preview (safe: we’re not executing any code)
     const reader = new FileReader();
     reader.onloadend = () => {
       setImageFile(file);
@@ -69,7 +74,7 @@ export default function NewDrop() {
   };
 
   const handleFileInputChange = (e) => {
-    const file = e.target.files && e.target.files[0];
+    const file = e.target.files?.[0] || null;
     handleImageSelect(file);
   };
 
@@ -80,11 +85,12 @@ export default function NewDrop() {
 
   const handleImageDrop = (e) => {
     e.preventDefault();
-    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    const file = e.dataTransfer.files?.[0] || null;
     handleImageSelect(file);
   };
 
   const handleClearImage = (e) => {
+    // prevent triggering the label click underneath
     e.stopPropagation();
     setImageFile(null);
     setImagePreview(null);
@@ -93,6 +99,36 @@ export default function NewDrop() {
       fileInputRef.current.value = '';
     }
   };
+
+  // --- Stripe connect handler ---------------------------------------------
+
+  const handleConnectStripe = async () => {
+    if (connectingStripe) return;
+
+    setConnectingStripe(true);
+    try {
+      const res = await fetch('/api/stripe/connect-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token || null }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'Unable to start Stripe connection.');
+      }
+
+      // Redirect to Stripe's onboarding flow
+      window.location.href = data.url;
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'There was a problem connecting to Stripe.');
+      setConnectingStripe(false);
+    }
+  };
+
+  // --- Submit handler ------------------------------------------------------
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -131,7 +167,7 @@ export default function NewDrop() {
     goToStep4();
   };
 
-  // --- Render -------------------------------------------------------------
+  // --- Render --------------------------------------------------------------
 
   return (
     <main className="onboarding-root">
@@ -224,43 +260,49 @@ export default function NewDrop() {
 
             {/* 2. Stripe connection block WITH product dropdown */}
             <section className="connection-section">
-  <div className="connection-info">
-    <h3 className="connection-title">Connect Stripe (required)</h3>
-    <p className="connection-desc">
-      This defines your product price and enables sales.
-    </p>
-  </div>
+              <div className="connection-info">
+                <h3 className="connection-title">Connect Stripe (required)</h3>
+                <p className="connection-desc">
+                  This defines your product price and enables sales.
+                </p>
+              </div>
 
-  {/* Only show the product dropdown AFTER Stripe is connected */}
-  {stripeConnected && (
-    <div className="connection-product-block">
-      <select
-        className="input-field connection-product-select"
-        value={selectedProductId}
-        onChange={(e) => setSelectedProductId(e.target.value)}
-      >
-        <option value="">Choose a product…</option>
-        {/* Placeholder options – later populate from Stripe API */}
-        <option value="prod_1">My Amazing Art Piece (Price: $150)</option>
-        <option value="prod_2">Another Product ($50)</option>
-      </select>
-      <p className="helper-text connection-helper">
-        Product name and price are managed in your Stripe Dashboard.
-      </p>
-    </div>
-  )}
+              {/* Only show the product dropdown AFTER Stripe is connected */}
+              {stripeConnected && (
+                <div className="connection-product-block">
+                  <select
+                    className="input-field connection-product-select"
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(e.target.value)}
+                  >
+                    <option value="">Choose a product…</option>
+                    {/* Placeholder options – later populate from Stripe API */}
+                    <option value="prod_1">
+                      My Amazing Art Piece (Price: $150)
+                    </option>
+                    <option value="prod_2">Another Product ($50)</option>
+                  </select>
+                  <p className="helper-text connection-helper">
+                    Product name and price are managed in your Stripe Dashboard.
+                  </p>
+                </div>
+              )}
 
-  <button
-    type="button"
-    className={`connect-btn ${
-      stripeConnected ? 'stripe-connected' : 'stripe-connect'
-    }`}
-    onClick={() => setStripeConnected((v) => !v)}
-  >
-    {stripeConnected ? '✓ Stripe connected' : 'Connect Stripe'}
-  </button>
-</section>
-
+              <button
+                type="button"
+                className={`connect-btn ${
+                  stripeConnected ? 'stripe-connected' : 'stripe-connect'
+                }`}
+                onClick={handleConnectStripe}
+                disabled={connectingStripe}
+              >
+                {stripeConnected
+                  ? '✓ Stripe connected'
+                  : connectingStripe
+                  ? 'Redirecting…'
+                  : 'Connect Stripe'}
+              </button>
+            </section>
 
             <div className="divider" />
 
@@ -339,7 +381,9 @@ export default function NewDrop() {
               <button
                 type="submit"
                 className="btn btn-primary btn-full-width"
-                disabled={saving || !stripeConnected}
+                disabled={
+                  saving || !stripeConnected || !selectedProductId
+                }
               >
                 {saving ? 'Saving…' : 'Next: Email setup →'}
               </button>
@@ -384,7 +428,7 @@ export default function NewDrop() {
 
         .card-inner {
           width: 100%;
-          max-width: 540px;
+          max-width: 540px; /* matches Step 1 & 2 */
           background: rgba(9, 9, 18, 0.96);
           border-radius: 32px;
           border: 1px solid rgba(255, 255, 255, 0.16);
@@ -485,7 +529,7 @@ export default function NewDrop() {
 
         .image-upload-box {
           width: 100%;
-          height: 200px;
+          height: 200px; /* fixed height = stable layout */
           border-radius: 20px;
           border: 2px dashed #34384f;
           background: #181a26;
@@ -511,7 +555,7 @@ export default function NewDrop() {
         .drop-image-preview {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: cover; /* card-hero style crop */
           display: block;
         }
 
@@ -696,40 +740,21 @@ export default function NewDrop() {
         }
 
         .timer-inputs {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
-  width: 100%;        /* keep it aligned with other inputs */
-}
+          display: flex;
+          gap: 12px;
+          margin-top: 8px;
+          width: 100%; /* keep aligned with other inputs */
+        }
 
-/* Desktop / default: side-by-side, equal width */
-.half-input {
-  flex: 1;
-}
-
-/* Mobile: stack them, full width like other fields */
-@media (max-width: 600px) {
-  .timer-inputs {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .half-input {
-    width: 100%;
-  }
-}
+        .half-input {
+          flex: 1;
+        }
 
         .sub-label {
           display: block;
           font-size: 11px;
           color: #8b8fa5;
           margin-bottom: 4px;
-        }
-
-        @media (max-width: 600px) {
-          .timer-inputs {
-            flex-direction: column;
-          }
         }
 
         .actions-row {
@@ -768,6 +793,23 @@ export default function NewDrop() {
 
         .btn-full-width {
           width: 100%;
+        }
+
+        /* Mobile tweaks */
+        @media (max-width: 600px) {
+          .card-inner {
+            padding: 28px 18px 24px;
+            border-radius: 24px;
+          }
+
+          .timer-inputs {
+            flex-direction: column;
+            gap: 10px;
+          }
+
+          .half-input {
+            width: 100%;
+          }
         }
       `}</style>
     </main>

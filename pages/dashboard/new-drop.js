@@ -37,20 +37,22 @@ export default function NewDrop() {
     }
   }, [stripe_connected]);
 
-  // Clean up preview if we ever change strategy later
+  // Clean up preview if component unmounts
   useEffect(() => {
     return () => {
       setImagePreview(null);
     };
   }, []);
 
-  // --- Helpers -------------------------------------------------------------
+  // --- Navigation helper ---------------------------------------------------
 
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
     const target = token ? `${base}?token=${token}` : base;
     window.location.href = target;
   };
+
+  // --- Image handling ------------------------------------------------------
 
   const handleImageSelect = (file) => {
     if (!file) return;
@@ -101,7 +103,8 @@ export default function NewDrop() {
     }
   };
 
-  // Connect Stripe → call API → redirect to Stripe
+  // --- Stripe connect handler ---------------------------------------------
+
   const handleConnectStripe = async () => {
     if (connectingStripe) return;
 
@@ -113,12 +116,19 @@ export default function NewDrop() {
         body: JSON.stringify({ token: token || null }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || 'Unable to start Stripe connection.');
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        console.error('connect-link JSON parse error:', parseErr);
+        throw new Error('Unexpected response from server. Try again.');
       }
 
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || 'Unable to start Stripe connection.');
+      }
+
+      // Redirect to Stripe's onboarding flow
       window.location.href = data.url;
     } catch (err) {
       console.error(err);
@@ -126,6 +136,8 @@ export default function NewDrop() {
       setConnectingStripe(false);
     }
   };
+
+  // --- Form submit ---------------------------------------------------------
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -164,7 +176,7 @@ export default function NewDrop() {
     goToStep4();
   };
 
-  // --- Render -------------------------------------------------------------
+  // --- Render --------------------------------------------------------------
 
   return (
     <main className="onboarding-root">
@@ -255,7 +267,7 @@ export default function NewDrop() {
               {imageError && <p className="field-error">{imageError}</p>}
             </section>
 
-            {/* 2. Stripe connection block WITH product dropdown */}
+            {/* 2. Stripe connection block + product dropdown */}
             <section className="connection-section">
               <div className="connection-info">
                 <h3 className="connection-title">Connect Stripe (required)</h3>
@@ -264,7 +276,6 @@ export default function NewDrop() {
                 </p>
               </div>
 
-              {/* Only show the product dropdown AFTER Stripe is connected */}
               {stripeConnected && (
                 <div className="connection-product-block">
                   <select
@@ -738,7 +749,7 @@ export default function NewDrop() {
           display: flex;
           gap: 12px;
           margin-top: 8px;
-          width: 100%; /* align with other inputs */
+          width: 100%;
         }
 
         .half-input {

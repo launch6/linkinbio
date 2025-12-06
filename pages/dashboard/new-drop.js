@@ -224,41 +224,43 @@ export default function NewDrop() {
 
             {/* 2. Stripe connection block WITH product dropdown */}
             <section className="connection-section">
-              <div className="connection-info">
-                <h3 className="connection-title">Connect Stripe (required)</h3>
-                <p className="connection-desc">
-                  This defines your product price and enables sales.
-                </p>
-              </div>
+  <div className="connection-info">
+    <h3 className="connection-title">Connect Stripe (required)</h3>
+    <p className="connection-desc">
+      This defines your product price and enables sales.
+    </p>
+  </div>
 
-              <div className="connection-product-block">
-                <select
-                  className="input-field connection-product-select"
-                  value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(e.target.value)}
-                >
-                  <option value="">Choose a product…</option>
-                  {/* Placeholder options – later populate from Stripe API */}
-                  <option value="prod_1">
-                    My Amazing Art Piece (Price: $150)
-                  </option>
-                  <option value="prod_2">Another Product ($50)</option>
-                </select>
-                <p className="helper-text connection-helper">
-                  Product name and price are managed in your Stripe Dashboard.
-                </p>
-              </div>
+  {/* Only show the product dropdown AFTER Stripe is connected */}
+  {stripeConnected && (
+    <div className="connection-product-block">
+      <select
+        className="input-field connection-product-select"
+        value={selectedProductId}
+        onChange={(e) => setSelectedProductId(e.target.value)}
+      >
+        <option value="">Choose a product…</option>
+        {/* Placeholder options – later populate from Stripe API */}
+        <option value="prod_1">My Amazing Art Piece (Price: $150)</option>
+        <option value="prod_2">Another Product ($50)</option>
+      </select>
+      <p className="helper-text connection-helper">
+        Product name and price are managed in your Stripe Dashboard.
+      </p>
+    </div>
+  )}
 
-              <button
-                type="button"
-                className={`connect-btn ${
-                  stripeConnected ? 'stripe-connected' : 'stripe-connect'
-                }`}
-                onClick={() => setStripeConnected((v) => !v)}
-              >
-                {stripeConnected ? '✓ Stripe connected' : 'Connect Stripe'}
-              </button>
-            </section>
+  <button
+    type="button"
+    className={`connect-btn ${
+      stripeConnected ? 'stripe-connected' : 'stripe-connect'
+    }`}
+    onClick={() => setStripeConnected((v) => !v)}
+  >
+    {stripeConnected ? '✓ Stripe connected' : 'Connect Stripe'}
+  </button>
+</section>
+
 
             <div className="divider" />
 

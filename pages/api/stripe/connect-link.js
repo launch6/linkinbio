@@ -1,6 +1,26 @@
 // pages/api/stripe/connect-link.js
 
 export default async function handler(req, res) {
+  // Read envs once at the top
+  const clientId =
+    process.env.STRIPE_CLIENT_ID || process.env.STRIPE_CONNECT_CLIENT_ID;
+  const redirectUrl = process.env.STRIPE_CONNECT_REDIRECT_URL;
+
+  // 🔍 DEBUG MODE:
+  // Hitting this route with GET in the browser will show what the server
+  // actually sees for these env vars. Example:
+  // https://<your-domain>/api/stripe/connect-link
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      debug: true,
+      hasClientId: !!clientId,
+      hasRedirectUrl: !!redirectUrl,
+      clientId,
+      redirectUrl,
+    });
+  }
+
+  // Normal behavior for the app: POST only
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
@@ -8,12 +28,6 @@ export default async function handler(req, res) {
 
   try {
     const { token } = req.body || {};
-
-    // Support both names, but prefer STRIPE_CLIENT_ID (what you documented)
-    const clientId =
-      process.env.STRIPE_CLIENT_ID || process.env.STRIPE_CONNECT_CLIENT_ID;
-
-    const redirectUrl = process.env.STRIPE_CONNECT_REDIRECT_URL;
 
     if (!clientId || !redirectUrl) {
       console.error('[connect-link] Missing Stripe Connect env vars', {
@@ -29,9 +43,7 @@ export default async function handler(req, res) {
     }
 
     if (!token) {
-      return res
-        .status(400)
-        .json({ error: 'Missing onboarding token.' });
+      return res.status(400).json({ error: 'Missing onboarding token.' });
     }
 
     const params = new URLSearchParams({
@@ -47,10 +59,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ url });
   } catch (err) {
     console.error('Stripe connect-link error:', err);
-    return res
-      .status(500)
-      .json({
-        error: 'Unable to start Stripe connection. Try again later.',
-      });
+    return res.status(500).json({
+      error: 'Unable to start Stripe connection. Try again later.',
+    });
   }
 }

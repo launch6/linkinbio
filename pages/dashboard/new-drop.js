@@ -12,6 +12,8 @@ export default function NewDrop() {
   const { token, stripe_connected } = router.query;
 
   // Core drop fields
+  const [dropTitle, setDropTitle] = useState('');
+  const [dropDescription, setDropDescription] = useState('');
   const [quantity, setQuantity] = useState('1'); // blank = open edition
   const [btnText, setBtnText] = useState('Buy Now');
   const [isTimerEnabled, setIsTimerEnabled] = useState(false);
@@ -142,6 +144,12 @@ export default function NewDrop() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // 0) Require a drop title for the public card
+    if (!dropTitle.trim()) {
+      alert('Add a title for this drop before continuing.');
+      return;
+    }
+
     // 1) require Stripe
     if (!stripeConnected) {
       alert('Connect Stripe before continuing.');
@@ -172,7 +180,7 @@ export default function NewDrop() {
     if (saving) return;
     setSaving(true);
 
-    // TODO: later POST drop details (imageFile, product, quantity, timer, etc.)
+    // TODO: later POST drop details (imageFile, product, quantity, timer, title, description, etc.)
     goToStep4();
   };
 
@@ -265,6 +273,34 @@ export default function NewDrop() {
                 results, use a wide (landscape) image.
               </p>
               {imageError && <p className="field-error">{imageError}</p>}
+            </section>
+
+            {/* 1b. Drop title + description (for the public card) */}
+            <section className="input-group">
+              <label className="label">Drop title</label>
+              <input
+                type="text"
+                className="input-field"
+                value={dropTitle}
+                onChange={(e) => setDropTitle(e.target.value)}
+                placeholder="e.g. Papa Sparrow – Limited Edition Print"
+              />
+              <p className="helper-text">
+                This title appears on your public drop card.
+              </p>
+            </section>
+
+            <section className="input-group">
+              <label className="label">
+                Short description <span className="label-optional">(optional)</span>
+              </label>
+              <textarea
+                className="textarea-field"
+                rows={3}
+                value={dropDescription}
+                onChange={(e) => setDropDescription(e.target.value)}
+                placeholder="Tell collectors what they’re getting (size, edition size, special details, etc.)."
+              />
             </section>
 
             {/* 2. Stripe connection block + product dropdown */}
@@ -535,7 +571,7 @@ export default function NewDrop() {
 
         .image-upload-box {
           width: 100%;
-          height: 200px;
+          height: 240px; /* slightly taller so full art feels intentional */
           border-radius: 20px;
           border: 2px dashed #34384f;
           background: #181a26;
@@ -561,7 +597,8 @@ export default function NewDrop() {
         .drop-image-preview {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain; /* show full artwork, no cropping */
+          background-color: #0b0c14; /* subtle frame behind any letterboxing */
           display: block;
         }
 
@@ -636,6 +673,26 @@ export default function NewDrop() {
         }
 
         .input-field:focus {
+          border-color: #7e8bff;
+        }
+
+        .textarea-field {
+          width: 100%;
+          box-sizing: border-box;
+          background: #181a26;
+          border: 1px solid #34384f;
+          border-radius: 12px;
+          padding: 10px 14px;
+          color: #ffffff;
+          font-size: 14px;
+          font-family: ${fontStack};
+          outline: none;
+          resize: vertical;
+          min-height: 90px;
+          line-height: 1.4;
+        }
+
+        .textarea-field:focus {
           border-color: #7e8bff;
         }
 

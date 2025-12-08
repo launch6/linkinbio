@@ -21,9 +21,11 @@ export default async function handler(req, res) {
         hasRedirectUrl: !!redirectUrl,
       });
 
-      return res
-        .status(500)
-        .json({ error: 'Stripe is not configured yet. Contact support.' });
+      return res.status(500).json({
+        error: 'Stripe is not configured yet. Contact support.',
+        hasClientId: !!clientId,
+        hasRedirectUrl: !!redirectUrl,
+      });
     }
 
     if (!token) {

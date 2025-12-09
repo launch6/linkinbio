@@ -6,6 +6,7 @@ const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
 const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1MB
+const DRAFT_STORAGE_PREFIX = 'launch6_new_drop_draft';
 
 export default function NewDrop() {
   const router = useRouter();
@@ -45,6 +46,57 @@ export default function NewDrop() {
       setImagePreview(null);
     };
   }, []);
+
+  // --- Draft storage helpers ------------------------------------------------
+
+  const getDraftKey = () =>
+    `${DRAFT_STORAGE_PREFIX}_${typeof token === 'string' && token ? token : 'default'}`;
+
+  const saveDraftToStorage = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const payload = {
+        dropTitle,
+        dropDescription,
+        quantity,
+        btnText,
+        isTimerEnabled,
+        startsAt,
+        endsAt,
+        imagePreview, // data URL; used for visual restore only
+        selectedProductId,
+      };
+      window.localStorage.setItem(getDraftKey(), JSON.stringify(payload));
+    } catch (err) {
+      console.error('[new-drop] Failed to save draft', err);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!router.isReady) return;
+
+    try {
+      const raw = window.localStorage.getItem(getDraftKey());
+      if (!raw) return;
+      const d = JSON.parse(raw);
+
+      if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
+      if (typeof d.dropDescription === 'string')
+        setDropDescription(d.dropDescription);
+      if (typeof d.quantity === 'string') setQuantity(d.quantity);
+      if (typeof d.btnText === 'string') setBtnText(d.btnText);
+      if (typeof d.isTimerEnabled === 'boolean')
+        setIsTimerEnabled(d.isTimerEnabled);
+      if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
+      if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
+      if (typeof d.imagePreview === 'string') setImagePreview(d.imagePreview);
+      if (typeof d.selectedProductId === 'string')
+        setSelectedProductId(d.selectedProductId);
+    } catch (err) {
+      console.error('[new-drop] Failed to load draft', err);
+    }
+  }, [router.isReady, token]); // load when token/route is ready
 
   // --- Navigation helper ---------------------------------------------------
 
@@ -110,6 +162,9 @@ export default function NewDrop() {
   const handleConnectStripe = async () => {
     if (connectingStripe) return;
 
+    // save current work so returning from Stripe restores everything
+    saveDraftToStorage();
+
     setConnectingStripe(true);
     try {
       const res = await fetch('/api/stripe/connect-link', {
@@ -166,7 +221,9 @@ export default function NewDrop() {
     if (quantity.trim()) {
       const n = Number(quantity);
       if (!Number.isInteger(n) || n <= 0) {
-        alert('Quantity must be a whole number (leave blank for open edition).');
+        alert(
+          'Quantity must be a whole number (leave blank for open edition).'
+        );
         return;
       }
     }
@@ -178,6 +235,9 @@ export default function NewDrop() {
     }
 
     if (saving) return;
+
+    // save draft one more time before moving on
+    saveDraftToStorage();
     setSaving(true);
 
     // TODO: later POST drop details (imageFile, product, quantity, timer, title, description, etc.)
@@ -292,7 +352,8 @@ export default function NewDrop() {
 
             <section className="input-group">
               <label className="label">
-                Short description <span className="label-optional">(optional)</span>
+                Short description{' '}
+                <span className="label-optional">(optional)</span>
               </label>
               <textarea
                 className="textarea-field"
@@ -571,7 +632,7 @@ export default function NewDrop() {
 
         .image-upload-box {
           width: 100%;
-          height: 240px; /* slightly taller so full art feels intentional */
+          height: 240px;
           border-radius: 20px;
           border: 2px dashed #34384f;
           background: #181a26;
@@ -597,8 +658,8 @@ export default function NewDrop() {
         .drop-image-preview {
           width: 100%;
           height: 100%;
-          object-fit: contain; /* show full artwork, no cropping */
-          background-color: #0b0c14; /* subtle frame behind any letterboxing */
+          object-fit: contain;
+          background-color: #0b0c14;
           display: block;
         }
 

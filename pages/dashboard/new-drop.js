@@ -427,7 +427,7 @@ export default function NewDrop() {
                 className="btn btn-primary btn-full-width"
                 disabled={saving || !stripeConnected}
               >
-                {saving ? 'Saving…' : 'Next: Email setup →'}
+                {saving ? 'Saving…' : 'Next: Email setup & Complete →'}
               </button>
             </div>
           </form>

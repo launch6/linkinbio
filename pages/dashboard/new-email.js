@@ -1,35 +1,64 @@
 // pages/dashboard/new-email.js
-import { useState } from "react";
-import { useRouter } from "next/router";
+import { useState } from 'react';
+import { useRouter } from 'next/router';
 
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
-export default function NewEmail() {
+export default function NewEmailStep() {
   const router = useRouter();
   const { token } = router.query;
 
-  // For now we assume Klaviyo is “logically connected”.
-  // Later you’ll replace this with a real OAuth / API check.
-  const [klaviyoConnected] = useState(true);
+  // Basic state for this step
+  const [klaviyoConnected, setKlaviyoConnected] = useState(false);
+  const [enableForm, setEnableForm] = useState(true);
+  const [collectName, setCollectName] = useState(true);
+  const [selectedList, setSelectedList] = useState('main-list');
+  const [launching, setLaunching] = useState(false);
 
-  const [selectedList, setSelectedList] = useState("main-list");
-  const [emailCaptureEnabled, setEmailCaptureEnabled] = useState(true);
-  const [collectFullName, setCollectFullName] = useState(true);
-  const [requireSms, setRequireSms] = useState(false);
-
-  const handleSkip = () => {
-    router.push("/dashboard");
+  const handleConnectKlaviyo = () => {
+    // Later: open a real OAuth / API connection flow.
+    if (!klaviyoConnected) {
+      setKlaviyoConnected(true);
+      alert('Pretending to connect Klaviyo (we will wire this up later).');
+    } else {
+      setKlaviyoConnected(false);
+      alert('Klaviyo disconnected for now.');
+    }
   };
 
-  const handleLaunch = () => {
-    // TODO: later this should “publish” the drop.
-    // For now, send them back to the dashboard.
-    if (token) {
-      router.push(`/dashboard?token=${encodeURIComponent(token)}`);
-    } else {
-      router.push("/dashboard");
+  const finishOnboarding = async (enableEmailCapture) => {
+    if (launching) return;
+    setLaunching(true);
+
+    try {
+      // TODO: call a real API to persist email form settings
+      // await fetch('/api/onboarding/email-settings', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     token,
+      //     enableForm: enableEmailCapture,
+      //     collectName,
+      //     klaviyoListKey: selectedList,
+      //   }),
+      // });
+
+      router.push('/dashboard');
+    } catch (err) {
+      console.error(err);
+      alert('Something went wrong finishing setup. Try again.');
+      setLaunching(false);
     }
+  };
+
+  const handleSkip = () => {
+    finishOnboarding(false);
+  };
+
+  const handleLaunch = (e) => {
+    e.preventDefault();
+    finishOnboarding(enableForm);
   };
 
   return (
@@ -40,91 +69,86 @@ export default function NewEmail() {
 
       <div className="card">
         <div className="card-inner">
-          {/* Progress bar – STEP 4 OF 4 (100%) */}
+          {/* Progress bar – STEP 4 OF 4 (100% filled) */}
           <div className="progress-bar-container">
             <div className="progress-bar-fill step-4" />
           </div>
 
           <p className="step-label">STEP 4 OF 4</p>
           <h1 className="title">Amplify Your Audience</h1>
+
           <p className="subtitle">
             Connect your marketing tools to grow your collectors.
           </p>
 
-          <div className="stack-form">
+          <form onSubmit={handleLaunch} className="stack-form">
             {/* 1. Email Marketing Integration */}
-            <section className="panel panel-primary">
+            <section className="panel panel-main">
               <div className="panel-header">
-                <span className="panel-label">EMAIL MARKETING INTEGRATION</span>
+                <span className="panel-title">Email Marketing Integration</span>
               </div>
 
-              {/* Klaviyo connect (visually connected) */}
+              {/* Klaviyo connect button */}
               <button
                 type="button"
-                className="klaviyo-connect-btn"
-                disabled={!klaviyoConnected}
+                className={`klaviyo-connect ${
+                  klaviyoConnected ? 'connected' : ''
+                }`}
+                onClick={handleConnectKlaviyo}
               >
                 <div className="klaviyo-left">
-                  <div className="klaviyo-icon">K</div>
-                  <span>
+                  <span className="klaviyo-icon">K</span>
+                  <span className="klaviyo-label">
                     {klaviyoConnected
-                      ? "Connected to Klaviyo"
-                      : "Connect to Klaviyo"}
+                      ? 'Connected to Klaviyo'
+                      : 'Connect to Klaviyo'}
                   </span>
                 </div>
-                {klaviyoConnected && (
-                  <span className="klaviyo-status">✓ Connected</span>
-                )}
+                <span className="klaviyo-status">
+                  {klaviyoConnected ? '✓' : '→'}
+                </span>
               </button>
 
-              {/* List dropdown */}
-              {klaviyoConnected && (
-                <div className="panel-body-block">
-                  <label className="field-label" htmlFor="klaviyo-list">
-                    Sync signups to list
-                  </label>
-                  <div className="select-wrap">
-                    <select
-                      id="klaviyo-list"
-                      className="select-field"
-                      value={selectedList}
-                      onChange={(e) => setSelectedList(e.target.value)}
-                    >
-                      <option value="main-list">
-                        Launch6 – Primary Subscriber List (Default)
-                      </option>
-                      <option value="drop-signups">Aurora Drop Signups</option>
-                      <option value="waitlist">General Waitlist</option>
-                      <option value="legacy-subscribers">
-                        Legacy Subscribers
-                      </option>
-                    </select>
-                  </div>
-                  <p className="helper-text">
-                    This is where new emails from your drop page will be added.
-                  </p>
-                </div>
-              )}
+              {/* List dropdown (visible whether or not connected, for now) */}
+              <div className="list-select-block">
+                <label className="list-label" htmlFor="klaviyo-list">
+                  Sync signups to list
+                </label>
+                <select
+                  id="klaviyo-list"
+                  className="list-select"
+                  value={selectedList}
+                  onChange={(e) => setSelectedList(e.target.value)}
+                >
+                  <option value="main-list">
+                    Launch6 – Primary Subscriber List (Default)
+                  </option>
+                  <option value="drop-signups">Aurora Drop Signups</option>
+                  <option value="waitlist">General Waitlist</option>
+                  <option value="legacy-subscribers">
+                    Legacy Subscribers
+                  </option>
+                </select>
+                <p className="helper-text">
+                  This is where new emails from your drop page will be added.
+                </p>
+              </div>
 
               {/* Enable email capture toggle */}
-              <div className="panel-toggle-row">
-                <div className="panel-toggle-copy">
-                  <span className="toggle-title">
+              <div className="toggle-row panel-toggle with-border">
+                <div className="toggle-text">
+                  <span className="toggle-label">
                     Enable email capture form
                   </span>
-                  <span className="toggle-sub">
+                  <span className="toggle-subtext">
                     Show a simple form on your drop page so fans can join your
                     list.
                   </span>
                 </div>
                 <button
                   type="button"
-                  className={`toggle-switch ${
-                    emailCaptureEnabled ? "on" : "off"
-                  }`}
-                  onClick={() =>
-                    setEmailCaptureEnabled((current) => !current)
-                  }
+                  className={`toggle-switch ${enableForm ? 'on' : 'off'}`}
+                  onClick={() => setEnableForm((v) => !v)}
                 >
                   <div className="toggle-thumb" />
                 </button>
@@ -134,23 +158,30 @@ export default function NewEmail() {
             {/* 2. Form Preview & Settings */}
             <section className="panel">
               <div className="panel-header">
-                <span className="panel-label">FORM PREVIEW & SETTINGS</span>
+                <span className="panel-title">Form Preview &amp; Settings</span>
               </div>
 
-              <div className="form-preview-box">
-                <h2 className="form-preview-title">
+              <div
+                className={`form-preview ${
+                  !enableForm ? 'disabled' : ''
+                }`}
+              >
+                <h2 className="preview-title">
                   Get Notified About Future Drops
                 </h2>
 
-                <div className="form-field">
-                  <input
-                    type="text"
-                    disabled
-                    className="preview-input"
-                    placeholder="Full Name (optional)"
-                  />
-                </div>
-                <div className="form-field">
+                {collectName && (
+                  <div className="preview-field">
+                    <input
+                      type="text"
+                      disabled
+                      className="preview-input"
+                      placeholder="Full Name (optional)"
+                    />
+                  </div>
+                )}
+
+                <div className="preview-field">
                   <input
                     type="email"
                     disabled
@@ -162,93 +193,74 @@ export default function NewEmail() {
                 <button
                   type="button"
                   disabled
-                  className="preview-submit-btn"
+                  className="preview-submit"
                 >
                   Submit
                 </button>
               </div>
 
-              {/* Collect full name toggle */}
-              <div className="panel-toggle-row">
-                <div className="panel-toggle-copy">
-                  <span className="toggle-title">Collect full name</span>
-                  <span className="toggle-sub">
+              {/* Collect name toggle */}
+              <div className="toggle-row collect-name-row with-border">
+                <div className="toggle-text">
+                  <span className="toggle-label">Collect full name</span>
+                  <span className="toggle-subtext">
                     Helpful for more personal emails. Optional for collectors.
                   </span>
                 </div>
                 <button
                   type="button"
-                  className={`toggle-switch ${
-                    collectFullName ? "on" : "off"
-                  }`}
-                  onClick={() => setCollectFullName((current) => !current)}
+                  className={`toggle-switch ${collectName ? 'on' : 'off'}`}
+                  onClick={() => setCollectName((v) => !v)}
                 >
                   <div className="toggle-thumb" />
                 </button>
               </div>
             </section>
 
-            {/* 3. Advanced Form Settings */}
-            <section className="panel">
-              <div className="panel-header">
-                <span className="panel-label">ADVANCED FORM SETTINGS</span>
-              </div>
-
-              <div className="panel-toggle-row">
-                <div className="panel-toggle-copy">
-                  <span className="toggle-title">
-                    Require SMS opt-in (US only)
-                  </span>
-                  <span className="toggle-sub">
-                    Add an optional phone number field for SMS updates.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className={`toggle-switch ${requireSms ? "on" : "off"}`}
-                  onClick={() => setRequireSms((current) => !current)}
-                >
-                  <div className="toggle-thumb" />
-                </button>
-              </div>
-            </section>
+            {/* NOTE: Advanced settings / SMS panel removed per your request */}
 
             {/* Actions */}
             <div className="actions-row">
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-ghost"
                 onClick={handleSkip}
+                disabled={launching}
               >
                 Skip for now
               </button>
               <button
-                type="button"
+                type="submit"
                 className="btn btn-primary"
-                onClick={handleLaunch}
+                disabled={launching}
               >
-                Launch Your Page! 🔗
+                {launching ? 'Launching…' : 'Launch Your Page! 🔗'}
               </button>
             </div>
 
             <p className="footer-note">
               Don’t worry, you can always update this from your Dashboard.
             </p>
-          </div>
+          </form>
         </div>
       </div>
 
       <style jsx>{`
         :global(html),
         :global(body) {
+          background-color: #121219;
           margin: 0;
           padding: 0;
-          background-color: #121219; /* same as other steps */
         }
 
         .onboarding-root {
           min-height: 100vh;
-          background-color: #121219;
+          background: radial-gradient(
+            circle at top,
+            #1d1530 0,
+            #090814 40%,
+            #050509 100%
+          );
           color: #ffffff;
           display: flex;
           flex-direction: column;
@@ -262,7 +274,7 @@ export default function NewEmail() {
         }
 
         .logo {
-          height: 40px;
+          height: 44px;
           width: auto;
         }
 
@@ -274,12 +286,12 @@ export default function NewEmail() {
 
         .card-inner {
           width: 100%;
-          max-width: 420px; /* slimmer “phone-card” look */
+          max-width: 540px;
           background: rgba(9, 9, 18, 0.97);
           border-radius: 32px;
           border: 1px solid rgba(255, 255, 255, 0.16);
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-          padding: 28px 24px 24px;
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+          padding: 32px 32px 28px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -313,17 +325,17 @@ export default function NewEmail() {
         }
 
         .title {
-          font-size: 22px;
+          font-size: 24px;
           font-weight: 700;
-          margin: 0 0 6px;
+          margin: 0 0 8px;
           text-align: center;
         }
 
         .subtitle {
-          font-size: 13px;
+          font-size: 14px;
           color: #8b8fa5;
           text-align: center;
-          margin: 0 0 20px;
+          margin: 0 0 24px;
           line-height: 1.4;
         }
 
@@ -331,18 +343,18 @@ export default function NewEmail() {
           width: 100%;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 18px;
         }
 
         .panel {
           width: 100%;
-          border-radius: 18px;
           background: #181a26;
-          border: 1px solid #2e3247;
-          padding: 14px 14px 12px;
+          border-radius: 18px;
+          border: 1px solid #272a3e;
+          padding: 14px 14px 16px;
         }
 
-        .panel-primary {
+        .panel-main {
           background: #1c1f2e;
         }
 
@@ -350,27 +362,38 @@ export default function NewEmail() {
           margin-bottom: 10px;
         }
 
-        .panel-label {
-          font-size: 11px;
+        .panel-title {
+          font-size: 13px;
           font-weight: 600;
-          letter-spacing: 0.12em;
+          color: #e5e7ff;
           text-transform: uppercase;
-          color: #d0d2ff;
+          letter-spacing: 0.08em;
         }
 
-        .klaviyo-connect-btn {
+        .klaviyo-connect {
           width: 100%;
-          border-radius: 12px;
+          margin-top: 4px;
           padding: 10px 12px;
-          border: 1px solid #6366ff;
-          background: rgba(99, 102, 255, 0.16);
+          border-radius: 10px;
+          border: 1px solid #2e3248;
+          background: #0f111b;
           display: flex;
           align-items: center;
           justify-content: space-between;
+          cursor: pointer;
+          color: #f9fafb;
           font-size: 13px;
           font-weight: 500;
-          color: #ffffff;
-          cursor: default;
+          transition: border-color 0.15s, background 0.15s, transform 0.08s;
+        }
+
+        .klaviyo-connect:hover {
+          border-color: #6366ff;
+        }
+
+        .klaviyo-connect.connected {
+          background: rgba(99, 102, 255, 0.12);
+          border-color: #6366ff;
         }
 
         .klaviyo-left {
@@ -380,10 +403,10 @@ export default function NewEmail() {
         }
 
         .klaviyo-icon {
-          height: 26px;
-          width: 26px;
+          width: 24px;
+          height: 24px;
           border-radius: 8px;
-          background: linear-gradient(135deg, #a855f7, #6366ff);
+          background: radial-gradient(circle at 20% 0, #a855f7, #4f46e5);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -392,83 +415,87 @@ export default function NewEmail() {
         }
 
         .klaviyo-status {
-          font-size: 11px;
-          font-weight: 600;
-          color: #c7d2ff;
+          font-size: 14px;
+          opacity: 0.75;
         }
 
-        .panel-body-block {
-          margin-top: 10px;
+        .list-select-block {
+          margin-top: 12px;
         }
 
-        .field-label {
+        .list-label {
           display: block;
           font-size: 12px;
           font-weight: 600;
-          color: #ffffff;
-          margin-bottom: 6px;
-          margin-left: 2px;
+          margin: 0 0 4px 2px;
+          color: #e5e7ff;
         }
 
-        .select-wrap {
-          position: relative;
-        }
-
-        .select-field {
+        .list-select {
           width: 100%;
           box-sizing: border-box;
-          border-radius: 12px;
-          padding: 10px 34px 10px 12px;
           background: #181a26;
           border: 1px solid #34384f;
-          color: #e5e7eb;
+          border-radius: 10px;
+          padding: 8px 12px;
+          color: #f9fafb;
           font-size: 13px;
           font-family: ${fontStack};
           outline: none;
           appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239ca3c0'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z' clip-rule='evenodd' /%3E%3C/svg%3E");
+          background-image: linear-gradient(
+              45deg,
+              transparent 50%,
+              #9ca3c0 50%
+            ),
+            linear-gradient(135deg, #9ca3c0 50%, transparent 50%);
+          background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+          background-size: 5px 5px, 5px 5px;
           background-repeat: no-repeat;
-          background-position: right 10px center;
-          background-size: 16px 16px;
         }
 
-        .select-field:focus {
+        .list-select:focus {
           border-color: #7e8bff;
         }
 
         .helper-text {
           font-size: 11px;
           color: #9ca3c0;
-          margin: 6px 0 0 2px;
+          margin-top: 4px;
+          margin-left: 2px;
         }
 
-        .panel-toggle-row {
+        .toggle-row {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
+          align-items: center;
           gap: 10px;
-          margin-top: 12px;
-          padding-top: 10px;
-          border-top: 1px solid #252837;
         }
 
-        .panel-toggle-copy {
+        .panel-toggle {
+          margin-top: 10px;
+        }
+
+        .with-border {
+          border-top: 1px solid #252837;
+          padding-top: 10px;
+          margin-top: 12px;
+        }
+
+        .toggle-text {
           flex: 1;
           min-width: 0;
         }
 
-        .toggle-title {
-          display: block;
+        .toggle-label {
           font-size: 13px;
-          font-weight: 600;
-          color: #ffffff;
+          font-weight: 500;
         }
 
-        .toggle-sub {
-          display: block;
-          margin-top: 3px;
+        .toggle-subtext {
           font-size: 11px;
           color: #9ca3c0;
+          margin-top: 2px;
         }
 
         .toggle-switch {
@@ -479,7 +506,6 @@ export default function NewEmail() {
           position: relative;
           cursor: pointer;
           transition: background 0.2s;
-          flex-shrink: 0;
         }
 
         .toggle-switch.off {
@@ -497,113 +523,137 @@ export default function NewEmail() {
           border-radius: 50%;
           position: absolute;
           top: 2px;
-          left: 2px;
           transition: left 0.2s;
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .toggle-switch.off .toggle-thumb {
+          left: 2px;
         }
 
         .toggle-switch.on .toggle-thumb {
           left: 22px;
         }
 
-        .form-preview-box {
+        .form-preview {
+          margin-top: 8px;
+          padding: 14px 14px 16px;
+          border-radius: 14px;
           background: #050712;
-          border-radius: 16px;
           border: 1px solid #252838;
-          padding: 14px 14px 12px;
         }
 
-        .form-preview-title {
+        .form-preview.disabled {
+          opacity: 0.4;
+        }
+
+        .preview-title {
           font-size: 14px;
           font-weight: 600;
-          text-align: center;
           margin: 0 0 10px;
+          text-align: center;
         }
 
-        .form-field {
+        .preview-field {
           margin-bottom: 8px;
         }
 
         .preview-input {
           width: 100%;
           box-sizing: border-box;
-          border-radius: 12px;
-          padding: 9px 12px;
-          background: #181a26;
-          border: 1px solid #34384f;
-          color: #e5e7eb;
-          font-size: 13px;
-          font-family: ${fontStack};
-        }
-
-        .preview-input::placeholder {
-          color: #7d84a3;
-        }
-
-        .preview-submit-btn {
-          margin-top: 4px;
-          width: 100%;
           border-radius: 999px;
+          border: 1px solid #252838;
+          background: #0f111b;
           padding: 10px 14px;
+          color: #9ca3c0;
+          font-size: 13px;
+          outline: none;
+        }
+
+        .preview-submit {
+          width: 100%;
+          margin-top: 4px;
+          border-radius: 999px;
           border: none;
-          background: linear-gradient(90deg, #6366ff, #a855f7);
-          color: #ffffff;
+          padding: 12px 16px;
           font-size: 14px;
           font-weight: 600;
-          box-shadow: 0 6px 16px rgba(88, 92, 255, 0.4);
+          background: linear-gradient(90deg, #6366ff, #a855f7);
+          color: #ffffff;
+        }
+
+        .collect-name-row {
+          margin-top: 10px;
         }
 
         .actions-row {
           display: flex;
+          justify-content: space-between;
           gap: 10px;
-          margin-top: 10px;
+          margin-top: 6px;
         }
 
         .btn {
           border-radius: 999px;
           border: none;
           font-family: ${fontStack};
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
-          padding: 11px 14px;
+          padding: 13px 16px;
           cursor: pointer;
           transition: transform 0.08s ease, box-shadow 0.08s ease,
-            background 0.12s ease, border-color 0.12s ease;
-        }
-
-        .btn-secondary {
-          flex: 1;
-          background: transparent;
-          color: #ffffff;
-          border: 1px solid #3f4257;
-        }
-
-        .btn-secondary:hover {
-          border-color: #7e8bff;
+            background 0.12s ease, opacity 0.12s ease;
         }
 
         .btn-primary {
-          flex: 1.5;
+          flex: 1;
           background: linear-gradient(90deg, #6366ff, #a855f7);
           color: #ffffff;
           box-shadow: 0 10px 28px rgba(88, 92, 255, 0.55);
+          text-align: center;
         }
 
-        .btn-primary:active {
+        .btn-primary:disabled {
+          opacity: 0.7;
+          cursor: default;
+          box-shadow: none;
+        }
+
+        .btn-primary:not(:disabled):active {
           transform: translateY(1px);
           box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
         }
 
+        .btn-ghost {
+          min-width: 110px;
+          background: transparent;
+          color: #e5e7eb;
+          border: 1px solid #3f4257;
+        }
+
+        .btn-ghost:disabled {
+          opacity: 0.6;
+          cursor: default;
+        }
+
         .footer-note {
-          margin-top: 6px;
+          margin-top: 8px;
           font-size: 11px;
-          color: #8b8fa5;
+          color: #9e9fb7;
           text-align: center;
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
           .card-inner {
-            padding: 24px 18px 20px;
+            padding: 28px 18px 24px;
+          }
+
+          .actions-row {
+            flex-direction: column;
+          }
+
+          .btn-ghost,
+          .btn-primary {
+            width: 100%;
           }
         }
       `}</style>

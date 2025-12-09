@@ -105,6 +105,324 @@ function SocialIcon({ type }) {
 
   return null;
 }
+function DropCard({ product: p, slug }) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // --- basic fields -------------------------------------------------------
+  const imageUrl = p.imageUrl || null;
+  const title = p.title || "Untitled drop";
+  const description = p.description || "";
+
+  // price display: try a few common fields
+  let priceDisplay =
+    p.priceDisplay ||
+    p.priceFormatted ||
+    p.priceText ||
+    (typeof p.priceCents === "number"
+      ? `$${(p.priceCents / 100).toFixed(2)}`
+      : null);
+
+  const buttonText = p.buttonText || "Buy Now";
+
+  const buyHref = `/api/products/buy?productId=${encodeURIComponent(
+    p.id
+  )}${slug ? `&slug=${encodeURIComponent(slug)}` : ""}`;
+
+  // --- inventory / ended logic -------------------------------------------
+  const left =
+    p.unitsLeft === null || p.unitsLeft === undefined
+      ? null
+      : Number(p.unitsLeft);
+  const total =
+    p.unitsTotal === null || p.unitsTotal === undefined
+      ? null
+      : Number(p.unitsTotal);
+
+  const soldOut = left !== null && left <= 0;
+
+  const startsAt = p.dropStartsAt ? new Date(p.dropStartsAt) : null;
+  const endsAt = p.dropEndsAt ? new Date(p.dropEndsAt) : null;
+
+  let phase = "open"; // "upcoming" | "open" | "ended"
+  if (startsAt && now < startsAt) {
+    phase = "upcoming";
+  } else if (endsAt && now >= endsAt) {
+    phase = "ended";
+  }
+
+  const isEnded = soldOut || phase === "ended";
+
+  // --- countdown (hours : minutes : seconds) ------------------------------
+  let showTimer = false;
+  let timerTitle = "";
+  let h = "00",
+    m = "00",
+    s = "00";
+
+  if (p.showTimer && (startsAt || endsAt)) {
+    let target = null;
+
+    if (phase === "upcoming" && startsAt) {
+      timerTitle = "Drop starts in";
+      target = startsAt;
+    } else if (phase === "open" && endsAt) {
+      timerTitle = "Drop ends in";
+      target = endsAt;
+    } else if (phase === "ended") {
+      timerTitle = "Drop closed";
+    }
+
+    if (target) {
+      const diffMs = target.getTime() - now.getTime();
+      if (diffMs > 0) {
+        showTimer = true;
+        const totalSeconds = Math.floor(diffMs / 1000);
+        const hh = Math.floor(totalSeconds / 3600);
+        const mm = Math.floor((totalSeconds % 3600) / 60);
+        const ss = totalSeconds % 60;
+        h = String(hh).padStart(2, "0");
+        m = String(mm).padStart(2, "0");
+        s = String(ss).padStart(2, "0");
+      }
+    }
+  }
+
+  // inventory text (optional, under price)
+  let inventoryText = "";
+  if (p.showInventory && left !== null && total !== null) {
+    inventoryText = `${left}/${total} available`;
+  }
+
+  // --- styles -------------------------------------------------------------
+  const outer = {
+    width: "100%",
+    maxWidth: "420px",
+    margin: "0 auto 1.5rem",
+    borderRadius: "28px",
+    padding: "20px 18px 22px",
+    background:
+      "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
+    boxShadow:
+      "0 20px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)",
+  };
+
+  const heroFrame = {
+    borderRadius: "24px",
+    padding: "3px",
+    background:
+    "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
+    boxShadow:
+      "0 14px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,0.7)",
+  };
+
+  const heroInner = {
+    borderRadius: "20px",
+    background: "#0b0c15",
+    overflow: "hidden",
+    width: "100%",
+    aspectRatio: "1 / 1", // perfect square
+    position: "relative",
+  };
+
+  const heroImg = {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  };
+
+  const heroPlaceholder = {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#9ca3af",
+    fontSize: "1rem",
+  };
+
+  const body = {
+    padding: "18px 10px 0",
+    textAlign: "center",
+  };
+
+  const titleStyle = {
+    fontSize: "1.4rem",
+    fontWeight: 700,
+    margin: "0 0 0.25rem",
+  };
+
+  const priceStyle = {
+    fontSize: "1.2rem",
+    fontWeight: 700,
+    margin: "0 0 0.2rem",
+    backgroundImage: "linear-gradient(90deg,#a855f7,#6366ff)",
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+  };
+
+  const inventoryStyle = {
+    fontSize: "0.8rem",
+    color: "#9ca3af",
+    margin: "0 0 0.8rem",
+  };
+
+  const descStyle = {
+    fontSize: "0.9rem",
+    lineHeight: 1.6,
+    color: "#e5e7eb",
+    margin: "0 0 1rem",
+  };
+
+  const timerCard = {
+    borderRadius: "18px",
+    border: "1px solid rgba(148,163,184,0.4)",
+    background: "#0b0c17",
+    padding: "10px 14px 12px",
+    margin: "0 0 1.05rem",
+  };
+
+  const timerLabel = {
+    fontSize: "0.68rem",
+    textTransform: "uppercase",
+    letterSpacing: "0.16em",
+    color: "#9ca3af",
+    margin: "0 0 6px",
+  };
+
+  const timerValues = {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: "8px",
+    marginBottom: "2px",
+  };
+
+  const timerValue = {
+    fontSize: "1.35rem",
+    fontWeight: 600,
+  };
+
+  const timerSeparator = {
+    fontSize: "1.25rem",
+    color: "#6366ff",
+    transform: "translateY(-1px)",
+  };
+
+  const timerUnits = {
+    fontSize: "0.7rem",
+    color: "#9ca3af",
+    margin: 0,
+  };
+
+  const buttonBase = {
+    width: "100%",
+    borderRadius: "999px",
+    padding: "0.8rem 1.1rem",
+    fontSize: "0.98rem",
+    fontWeight: 600,
+    border: "none",
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: "0.1rem",
+    transition: "transform 0.08s ease, boxShadow 0.08s ease, opacity 0.12s",
+  };
+
+  const buttonActive = {
+    ...buttonBase,
+    backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
+    color: "#fff",
+    boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
+  };
+
+  const buttonDisabled = {
+    ...buttonBase,
+    backgroundImage: "linear-gradient(90deg,#374151,#1f2937)",
+    color: "#9ca3af",
+    boxShadow: "none",
+    cursor: "default",
+    opacity: 0.7,
+  };
+
+  // -----------------------------------------------------------------
+  return (
+    <article style={outer}>
+      {/* hero */}
+      <div style={heroFrame}>
+        <div style={heroInner}>
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={title}
+              style={heroImg}
+              loading="lazy"
+            />
+          ) : (
+            <div style={heroPlaceholder}>
+              <span>Drop artwork</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* body */}
+      <div style={body}>
+        <h2 style={titleStyle}>{title}</h2>
+
+        {priceDisplay && <p style={priceStyle}>{priceDisplay}</p>}
+
+        {inventoryText && (
+          <p style={inventoryStyle}>{inventoryText}</p>
+        )}
+
+        {description && <p style={descStyle}>{description}</p>}
+
+        {(timerTitle || showTimer) && (
+          <div style={timerCard}>
+            {timerTitle && (
+              <p style={timerLabel}>{timerTitle}</p>
+            )}
+
+            {showTimer && (
+              <>
+                <div style={timerValues}>
+                  <span style={timerValue}>{h}</span>
+                  <span style={timerSeparator}>:</span>
+                  <span style={timerValue}>{m}</span>
+                  <span style={timerSeparator}>:</span>
+                  <span style={timerValue}>{s}</span>
+                </div>
+                <p style={timerUnits}>
+                  Hours · Minutes · Seconds
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* primary button */}
+        {isEnded || !p.priceUrl ? (
+          <button type="button" style={buttonDisabled} disabled>
+            Drop ended
+          </button>
+        ) : (
+          <a href={buyHref} style={buttonActive}>
+            {buttonText}
+          </a>
+        )}
+      </div>
+    </article>
+  );
+}
 
 export default function PublicSlugPage() {
   const router = useRouter();
@@ -783,141 +1101,15 @@ export default function PublicSlugPage() {
             <section
               style={{
                 ...fullWidthSection,
-                marginBottom: SECTION_GAP, // same as header gap
+                marginBottom: SECTION_GAP,
               }}
             >
-              {products.map((p) => {
-                const st = productStatus(p);
-                const showBuy =
-                  !st.ended && !st.soldOut && !!p.priceUrl;
-                const buyHref = `/api/products/buy?productId=${encodeURIComponent(
-                  p.id
-                )}${
-                  slug ? `&slug=${encodeURIComponent(slug)}` : ""
-                }`;
-
-                return (
-                  <article
-                    key={p.id}
-                    style={{
-                      borderRadius: "1rem",
-                      border: "1px solid #27272a",
-                      backgroundColor: "rgba(24,24,27,0.85)",
-                      padding: "1.25rem",
-                    }}
-                    aria-labelledby={`prod-${p.id}-title`}
-                  >
-                    {/* HERO IMAGE – centered & capped */}
-                    {p.imageUrl && (
-                      <div
-                        style={{
-                          width: "100%",
-                          marginBottom: "1rem",
-                          display: "flex",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "100%",
-                            maxWidth: "460px",
-                            borderRadius: "0.75rem",
-                            overflow: "hidden",
-                            backgroundColor: "#09090b",
-                          }}
-                        >
-                          <img
-                            src={p.imageUrl}
-                            alt={p.title || "Product image"}
-                            loading="lazy"
-                            style={{
-                              width: "100%",
-                              height: "auto",
-                              display: "block",
-                              objectFit: "cover",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                        color: "#a3a3a3",
-                        marginBottom: "0.35rem",
-                      }}
-                    >
-                      Drop
-                    </div>
-                    <h2
-                      id={`prod-${p.id}-title`}
-                      style={{
-                        fontSize: "1.15rem",
-                        fontWeight: 600,
-                        marginBottom: "0.5rem",
-                      }}
-                    >
-                      {p.title || "Untitled"}
-                    </h2>
-
-                    {st.label ? (
-                      <div
-                        style={{
-                          fontSize: "0.9rem",
-                          marginBottom: "0.75rem",
-                          color:
-                            st.soldOut || st.ended
-                              ? "#fecaca"
-                              : "#6ee7b7",
-                        }}
-                      >
-                        {st.label}
-                      </div>
-                    ) : null}
-
-                    {p.description ? (
-                      <p
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#e5e5e5",
-                          marginBottom: showBuy ? "0.9rem" : 0,
-                        }}
-                      >
-                        {p.description}
-                      </p>
-                    ) : null}
-
-                    {showBuy && (
-                      <a
-                        href={buyHref}
-                        style={{
-                          marginTop: "0.25rem",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          padding: "0.7rem 1.1rem",
-                          borderRadius: "999px",
-                          border: "1px solid #f97316",
-                          background:
-                            "linear-gradient(135deg, #f97316, #ea580c)",
-                          color: "#020617",
-                          fontSize: "0.95rem",
-                          fontWeight: 600,
-                          textDecoration: "none",
-                          width: "100%",
-                        }}
-                      >
-                        View drop
-                      </a>
-                    )}
-                  </article>
-                );
-              })}
+              {products.map((p) => (
+                <DropCard key={p.id} product={p} slug={slug} />
+              ))}
             </section>
           )}
+
 
           {/* LINKS (below drop card OR directly after header if no products) */}
           {links.length > 0 && (

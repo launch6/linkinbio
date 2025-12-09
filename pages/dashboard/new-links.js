@@ -597,8 +597,12 @@ const handleDragEnd = () => {
           align-items: center;
         }
 
-@media (max-width: 600px)
-
+@media (max-width: 600px) {
+  .card-inner {
+    padding: 28px 18px 24px;
+    border-radius: 24px;
+  }
+}
         .progress-bar-container {
           width: 100%;
           max-width: 260px;

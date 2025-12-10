@@ -501,22 +501,21 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
 
 .slug-row {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   width: 100%;
+  border-radius: 999px;
+  border: 1px solid #34384f;
+  background: #090a12;
+  overflow: hidden;
+  padding: 0 0 0 20px; /* matches left padding of other inputs */
 }
 
-/* Left "l6.io/" pill */
+/* Left "l6.io/" text */
 .slug-prefix {
-  padding: 12px 16px;          /* a bit tighter */
-  background: #090a12;
-  border: 1px solid #34384f;
-  border-right: none;
-  border-radius: 999px 0 0 999px;
   font-size: 16px;
   color: #e5e7eb;
-  display: flex;
-  align-items: center;
   white-space: nowrap;
+  margin-right: 8px;
 }
 
 /* Right editable slug input */
@@ -524,37 +523,24 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  background: #090a12;
-  border: 1px solid #34384f;
-  border-left: none;
-  border-radius: 0 999px 999px 0;
-  padding: 12px 14px;          /* closer to prefix */
+  border: none;
+  background: transparent;
+  padding: 12px 20px 12px 0;
   color: #ffffff;
   font-size: 16px;
   outline: none;
+  font-family: ${fontStack};
 }
 
 .slug-input::placeholder {
   color: #8b8fa5;
 }
 
-.slug-input:focus {
+/* Focus state on the whole pill */
+.slug-row:focus-within {
   border-color: #7e8bff;
   box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
 }
-        .text-input,
-        .textarea-input {
-          width: 100%;
-          box-sizing: border-box;
-          font-family: ${fontStack};
-          font-size: 16px;
-          color: #ffffff;
-          border-radius: 999px;
-          border: 1px solid #34384f;
-          background: #090a12;
-          padding: 12px 20px;
-          outline: none;
-        }
 
         .textarea-input {
           border-radius: 18px;

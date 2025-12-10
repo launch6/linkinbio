@@ -11,7 +11,7 @@ export default function NewEmailStep() {
 
   // Basic state for this step
   const [klaviyoConnected, setKlaviyoConnected] = useState(false);
-  const [enableForm, setEnableForm] = useState(false); // start OFF by default
+  const [enableForm, setEnableForm] = useState(false); // OFF by default
   const [collectName, setCollectName] = useState(true);
   const [syncSpecificList, setSyncSpecificList] = useState(false);
   const [klaviyoListId, setKlaviyoListId] = useState('');
@@ -19,7 +19,7 @@ export default function NewEmailStep() {
 
   // Connect to Klaviyo via our API route
   const handleConnectKlaviyo = async () => {
-    if (klaviyoConnected) return;
+    if (klaviyoConnected || launching) return;
 
     try {
       const resp = await fetch('/api/klaviyo/connect', {
@@ -44,7 +44,7 @@ export default function NewEmailStep() {
     }
   };
 
-  // Finish onboarding + redirect
+  // Finish onboarding + redirect to the next step
   const finishOnboarding = async (enableEmailCapture) => {
     if (launching) return;
     setLaunching(true);
@@ -53,7 +53,6 @@ export default function NewEmailStep() {
       // TODO: later POST these settings to your backend
       // await fetch('/api/onboarding/email-settings', { ... });
 
-      // For now, send them to step 1 of dashboard with token intact
       const base = '/dashboard/new-links';
       const target = token
         ? `${base}?token=${encodeURIComponent(String(token))}`
@@ -93,7 +92,7 @@ export default function NewEmailStep() {
           </p>
 
           <form onSubmit={handleLaunch} className="stack-form">
-            {/* Email Marketing / Klaviyo row */}
+            {/* 1. Email Marketing / Klaviyo row */}
             <section className="panel panel-main">
               <div className="panel-header">
                 <span className="panel-title">Email Marketing</span>
@@ -138,7 +137,7 @@ export default function NewEmailStep() {
               </div>
             </section>
 
-            {/* Advanced settings: only visible once Klaviyo is connected */}
+            {/* 2. Sync with specific list – only when Klaviyo is connected */}
             {klaviyoConnected && (
               <section className="panel">
                 <div className="panel-header">
@@ -181,7 +180,7 @@ export default function NewEmailStep() {
               </section>
             )}
 
-            {/* Form Preview – only show when email capture is enabled */}
+            {/* 3. Form Preview – only show when email capture is enabled */}
             {enableForm && (
               <section className="panel">
                 <div className="panel-header">

@@ -507,12 +507,12 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
 
 /* Left "l6.io/" pill */
 .slug-prefix {
-  padding: 12px 20px;
-  background: #090a12;          /* match other inputs */
+  padding: 12px 16px;          /* a bit tighter */
+  background: #090a12;
   border: 1px solid #34384f;
   border-right: none;
   border-radius: 999px 0 0 999px;
-  font-size: 16px;              /* match Name / bio font size */
+  font-size: 16px;
   color: #e5e7eb;
   display: flex;
   align-items: center;
@@ -524,13 +524,13 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  background: #090a12;          /* same as .text-input */
+  background: #090a12;
   border: 1px solid #34384f;
   border-left: none;
   border-radius: 0 999px 999px 0;
-  padding: 12px 20px;           /* same vertical + horizontal padding */
+  padding: 12px 14px;          /* closer to prefix */
   color: #ffffff;
-  font-size: 16px;              /* same as .text-input */
+  font-size: 16px;
   outline: none;
 }
 
@@ -542,8 +542,6 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
   border-color: #7e8bff;
   box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
 }
-
-
         .text-input,
         .textarea-input {
           width: 100%;

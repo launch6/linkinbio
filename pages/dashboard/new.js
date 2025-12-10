@@ -261,7 +261,7 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
           setUsername(e.target.value);
           if (usernameError) setUsernameError('');
         }}
-        placeholder="yourname"
+        placeholder="username"
       />
     </div>
 
@@ -503,6 +503,43 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
   display: flex;
   align-items: stretch;
   width: 100%;
+}
+
+/* Left "l6.io/" pill */
+.slug-prefix {
+  padding: 14px 14px;
+  background: #181a26;
+  border: 1px solid #34384f;
+  border-right: none;
+  border-radius: 999px 0 0 999px;
+  font-size: 15px;          /* match other inputs */
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Right editable slug input */
+.slug-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  background: #181a26;
+  border: 1px solid #34384f;
+  border-left: none;
+  border-radius: 0 999px 999px 0;
+  padding: 14px 12px;       /* same vertical as other inputs, slightly less left pad */
+  color: #ffffff;
+  font-size: 15px;          /* match other inputs */
+  outline: none;
+}
+
+.slug-input::placeholder {
+  color: #6b7280;
+}
+
+.slug-input:focus {
+  border-color: #7e8bff;
 }
 
 .slug-prefix {

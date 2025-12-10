@@ -497,6 +497,20 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
           display: flex;
           justify-content: center;
           margin-top: 18px;
+          
+        }
+        .text-input,
+        .textarea-input {
+          width: 100%;
+          box-sizing: border-box;
+          font-family: ${fontStack};
+          font-size: 16px;
+          color: #ffffff;
+          border-radius: 999px;
+          border: 1px solid #34384f;
+          background: #090a12;
+          padding: 12px 20px;
+          outline: none;
         }
 
 .slug-row {

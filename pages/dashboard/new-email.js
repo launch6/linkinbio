@@ -10,24 +10,45 @@ export default function NewEmailStep() {
   const { token } = router.query;
 
   // Basic state for this step
-  const [klaviyoConnected, setKlaviyoConnected] = useState(false);
-  const [enableForm, setEnableForm] = useState(false); // start OFF
-  const [collectName, setCollectName] = useState(true);
-  const [klaviyoListId, setKlaviyoListId] = useState('');
-  const [launching, setLaunching] = useState(false);
+const [klaviyoConnected, setKlaviyoConnected] = useState(false);
+const [enableForm, setEnableForm] = useState(false); // start OFF by default
+const [collectName, setCollectName] = useState(true);
+const [syncSpecificList, setSyncSpecificList] = useState(false);
+const [klaviyoListId, setKlaviyoListId] = useState('');
+const [launching, setLaunching] = useState(false);
+const [connectingKlaviyo, setConnectingKlaviyo] = useState(false);
 
-  const handleConnectKlaviyo = () => {
-    // Later: open a real OAuth / API connection flow.
-    if (!klaviyoConnected) {
-      setKlaviyoConnected(true);
-      setEnableForm(true); // turn the form ON when they connect
-      alert('Pretending to connect Klaviyo (we will wire this up later).');
-    } else {
-      setKlaviyoConnected(false);
-      setEnableForm(false); // if they disconnect, hide form + settings
-      alert('Klaviyo disconnected for now.');
+
+const handleConnectKlaviyo = async () => {
+  if (connectingKlaviyo) return;
+
+  setConnectingKlaviyo(true);
+  try {
+    const res = await fetch('/api/klaviyo/connect');
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || 'Unable to connect to Klaviyo.');
     }
-  };
+
+    // Mark as connected and automatically enable the form
+    setKlaviyoConnected(true);
+    setEnableForm(true);
+
+    // If you later want to store a default list ID from Klaviyo:
+    if (data.listId && !klaviyoListId) {
+      setKlaviyoListId(data.listId);
+    }
+
+    // No fake alerts — this is a real check now
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'There was a problem connecting to Klaviyo.');
+  } finally {
+    setConnectingKlaviyo(false);
+  }
+};
+
 
   const finishOnboarding = async (enableEmailCapture) => {
     if (launching) return;
@@ -92,24 +113,26 @@ export default function NewEmailStep() {
               </div>
 
               <button
-                type="button"
-                className={`klaviyo-connect ${
-                  klaviyoConnected ? 'connected' : ''
-                }`}
-                onClick={handleConnectKlaviyo}
-              >
-                <div className="klaviyo-left">
-                  <span className="klaviyo-icon">K</span>
-                  <span className="klaviyo-label">
-                    {klaviyoConnected
-                      ? 'Connected to Klaviyo'
-                      : 'Connect to Klaviyo'}
-                  </span>
-                </div>
-                <span className="klaviyo-status">
-                  {klaviyoConnected ? '✓' : '→'}
-                </span>
-              </button>
+  type="button"
+  className={`klaviyo-connect ${klaviyoConnected ? 'connected' : ''}`}
+  onClick={handleConnectKlaviyo}
+  disabled={connectingKlaviyo}
+>
+  <div className="klaviyo-left">
+    <span className="klaviyo-icon">K</span>
+    <span className="klaviyo-label">
+      {klaviyoConnected
+        ? 'Connected to Klaviyo'
+        : connectingKlaviyo
+        ? 'Connecting…'
+        : 'Connect to Klaviyo'}
+    </span>
+  </div>
+  <span className="klaviyo-status">
+    {klaviyoConnected ? '✓' : connectingKlaviyo ? '…' : '→'}
+  </span>
+</button>
+
 
               {/* Sync list dropdown – appears once Klaviyo is connected */}
               {klaviyoConnected && (

@@ -129,8 +129,8 @@ const getSocialBaseUrl = (key) => {
       return 'https://www.youtube.com/';
     case 'x':
       return 'https://x.com/';
-    case 'website':
-      return 'https://';
+case 'website':
+  return '';
     default:
       return 'https://';
   }

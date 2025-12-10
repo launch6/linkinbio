@@ -336,8 +336,8 @@ const isValidLinkUrl = (value) => {
       : '';
 
   const activeSocialPlaceholder = activeSocialKey
-    ? `${getSocialBaseUrl(activeSocialKey)}yourname`
-    : 'https://yourname';
+    ? `${getSocialBaseUrl(activeSocialKey)}https://`
+    : 'https://yourwebsite.com';
 
   // --- drag + drop for link cards ---
 

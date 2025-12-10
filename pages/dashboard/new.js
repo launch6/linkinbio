@@ -246,26 +246,30 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
               </div>
             </div>
 
-            {/* Username (slug source) */}
-            <div className="field">
-              <div className="field-control content-rail">
-                <input
-                  id="username"
-                  aria-label="Username"
-                  className="text-input"
-                  type="text"
-                  value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value);
-                    if (usernameError) setUsernameError('');
-                  }}
-                  placeholder="Choose URL ending (l6.io/yourname)"
-                />
-                {usernameError && (
-                  <p className="field-error">{usernameError}</p>
-                )}
-              </div>
-            </div>
+           {/* Username (slug source) */}
+<div className="field">
+  <div className="field-control content-rail">
+    <div className="slug-row">
+      <span className="slug-prefix">l6.io/</span>
+      <input
+        id="username"
+        aria-label="Username"
+        className="slug-input"
+        type="text"
+        value={username}
+        onChange={(e) => {
+          setUsername(e.target.value);
+          if (usernameError) setUsernameError('');
+        }}
+        placeholder="yourname"
+      />
+    </div>
+
+    {usernameError && (
+      <p className="field-error">{usernameError}</p>
+    )}
+  </div>
+</div>
 
             {/* Short bio */}
             <div className="field">
@@ -494,6 +498,47 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
           justify-content: center;
           margin-top: 18px;
         }
+
+.slug-row {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.slug-prefix {
+  padding: 12px 10px 12px 16px;
+  background: #181a26;
+  border: 1px solid #34384f;
+  border-right: none;
+  border-radius: 999px 0 0 999px;
+  font-size: 14px;
+  color: #9ca3c0;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.slug-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  background: #181a26;
+  border: 1px solid #34384f;
+  border-left: none;
+  border-radius: 0 999px 999px 0;
+  padding: 12px 16px;
+  color: #ffffff;
+  font-size: 15px;
+  outline: none;
+}
+
+.slug-input::placeholder {
+  color: #6b7280;
+}
+
+.slug-input:focus {
+  border-color: #7e8bff;
+}
 
         .text-input,
         .textarea-input {

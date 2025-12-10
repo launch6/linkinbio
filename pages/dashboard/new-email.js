@@ -10,56 +10,69 @@ export default function NewEmailStep() {
   const { token } = router.query;
 
   // Basic state for this step
-  const [klaviyoConnected, setKlaviyoConnected] = useState(false);
-  const [enableForm, setEnableForm] = useState(false); // start OFF by default
-  const [collectName, setCollectName] = useState(true);
-  const [syncSpecificList, setSyncSpecificList] = useState(false);
-  const [klaviyoListId, setKlaviyoListId] = useState('');
-  const [launching, setLaunching] = useState(false);
+const [klaviyoConnected, setKlaviyoConnected] = useState(false);
+const [enableForm, setEnableForm] = useState(false); // start OFF by default
+const [collectName, setCollectName] = useState(true);
+const [syncSpecificList, setSyncSpecificList] = useState(false);
+const [klaviyoListId, setKlaviyoListId] = useState('');
+const [launching, setLaunching] = useState(false);
+const [connectingKlaviyo, setConnectingKlaviyo] = useState(false);
 
-  // Connect to Klaviyo via our API route
-  const handleConnectKlaviyo = async () => {
-    if (klaviyoConnected) return;
 
-    try {
-      const resp = await fetch('/api/klaviyo/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+const handleConnectKlaviyo = async () => {
+  if (connectingKlaviyo) return;
 
-      const json = await resp.json().catch(() => ({}));
+  setConnectingKlaviyo(true);
+  try {
+    const res = await fetch('/api/klaviyo/connect');
+    const data = await res.json().catch(() => ({}));
 
-      if (!resp.ok || !json?.ok) {
-        throw new Error(
-          json?.error || 'Unable to connect Klaviyo. Please try again.'
-        );
-      }
-
-      // Mark as connected and automatically enable the form
-      setKlaviyoConnected(true);
-      setEnableForm(true);
-    } catch (err) {
-      console.error(err);
-      alert(err.message || 'There was a problem connecting Klaviyo.');
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || 'Unable to connect to Klaviyo.');
     }
-  };
 
-  // Finish onboarding + redirect
+    // Mark as connected and automatically enable the form
+    setKlaviyoConnected(true);
+    setEnableForm(true);
+
+    // If you later want to store a default list ID from Klaviyo:
+    if (data.listId && !klaviyoListId) {
+      setKlaviyoListId(data.listId);
+    }
+
+    // No fake alerts — this is a real check now
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'There was a problem connecting to Klaviyo.');
+  } finally {
+    setConnectingKlaviyo(false);
+  }
+};
+
+
   const finishOnboarding = async (enableEmailCapture) => {
     if (launching) return;
     setLaunching(true);
 
     try {
-      // TODO: later POST these settings to your backend
-      // await fetch('/api/onboarding/email-settings', { ... });
+      // TODO: call a real API to persist email form settings
+      // await fetch('/api/onboarding/email-settings', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     token,
+      //     enableForm: enableEmailCapture,
+      //     collectName,
+      //     klaviyoListId: klaviyoConnected
+      //       ? (klaviyoListId.trim() || null)
+      //       : null,
+      //   }),
+      // });
 
-      // For now, send them to step 1 of dashboard with token intact
-      const base = '/dashboard/new-links';
-      const target = token
-        ? `${base}?token=${encodeURIComponent(String(token))}`
-        : base;
-
-      router.push(target);
+      const dest = token
+        ? `/dashboard?token=${encodeURIComponent(token)}`
+        : '/dashboard';
+      router.push(dest);
     } catch (err) {
       console.error(err);
       alert('Something went wrong finishing setup. Try again.');
@@ -96,29 +109,68 @@ export default function NewEmailStep() {
             {/* Email Marketing / Klaviyo row */}
             <section className="panel panel-main">
               <div className="panel-header">
-                <span className="panel-title">Email Marketing</span>
+                <span className="panel-title">Email Marketing Integration</span>
               </div>
 
               <button
-                type="button"
-                className={`klaviyo-connect ${klaviyoConnected ? 'connected' : ''}`}
-                onClick={handleConnectKlaviyo}
-                disabled={launching}
-              >
-                <div className="klaviyo-left">
-                  <span className="klaviyo-icon">K</span>
-                  <span className="klaviyo-label">
-                    {klaviyoConnected ? 'Connected to Klaviyo' : 'Connect to Klaviyo'}
-                  </span>
+  type="button"
+  className={`klaviyo-connect ${klaviyoConnected ? 'connected' : ''}`}
+  onClick={handleConnectKlaviyo}
+  disabled={connectingKlaviyo}
+>
+  <div className="klaviyo-left">
+    <span className="klaviyo-icon">K</span>
+    <span className="klaviyo-label">
+      {klaviyoConnected
+        ? 'Connected to Klaviyo'
+        : connectingKlaviyo
+        ? 'Connecting…'
+        : 'Connect to Klaviyo'}
+    </span>
+  </div>
+  <span className="klaviyo-status">
+    {klaviyoConnected ? '✓' : connectingKlaviyo ? '…' : '→'}
+  </span>
+</button>
+
+
+              {/* Sync list dropdown – appears once Klaviyo is connected */}
+              {klaviyoConnected && (
+                <div className="list-select-block">
+                  <label
+                    className="list-label"
+                    htmlFor="klaviyo-list-select"
+                  >
+                    Sync signups to list
+                  </label>
+                  <div className="list-select-wrapper">
+                    <select
+                      id="klaviyo-list-select"
+                      className="list-select"
+                      value={klaviyoListId}
+                      onChange={(e) => setKlaviyoListId(e.target.value)}
+                    >
+                      <option value="">
+                        Choose a Klaviyo list…
+                      </option>
+                      {/* Placeholder options – later populate from Klaviyo API */}
+                      <option value="aurora_drop_signups">
+                        Aurora Drop Signups
+                      </option>
+                      <option value="primary_subscribers">
+                        Launch6 – Primary Subscriber List (Default)
+                      </option>
+                      <option value="waitlist">
+                        General Waitlist
+                      </option>
+                    </select>
+                    <span className="select-arrow">▾</span>
+                  </div>
+                  <p className="helper-text list-helper">
+                    This is where new emails from your drop page will be added.
+                  </p>
                 </div>
-                <span
-                  className={`klaviyo-status ${
-                    klaviyoConnected ? 'status-connected' : ''
-                  }`}
-                >
-                  {klaviyoConnected ? '✓' : '→'}
-                </span>
-              </button>
+              )}
 
               <div className="toggle-row panel-toggle">
                 <div className="toggle-text">
@@ -131,65 +183,23 @@ export default function NewEmailStep() {
                   type="button"
                   className={`toggle-switch ${enableForm ? 'on' : 'off'}`}
                   onClick={() => setEnableForm((v) => !v)}
-                  disabled={!klaviyoConnected}
                 >
                   <div className="toggle-thumb" />
                 </button>
               </div>
             </section>
 
-            {/* Advanced settings: only visible once Klaviyo is connected */}
-            {klaviyoConnected && (
-              <section className="panel">
-                <div className="panel-header">
-                  <span className="panel-title">Sync with specific Klaviyo list</span>
-                </div>
-
-                <div className="toggle-row">
-                  <div className="toggle-text">
-                    <span className="toggle-label">
-                      Use a dedicated list for Launch6 drop signups
-                    </span>
-                    <span className="toggle-subtext">
-                      If off, we’ll use your default list set in Launch6.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`toggle-switch ${syncSpecificList ? 'on' : 'off'}`}
-                    onClick={() => setSyncSpecificList((v) => !v)}
-                  >
-                    <div className="toggle-thumb" />
-                  </button>
-                </div>
-
-                {syncSpecificList && (
-                  <div className="list-id-input">
-                    <input
-                      type="text"
-                      className="input-field"
-                      value={klaviyoListId}
-                      onChange={(e) => setKlaviyoListId(e.target.value)}
-                      placeholder="Klaviyo List ID (e.g., RZCAJQ)"
-                    />
-                    <p className="helper-text">
-                      Later this will be a dropdown of your Klaviyo lists. For now, paste a
-                      List ID if you want to override the default.
-                    </p>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* Form Preview – only show when email capture is enabled */}
+            {/* Form Preview & Settings – only visible when email capture is ON */}
             {enableForm && (
               <section className="panel">
                 <div className="panel-header">
-                  <span className="panel-title">Form Preview</span>
+                  <span className="panel-title">Form Preview &amp; Settings</span>
                 </div>
 
                 <div className="form-preview">
-                  <h2 className="preview-title">Get Notified About Future Drops</h2>
+                  <h2 className="preview-title">
+                    Get Notified About Future Drops
+                  </h2>
 
                   {collectName && (
                     <div className="preview-field">
@@ -239,13 +249,13 @@ export default function NewEmailStep() {
             )}
 
             {/* Actions – single primary CTA */}
-            <div className="actions-row actions-single">
+            <div className="actions-row single">
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={launching}
               >
-                {launching ? 'Launching…' : 'Launch your project 🚀'}
+                {launching ? 'Launching…' : 'Launch Your Page! 🚀'}
               </button>
             </div>
 
@@ -266,7 +276,7 @@ export default function NewEmailStep() {
 
         .onboarding-root {
           min-height: 100vh;
-          background: radial-gradient(circle at top, #1d1530 0, #090814 40%, #050509 100%);
+          background-color: #121219;
           color: #ffffff;
           display: flex;
           flex-direction: column;
@@ -391,7 +401,7 @@ export default function NewEmailStep() {
           transition: border-color 0.15s, background 0.15s, transform 0.08s;
         }
 
-        .klaviyo-connect:hover:not(:disabled) {
+        .klaviyo-connect:hover {
           border-color: #6366ff;
         }
 
@@ -427,8 +437,48 @@ export default function NewEmailStep() {
           opacity: 0.75;
         }
 
-        .klaviyo-status.status-connected {
-          color: #4ade80;
+        .list-select-block {
+          margin-top: 10px;
+        }
+
+        .list-label {
+          display: block;
+          font-size: 12px;
+          font-weight: 500;
+          color: #e5e7ff;
+          margin-bottom: 4px;
+        }
+
+        .list-select-wrapper {
+          position: relative;
+        }
+
+        .list-select {
+          width: 100%;
+          box-sizing: border-box;
+          border-radius: 10px;
+          border: 1px solid #34384f;
+          background: #181a26;
+          padding: 10px 32px 10px 12px;
+          color: #e5e7ff;
+          font-size: 13px;
+          font-family: ${fontStack};
+          appearance: none;
+          outline: none;
+        }
+
+        .select-arrow {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 10px;
+          color: #9ca3c0;
+          pointer-events: none;
+        }
+
+        .list-helper {
+          margin-top: 4px;
         }
 
         .toggle-row {
@@ -456,7 +506,8 @@ export default function NewEmailStep() {
         .toggle-subtext {
           font-size: 11px;
           color: #9ca3c0;
-          margin-top: 2px;
+          margin-top: 4px;
+          display: block;
         }
 
         .toggle-switch {
@@ -475,11 +526,6 @@ export default function NewEmailStep() {
 
         .toggle-switch.on {
           background: #34c759;
-        }
-
-        .toggle-switch:disabled {
-          opacity: 0.5;
-          cursor: default;
         }
 
         .toggle-thumb {
@@ -546,42 +592,10 @@ export default function NewEmailStep() {
           margin-top: 10px;
         }
 
-        .list-id-input {
-          margin-top: 10px;
-        }
-
-        .input-field {
-          width: 100%;
-          box-sizing: border-box;
-          background: #181a26;
-          border: 1px solid #34384f;
-          border-radius: 10px;
-          padding: 10px 12px;
-          color: #ffffff;
-          font-size: 13px;
-          font-family: ${fontStack};
-          outline: none;
-        }
-
-        .input-field:focus {
-          border-color: #7e8bff;
-        }
-
-        .helper-text {
-          font-size: 11px;
-          color: #9ca3c0;
-          margin-top: 4px;
-        }
-
-        .actions-row {
+        .actions-row.single {
           display: flex;
           justify-content: center;
-          gap: 10px;
-          margin-top: 6px;
-        }
-
-        .actions-single .btn-primary {
-          width: 100%;
+          margin-top: 10px;
         }
 
         .btn {
@@ -597,6 +611,7 @@ export default function NewEmailStep() {
         }
 
         .btn-primary {
+          min-width: 180px;
           background: linear-gradient(90deg, #6366ff, #a855f7);
           color: #ffffff;
           box-shadow: 0 10px 28px rgba(88, 92, 255, 0.55);
@@ -626,8 +641,8 @@ export default function NewEmailStep() {
             padding: 28px 18px 24px;
           }
 
-          .actions-row {
-            flex-direction: column;
+          .actions-row.single {
+            justify-content: stretch;
           }
 
           .btn-primary {

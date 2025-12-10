@@ -507,12 +507,12 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
 
 /* Left "l6.io/" pill */
 .slug-prefix {
-  padding: 14px 14px;
-  background: #181a26;
+  padding: 12px 20px;
+  background: #090a12;          /* match other inputs */
   border: 1px solid #34384f;
   border-right: none;
   border-radius: 999px 0 0 999px;
-  font-size: 15px;          /* match other inputs */
+  font-size: 16px;              /* match Name / bio font size */
   color: #e5e7eb;
   display: flex;
   align-items: center;
@@ -524,58 +524,25 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  background: #181a26;
+  background: #090a12;          /* same as .text-input */
   border: 1px solid #34384f;
   border-left: none;
   border-radius: 0 999px 999px 0;
-  padding: 14px 12px;       /* same vertical as other inputs, slightly less left pad */
+  padding: 12px 20px;           /* same vertical + horizontal padding */
   color: #ffffff;
-  font-size: 15px;          /* match other inputs */
+  font-size: 16px;              /* same as .text-input */
   outline: none;
 }
 
 .slug-input::placeholder {
-  color: #6b7280;
+  color: #8b8fa5;
 }
 
 .slug-input:focus {
   border-color: #7e8bff;
+  box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
 }
 
-.slug-prefix {
-  padding: 12px 10px 12px 16px;
-  background: #181a26;
-  border: 1px solid #34384f;
-  border-right: none;
-  border-radius: 999px 0 0 999px;
-  font-size: 14px;
-  color: #9ca3c0;
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-}
-
-.slug-input {
-  flex: 1;
-  min-width: 0;
-  box-sizing: border-box;
-  background: #181a26;
-  border: 1px solid #34384f;
-  border-left: none;
-  border-radius: 0 999px 999px 0;
-  padding: 12px 16px;
-  color: #ffffff;
-  font-size: 15px;
-  outline: none;
-}
-
-.slug-input::placeholder {
-  color: #6b7280;
-}
-
-.slug-input:focus {
-  border-color: #7e8bff;
-}
 
         .text-input,
         .textarea-input {

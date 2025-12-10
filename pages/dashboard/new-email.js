@@ -86,34 +86,21 @@ export default function NewEmailStep() {
 
   // Finish onboarding + redirect to the next step (links editor)
   const finishOnboarding = async (enableEmailCapture) => {
-    if (launching) return;
-    setLaunching(true);
+  if (launching) return;
+  setLaunching(true);
 
-    try {
-      // TODO: later POST these settings to your backend
-      // await fetch('/api/onboarding/email-settings', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     token,
-      //     enableForm: enableEmailCapture,
-      //     collectName,
-      //     klaviyoListId: klaviyoListId || null,
-      //   }),
-      // });
+  try {
+    // TODO: real API to persist settings later
+    // await fetch('/api/onboarding/email-settings', { ... });
 
-      const base = '/dashboard/new-links';
-      const target = token
-        ? `${base}?token=${encodeURIComponent(String(token))}`
-        : base;
-
-      router.push(target);
-    } catch (err) {
-      console.error(err);
-      alert('Something went wrong finishing setup. Try again.');
-      setLaunching(false);
-    }
-  };
+    // ✅ Send them to the main dashboard, not back into onboarding
+    router.push('/dashboard');
+  } catch (err) {
+    console.error(err);
+    alert('Something went wrong finishing setup. Try again.');
+    setLaunching(false);
+  }
+};
 
   const handleLaunch = (e) => {
     e.preventDefault();

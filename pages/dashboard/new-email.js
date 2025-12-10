@@ -13,7 +13,6 @@ export default function NewEmailStep() {
   const [klaviyoConnected, setKlaviyoConnected] = useState(false);
   const [enableForm, setEnableForm] = useState(false); // OFF by default
   const [collectName, setCollectName] = useState(true);
-  const [syncSpecificList, setSyncSpecificList] = useState(false);
   const [klaviyoListId, setKlaviyoListId] = useState('');
   const [launching, setLaunching] = useState(false);
 
@@ -51,7 +50,16 @@ export default function NewEmailStep() {
 
     try {
       // TODO: later POST these settings to your backend
-      // await fetch('/api/onboarding/email-settings', { ... });
+      // await fetch('/api/onboarding/email-settings', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     token,
+      //     enableForm: enableEmailCapture,
+      //     collectName,
+      //     klaviyoListId: klaviyoListId.trim() || null,
+      //   }),
+      // });
 
       const base = '/dashboard/new-links';
       const target = token
@@ -119,6 +127,27 @@ export default function NewEmailStep() {
                 </span>
               </button>
 
+              {/* List selection lives directly under the Klaviyo button */}
+              {klaviyoConnected && (
+                <div className="list-select">
+                  <label className="sync-label" htmlFor="klaviyo-list-input">
+                    Sync signups to list
+                  </label>
+                  <input
+                    id="klaviyo-list-input"
+                    type="text"
+                    className="input-field"
+                    value={klaviyoListId}
+                    onChange={(e) => setKlaviyoListId(e.target.value)}
+                    placeholder="Klaviyo List ID (e.g., RZCAJQ)"
+                  />
+                  <p className="helper-text">
+                    This is where new emails from your drop page will be added. If
+                    left blank, we’ll use your default list in Launch6.
+                  </p>
+                </div>
+              )}
+
               <div className="toggle-row panel-toggle">
                 <div className="toggle-text">
                   <span className="toggle-label">Enable email capture form</span>
@@ -137,50 +166,7 @@ export default function NewEmailStep() {
               </div>
             </section>
 
-            {/* 2. Sync with specific list – only when Klaviyo is connected */}
-            {klaviyoConnected && (
-              <section className="panel">
-                <div className="panel-header">
-                  <span className="panel-title">Sync with specific Klaviyo list</span>
-                </div>
-
-                <div className="toggle-row">
-                  <div className="toggle-text">
-                    <span className="toggle-label">
-                      Use a dedicated list for Launch6 drop signups
-                    </span>
-                    <span className="toggle-subtext">
-                      If off, we’ll use your default list set in Launch6.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`toggle-switch ${syncSpecificList ? 'on' : 'off'}`}
-                    onClick={() => setSyncSpecificList((v) => !v)}
-                  >
-                    <div className="toggle-thumb" />
-                  </button>
-                </div>
-
-                {syncSpecificList && (
-                  <div className="list-id-input">
-                    <input
-                      type="text"
-                      className="input-field"
-                      value={klaviyoListId}
-                      onChange={(e) => setKlaviyoListId(e.target.value)}
-                      placeholder="Klaviyo List ID (e.g., RZCAJQ)"
-                    />
-                    <p className="helper-text">
-                      Later this will be a dropdown of your Klaviyo lists. For now, paste a
-                      List ID if you want to override the default.
-                    </p>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* 3. Form Preview – only show when email capture is enabled */}
+            {/* 2. Form Preview – only show when email capture is enabled */}
             {enableForm && (
               <section className="panel">
                 <div className="panel-header">
@@ -430,16 +416,28 @@ export default function NewEmailStep() {
           color: #4ade80;
         }
 
+        .list-select {
+          margin-top: 10px;
+        }
+
+        .sync-label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #e5e7ff;
+          display: block;
+          margin-bottom: 4px;
+        }
+
         .toggle-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-top: 10px;
+          margin-top: 12px;
           gap: 10px;
         }
 
         .panel-toggle {
-          margin-top: 12px;
+          margin-top: 14px;
         }
 
         .toggle-text {
@@ -542,10 +540,6 @@ export default function NewEmailStep() {
         }
 
         .collect-name-row {
-          margin-top: 10px;
-        }
-
-        .list-id-input {
           margin-top: 10px;
         }
 

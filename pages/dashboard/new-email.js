@@ -1,5 +1,5 @@
 // pages/dashboard/new-email.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
 const fontStack =
@@ -15,6 +15,47 @@ export default function NewEmailStep() {
   const [collectName, setCollectName] = useState(true);
   const [klaviyoListId, setKlaviyoListId] = useState('');
   const [launching, setLaunching] = useState(false);
+
+  // Klaviyo lists
+  const [lists, setLists] = useState([]);
+  const [listsLoading, setListsLoading] = useState(false);
+  const [listsError, setListsError] = useState('');
+
+  // Load lists from our API
+  const fetchLists = async () => {
+    setListsLoading(true);
+    setListsError('');
+
+    try {
+      const resp = await fetch('/api/klaviyo/lists');
+      const json = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !json?.ok) {
+        throw new Error(json?.error || 'Unable to load Klaviyo lists.');
+      }
+
+      const nextLists = json.lists || [];
+      setLists(nextLists);
+
+      // If we don't already have a selected list, default to the first
+      if (!klaviyoListId && nextLists.length > 0) {
+        setKlaviyoListId(nextLists[0].id);
+      }
+    } catch (err) {
+      console.error(err);
+      setListsError(err.message || 'Failed to load Klaviyo lists.');
+    } finally {
+      setListsLoading(false);
+    }
+  };
+
+  // When we become "connected", fetch lists
+  useEffect(() => {
+    if (klaviyoConnected) {
+      fetchLists();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [klaviyoConnected]);
 
   // Connect to Klaviyo via our API route
   const handleConnectKlaviyo = async () => {
@@ -43,7 +84,7 @@ export default function NewEmailStep() {
     }
   };
 
-  // Finish onboarding + redirect to the next step
+  // Finish onboarding + redirect to the next step (links editor)
   const finishOnboarding = async (enableEmailCapture) => {
     if (launching) return;
     setLaunching(true);
@@ -57,7 +98,7 @@ export default function NewEmailStep() {
       //     token,
       //     enableForm: enableEmailCapture,
       //     collectName,
-      //     klaviyoListId: klaviyoListId.trim() || null,
+      //     klaviyoListId: klaviyoListId || null,
       //   }),
       // });
 
@@ -127,24 +168,45 @@ export default function NewEmailStep() {
                 </span>
               </button>
 
-              {/* List selection lives directly under the Klaviyo button */}
+              {/* List dropdown lives directly under the Klaviyo button */}
               {klaviyoConnected && (
                 <div className="list-select">
-                  <label className="sync-label" htmlFor="klaviyo-list-input">
+                  <label className="sync-label" htmlFor="klaviyo-list-select">
                     Sync signups to list
                   </label>
-                  <input
-                    id="klaviyo-list-input"
-                    type="text"
-                    className="input-field"
-                    value={klaviyoListId}
-                    onChange={(e) => setKlaviyoListId(e.target.value)}
-                    placeholder="Klaviyo List ID (e.g., RZCAJQ)"
-                  />
-                  <p className="helper-text">
-                    This is where new emails from your drop page will be added. If
-                    left blank, we’ll use your default list in Launch6.
-                  </p>
+                  <div className="select-wrapper">
+                    <select
+                      id="klaviyo-list-select"
+                      className="input-field select-field"
+                      value={klaviyoListId}
+                      onChange={(e) => setKlaviyoListId(e.target.value)}
+                    >
+                      {listsLoading && (
+                        <option value="">Loading lists…</option>
+                      )}
+                      {!listsLoading && lists.length === 0 && (
+                        <option value="">
+                          No lists found in Klaviyo account
+                        </option>
+                      )}
+                      {!listsLoading &&
+                        lists.map((list) => (
+                          <option key={list.id} value={list.id}>
+                            {list.name}
+                          </option>
+                        ))}
+                    </select>
+                    <span className="select-chevron">▾</span>
+                  </div>
+                  {listsError && (
+                    <p className="helper-text error-text">{listsError}</p>
+                  )}
+                  {!listsError && (
+                    <p className="helper-text">
+                      This is where new emails from your drop page will be added.
+                      If left blank, we’ll use your default list in Launch6.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -428,6 +490,25 @@ export default function NewEmailStep() {
           margin-bottom: 4px;
         }
 
+        .select-wrapper {
+          position: relative;
+        }
+
+        .select-field {
+          padding-right: 36px;
+          appearance: none;
+        }
+
+        .select-chevron {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 11px;
+          color: #9ca3c0;
+          pointer-events: none;
+        }
+
         .toggle-row {
           display: flex;
           justify-content: space-between;
@@ -564,6 +645,10 @@ export default function NewEmailStep() {
           font-size: 11px;
           color: #9ca3c0;
           margin-top: 4px;
+        }
+
+        .helper-text.error-text {
+          color: #f97373;
         }
 
         .actions-row {

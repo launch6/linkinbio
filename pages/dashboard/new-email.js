@@ -298,9 +298,9 @@ export default function NewEmailStep() {
           padding: 0;
         }
 
-       .onboarding-root {
+ .onboarding-root {
   min-height: 100vh;
-  background-color: #121219; /* same as other steps */
+  background-color: #121219;  /* same as Step 1 */
   color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -308,8 +308,6 @@ export default function NewEmailStep() {
   padding: 15px 16px 40px;
   font-family: ${fontStack};
 }
-
-
         .logo-row {
           margin-bottom: 18px;
         }

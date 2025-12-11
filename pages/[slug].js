@@ -647,15 +647,24 @@ export default function PublicSlugPage() {
     )
   : [];
 
-  const social = profile?.social || {};
+    const social = profile?.social || {};
 
-  // Ensure website link is always absolute (so it doesn't become /backyardsofkeywest.com)
+  // Ensure website link is always absolute
+  // Rules:
+  // - If user typed http:// or https://, keep it as-is
+  // - If they typed a bare domain (mysite.com), prepend http://
   const normalizeHref = (url) => {
     if (!url) return "";
     const trimmed = url.trim();
     if (!trimmed) return "";
-    if (/^https?:\/\//i.test(trimmed)) return trimmed;
-    return `https://${trimmed}`;
+
+    // If user typed http:// or https://, respect it
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+
+    // No protocol → assume http:// (their server/Cloudflare/etc. can upgrade to https)
+    return `http://${trimmed}`;
   };
 
   const websiteHref = normalizeHref(social.website);
@@ -667,6 +676,7 @@ export default function PublicSlugPage() {
     social.youtube ||
     social.x ||
     websiteHref;
+
 
   // --- SEO / Social ---
   const firstImage = products?.[0]?.imageUrl || "";

@@ -298,16 +298,17 @@ export default function NewEmailStep() {
           padding: 0;
         }
 
-        .onboarding-root {
-          min-height: 100vh;
-          background: radial-gradient(circle at top, #1d1530 0, #090814 40%, #050509 100%);
-          color: #ffffff;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 15px 16px 40px;
-          font-family: ${fontStack};
-        }
+       .onboarding-root {
+  min-height: 100vh;
+  background-color: #121219; /* same as other steps */
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 16px 40px;
+  font-family: ${fontStack};
+}
+
 
         .logo-row {
           margin-bottom: 18px;
@@ -325,17 +326,17 @@ export default function NewEmailStep() {
         }
 
         .card-inner {
-          width: 100%;
-          max-width: 540px;
-          background: rgba(9, 9, 18, 0.97);
-          border-radius: 32px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
-          padding: 32px 32px 28px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
+  width: 100%;
+  max-width: 540px;
+  background: rgba(9, 9, 18, 0.97);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+  padding: 32px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* panels line up dead center */
+}
 
         .progress-bar-container {
           width: 100%;

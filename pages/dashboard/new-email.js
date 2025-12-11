@@ -84,23 +84,32 @@ export default function NewEmailStep() {
     }
   };
 
-  // Finish onboarding + redirect to the next step (links editor)
+  // Finish onboarding + save email settings
   const finishOnboarding = async (enableEmailCapture) => {
-  if (launching) return;
-  setLaunching(true);
+    if (launching) return;
+    setLaunching(true);
 
-  try {
-    // TODO: real API to persist settings later
-    // await fetch('/api/onboarding/email-settings', { ... });
+    try {
+      // Save email settings for this profile
+      await fetch('/api/onboarding/email-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,                    // from router.query
+          enableForm: enableEmailCapture,
+          collectName,
+          klaviyoListId: enableEmailCapture ? klaviyoListId || '' : '',
+        }),
+      }).catch(() => {});
 
-    // ✅ Send them to the main dashboard, not back into onboarding
-    router.push('/dashboard');
-  } catch (err) {
-    console.error(err);
-    alert('Something went wrong finishing setup. Try again.');
-    setLaunching(false);
-  }
-};
+      // Send them to the main dashboard (not back into onboarding)
+      router.push('/dashboard');
+    } catch (err) {
+      console.error(err);
+      alert('Something went wrong finishing setup. Try again.');
+      setLaunching(false);
+    }
+  };
 
   const handleLaunch = (e) => {
     e.preventDefault();

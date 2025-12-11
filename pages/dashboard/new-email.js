@@ -85,7 +85,7 @@ export default function NewEmailStep() {
   };
 
   // Finish onboarding + save email settings
-    const finishOnboarding = async (enableEmailCapture) => {
+  const finishOnboarding = async (enableEmailCapture) => {
     if (launching) return;
     setLaunching(true);
 
@@ -115,12 +115,16 @@ export default function NewEmailStep() {
           }
         } catch (err) {
           console.error('Error calling /api/onboarding/email-settings', err);
-          // Same idea: don’t block launch, just log
+          // Same idea: don’t block launch, log instead
         }
       }
 
-      // ✅ Then send them to the main dashboard, not back into onboarding
-      router.push('/dashboard');
+      // ✅ AFTER saving, send them into the editor with their editToken
+      const destination = editToken
+        ? `/dashboard?editToken=${encodeURIComponent(editToken)}`
+        : '/dashboard';
+
+      router.push(destination);
     } catch (err) {
       console.error(err);
       alert('Something went wrong finishing setup. Try again.');
@@ -324,16 +328,16 @@ export default function NewEmailStep() {
           padding: 0;
         }
 
- .onboarding-root {
-  min-height: 100vh;
-  background-color: #121219;  /* same as Step 1 */
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 15px 16px 40px;
-  font-family: ${fontStack};
-}
+        .onboarding-root {
+          min-height: 100vh;
+          background-color: #121219;
+          color: #ffffff;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 15px 16px 40px;
+          font-family: ${fontStack};
+        }
         .logo-row {
           margin-bottom: 18px;
         }
@@ -350,17 +354,17 @@ export default function NewEmailStep() {
         }
 
         .card-inner {
-  width: 100%;
-  max-width: 540px;
-  background: rgba(9, 9, 18, 0.97);
-  border-radius: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
-  padding: 32px 32px 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch; /* panels line up dead center */
-}
+          width: 100%;
+          max-width: 540px;
+          background: rgba(9, 9, 18, 0.97);
+          border-radius: 32px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+          padding: 32px 32px 28px;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+        }
 
         .progress-bar-container {
           width: 100%;
@@ -381,14 +385,14 @@ export default function NewEmailStep() {
           width: 100%;
         }
 
-.step-label {
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #8b8fa5;
-  margin: 0 0 8px;
-  text-align: center;       /* 👈 center the “STEP 4 OF 4” text */
-}
+        .step-label {
+          font-size: 11px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #8b8fa5;
+          margin: 0 0 8px;
+          text-align: center;
+        }
 
         .title {
           font-size: 24px;
@@ -412,19 +416,19 @@ export default function NewEmailStep() {
           gap: 18px;
         }
 
-.panel {
-  width: 100%;
-  max-width: 480px;      /* controls how wide the sections can get */
-  margin: 0 auto;        /* centers them inside the card */
-  background: #181a26;
-  border-radius: 18px;
-  border: 1px solid #272a3e;
-  padding: 14px 14px 16px;
-}
+        .panel {
+          width: 100%;
+          max-width: 480px;
+          margin: 0 auto;
+          background: #181a26;
+          border-radius: 18px;
+          border: 1px solid #272a3e;
+          padding: 14px 14px 16px;
+        }
 
-.panel-main {
-  background: #1c1f2e;   /* inherits max-width + margin from .panel */
-}
+        .panel-main {
+          background: #1c1f2e;
+        }
 
         .panel-header {
           margin-bottom: 10px;

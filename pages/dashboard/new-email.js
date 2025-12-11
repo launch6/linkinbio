@@ -355,13 +355,14 @@ export default function NewEmailStep() {
           width: 100%;
         }
 
-        .step-label {
-          font-size: 11px;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: #8b8fa5;
-          margin: 0 0 8px;
-        }
+.step-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8b8fa5;
+  margin: 0 0 8px;
+  text-align: center;       /* 👈 center the “STEP 4 OF 4” text */
+}
 
         .title {
           font-size: 24px;

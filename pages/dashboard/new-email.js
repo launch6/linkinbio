@@ -119,18 +119,19 @@ export default function NewEmailStep() {
         }
       }
 
-      // ✅ AFTER saving, send them into the editor with their editToken
-      const destination = editToken
-        ? `/dashboard?editToken=${encodeURIComponent(editToken)}`
-        : '/dashboard';
-
-      router.push(destination);
+      // ✅ Then send them to the main dashboard, carrying the editToken
+      if (editToken) {
+        router.push(`/dashboard?editToken=${encodeURIComponent(editToken)}`);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       console.error(err);
       alert('Something went wrong finishing setup. Try again.');
       setLaunching(false);
     }
   };
+
 
   const handleLaunch = (e) => {
     e.preventDefault();

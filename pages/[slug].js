@@ -41,8 +41,8 @@ function isValidEmail(email) {
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
   const common = {
-    width: 28,
-    height: 28,
+    width: 40,
+    height: 40,
     viewBox: "0 0 28 28",
     fill: "none",
     stroke: "currentColor",

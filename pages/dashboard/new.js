@@ -135,12 +135,12 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
 
       <div className="card">
         <div className="card-inner">
-          {/* Progress bar – STEP 1 of 3 (33.3%) */}
+          {/* Progress bar – STEP 1 of 4 (25%) */}
           <div className="progress-bar-container">
             <div className="progress-bar-fill" />
           </div>
 
-          <p className="step-label">STEP 1 OF 3</p>
+          <p className="step-label">STEP 1 OF 4</p>
           <h1 className="title">Add profile details</h1>
 
           <div className="subtitle-block">
@@ -378,7 +378,7 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
         }
 
         .progress-bar-fill {
-          width: 33.3%;
+          width: 25%;
           height: 100%;
           background: linear-gradient(90deg, #6366ff, #a855f7);
           border-radius: 2px;

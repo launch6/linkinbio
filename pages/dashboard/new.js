@@ -1,3 +1,4 @@
+// pages/dashboard/new.js
 import { useState, useRef } from 'react';
 
 function slugify(input) {
@@ -28,14 +29,13 @@ export default function NewProfile() {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
+  // Reusable image processor (used by both file input + drag-drop)
+  const processImageFile = (file) => {
     if (!file) return;
 
     const maxBytes = 1 * 1024 * 1024; // 1MB
     if (file.size > maxBytes) {
       alert('Image is too large. Please upload a JPG/PNG up to 1MB.');
-      e.target.value = '';
       return;
     }
 
@@ -49,78 +49,99 @@ export default function NewProfile() {
     reader.readAsDataURL(file);
   };
 
+  // File input change
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processImageFile(file);
+
+    // allow re-uploading the same file
+    e.target.value = '';
+  };
+
+  // Drag-and-drop on the avatar area
+  const handleAvatarDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleAvatarDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    processImageFile(file);
+  };
+
   const createProfile = async () => {
-  if (saving) return;
-  setSaving(true);
-  setUsernameError('');
+    if (saving) return;
+    setSaving(true);
+    setUsernameError('');
 
-  const rawName = displayName.trim();
-  let slugSource = username.trim();
-  const description = bio.trim();
+    const rawName = displayName.trim();
+    let slugSource = username.trim();
+    const description = bio.trim();
 
-  // ✅ Username / slug is REQUIRED
-  if (!slugSource) {
-    setUsernameError('Choose your username (you can change it later).');
-    setSaving(false);
-    return;
-  }
-
-  // Allow @handle style, but still require something real
-  if (slugSource.startsWith('@')) {
-    slugSource = slugSource.slice(1).trim();
+    // Username / slug is REQUIRED
     if (!slugSource) {
       setUsernameError('Choose your username (you can change it later).');
       setSaving(false);
       return;
     }
-  }
 
-  const slug = slugify(slugSource);
+    // Allow @handle style, but still require something real
+    if (slugSource.startsWith('@')) {
+      slugSource = slugSource.slice(1).trim();
+      if (!slugSource) {
+        setUsernameError('Choose your username (you can change it later).');
+        setSaving(false);
+        return;
+      }
+    }
 
-  // ✅ Name is OPTIONAL – if empty, fall back to slugSource
-  const finalName = rawName || slugSource;
+    const slug = slugify(slugSource);
 
-  try {
-    const res = await fetch('/api/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: finalName,
-        slug,
-        description,
-        avatarUrl: avatarDataUrl || '',
-      }),
-    });
+    // Name is OPTIONAL – if empty, fall back to slugSource
+    const finalName = rawName || slugSource;
 
-    const data = await res.json();
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: finalName,
+          slug,
+          description,
+          avatarUrl: avatarDataUrl || '',
+        }),
+      });
 
-    if (!res.ok) {
-      const rawError =
-        data && typeof data.error === 'string' ? data.error : '';
+      const data = await res.json();
 
-      // Slug / username taken → inline message under username input
-      if (
-        res.status === 409 ||
-        (rawError && rawError.toLowerCase().includes('slug'))
-      ) {
-        setUsernameError('That URL is already taken. Try another username.');
-      } else {
-        alert(rawError || 'Failed to create profile');
+      if (!res.ok) {
+        const rawError =
+          data && typeof data.error === 'string' ? data.error : '';
+
+        if (
+          res.status === 409 ||
+          (rawError && rawError.toLowerCase().includes('slug'))
+        ) {
+          setUsernameError('That URL is already taken. Try another username.');
+        } else {
+          alert(rawError || 'Failed to create profile');
+        }
+
+        setSaving(false);
+        return;
       }
 
+      // After: send them to Step 2 with token as a query param
+      window.location.href = `/dashboard/new-links?token=${data.editToken}`;
+    } catch (err) {
+      console.error(err);
+      alert('Something went wrong creating your profile.');
       setSaving(false);
-      return;
     }
-// After: send them to Step 2 with token as a query param
-window.location.href = `/dashboard/new-links?token=${data.editToken}`;
-
-  } catch (err) {
-    console.error(err);
-    alert('Something went wrong creating your profile.');
-    setSaving(false);
-  }
-};
-
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -154,11 +175,17 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
 
           <form onSubmit={handleSubmit} className="form">
             {/* Avatar upload */}
-            <div className="avatar-block">
+            <div
+              className="avatar-block"
+              onDragOver={handleAvatarDragOver}
+              onDrop={handleAvatarDrop}
+            >
               <button
                 type="button"
                 className="avatar-circle"
                 onClick={handleAvatarClick}
+                onDragOver={handleAvatarDragOver}
+                onDrop={handleAvatarDrop}
                 aria-label="Upload profile image"
               >
                 {avatarDataUrl ? (
@@ -246,30 +273,30 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
               </div>
             </div>
 
-           {/* Username (slug source) */}
-<div className="field">
-  <div className="field-control content-rail">
-    <div className="slug-row">
-      <span className="slug-prefix">l6.io/</span>
-      <input
-        id="username"
-        aria-label="Username"
-        className="slug-input"
-        type="text"
-        value={username}
-        onChange={(e) => {
-          setUsername(e.target.value);
-          if (usernameError) setUsernameError('');
-        }}
-        placeholder="username"
-      />
-    </div>
+            {/* Username (slug source) */}
+            <div className="field">
+              <div className="field-control content-rail">
+                <div className="slug-row">
+                  <span className="slug-prefix">l6.io/</span>
+                  <input
+                    id="username"
+                    aria-label="Username"
+                    className="slug-input"
+                    type="text"
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      if (usernameError) setUsernameError('');
+                    }}
+                    placeholder="username"
+                  />
+                </div>
 
-    {usernameError && (
-      <p className="field-error">{usernameError}</p>
-    )}
-  </div>
-</div>
+                {usernameError && (
+                  <p className="field-error">{usernameError}</p>
+                )}
+              </div>
+            </div>
 
             {/* Short bio */}
             <div className="field">
@@ -367,7 +394,7 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
           }
         }
 
-        /* Progress bar – same style as Step 2, but 33.3% */
+        /* Progress bar – STEP 1 of 4 (25%) */
         .progress-bar-container {
           width: 100%;
           max-width: 260px;
@@ -497,8 +524,8 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
           display: flex;
           justify-content: center;
           margin-top: 18px;
-          
         }
+
         .text-input,
         .textarea-input {
           width: 100%;
@@ -513,48 +540,45 @@ window.location.href = `/dashboard/new-links?token=${data.editToken}`;
           outline: none;
         }
 
-.slug-row {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  border-radius: 999px;
-  border: 1px solid #34384f;
-  background: #090a12;
-  overflow: hidden;
-  padding: 0 0 0 20px; /* matches left padding of other inputs */
-}
+        .slug-row {
+          display: flex;
+          align-items: center;
+          width: 100%;
+          border-radius: 999px;
+          border: 1px solid #34384f;
+          background: #090a12;
+          overflow: hidden;
+          padding: 0 0 0 20px;
+        }
 
-/* Left "l6.io/" text */
-.slug-prefix {
-  font-size: 16px;
-  color: #e5e7eb;
-  white-space: nowrap;
-  margin-right: 8px;
-}
+        .slug-prefix {
+          font-size: 16px;
+          color: #e5e7eb;
+          white-space: nowrap;
+          margin-right: 8px;
+        }
 
-/* Right editable slug input */
-.slug-input {
-  flex: 1;
-  min-width: 0;
-  box-sizing: border-box;
-  border: none;
-  background: transparent;
-  padding: 12px 20px 12px 0;
-  color: #ffffff;
-  font-size: 16px;
-  outline: none;
-  font-family: ${fontStack};
-}
+        .slug-input {
+          flex: 1;
+          min-width: 0;
+          box-sizing: border-box;
+          border: none;
+          background: transparent;
+          padding: 12px 20px 12px 0;
+          color: #ffffff;
+          font-size: 16px;
+          outline: none;
+          font-family: ${fontStack};
+        }
 
-.slug-input::placeholder {
-  color: #8b8fa5;
-}
+        .slug-input::placeholder {
+          color: #8b8fa5;
+        }
 
-/* Focus state on the whole pill */
-.slug-row:focus-within {
-  border-color: #7e8bff;
-  box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
-}
+        .slug-row:focus-within {
+          border-color: #7e8bff;
+          box-shadow: 0 0 0 1px rgba(126, 139, 255, 0.3);
+        }
 
         .textarea-input {
           border-radius: 18px;

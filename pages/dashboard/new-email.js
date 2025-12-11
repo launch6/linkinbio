@@ -85,24 +85,41 @@ export default function NewEmailStep() {
   };
 
   // Finish onboarding + save email settings
-  const finishOnboarding = async (enableEmailCapture) => {
+    const finishOnboarding = async (enableEmailCapture) => {
     if (launching) return;
     setLaunching(true);
 
-    try {
-      // Save email settings for this profile
-      await fetch('/api/onboarding/email-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token,                    // from router.query
-          enableForm: enableEmailCapture,
-          collectName,
-          klaviyoListId: enableEmailCapture ? klaviyoListId || '' : '',
-        }),
-      }).catch(() => {});
+    // token comes from ?token=... in the URL
+    const editToken = typeof token === 'string' ? token : '';
 
-      // Send them to the main dashboard (not back into onboarding)
+    try {
+      // Persist Klaviyo + form settings if we have an editToken
+      if (editToken) {
+        try {
+          const resp = await fetch('/api/onboarding/email-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              editToken,
+              klaviyoEnabled: klaviyoConnected,
+              klaviyoListId: klaviyoConnected ? klaviyoListId || '' : '',
+              showForm: !!enableForm,
+              collectName,
+            }),
+          });
+
+          if (!resp.ok) {
+            const json = await resp.json().catch(() => ({}));
+            console.error('Failed to save email settings', json);
+            // We still let them through to the dashboard, but log the error
+          }
+        } catch (err) {
+          console.error('Error calling /api/onboarding/email-settings', err);
+          // Same idea: don’t block launch, just log
+        }
+      }
+
+      // ✅ Then send them to the main dashboard, not back into onboarding
       router.push('/dashboard');
     } catch (err) {
       console.error(err);

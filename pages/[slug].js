@@ -796,36 +796,37 @@ export default function PublicSlugPage() {
                 }}
               >
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={title || "Avatar"}
-                    style={{
-                      height: "4rem",
-                      width: "4rem",
-                      borderRadius: "999px",
-                      objectFit: "cover",
-                      border: "1px solid #27272a",
-                      display: "block",
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      height: "3.5rem",
-                      width: "3.5rem",
-                      borderRadius: "999px",
-                      backgroundColor: "#18181b",
-                      border: "1px solid #27272a",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 600,
-                      fontSize: "1.4rem",
-                    }}
-                  >
-                    {avatarInitial}
-                  </div>
-                )}
+  <img
+    src={avatarUrl}
+    alt={title || "Avatar"}
+    style={{
+      height: "7rem",
+      width: "7rem",
+      borderRadius: "999px",
+      objectFit: "cover",
+      border: "1px solid #27272a",
+      display: "block",
+    }}
+  />
+) : (
+  <div
+    style={{
+      height: "6.5rem",
+      width: "6.5rem",
+      borderRadius: "999px",
+      backgroundColor: "#18181b",
+      border: "1px solid #27272a",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontWeight: 600,
+      fontSize: "2.2rem",
+    }}
+  >
+    {avatarInitial}
+  </div>
+)}
+
               </div>
 
               {/* Handle (@backyards) */}
@@ -872,8 +873,8 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="Instagram"
                       style={{
-                        height: "3rem",
-                        width: "3rem",
+                        height: "4rem",
+                        width: "4rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
                         backgroundColor: "rgba(24,24,27,0.9)",
@@ -894,8 +895,8 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="Facebook"
                       style={{
-                        height: "3rem",
-                        width: "3rem",
+                        height: "4rem",
+                        width: "4rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
                         backgroundColor: "rgba(24,24,27,0.9)",
@@ -916,8 +917,8 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="TikTok"
                       style={{
-                        height: "3rem",
-                        width: "3rem",
+                        height: "4rem",
+                        width: "4rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
                         backgroundColor: "rgba(24,24,27,0.9)",
@@ -938,8 +939,8 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="YouTube"
                       style={{
-                        height: "3rem",
-                        width: "3rem",
+                        height: "4rem",
+                        width: "4rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
                         backgroundColor: "rgba(24,24,27,0.9)",
@@ -960,8 +961,8 @@ export default function PublicSlugPage() {
                       rel="noopener noreferrer"
                       aria-label="X"
                       style={{
-                        height: "3rem",
-                        width: "3rem",
+                        height: "4rem",
+                        width: "4rem",
                         borderRadius: "999px",
                         border: "1px solid #27272a",
                         backgroundColor: "rgba(24,24,27,0.9)",
@@ -982,8 +983,8 @@ export default function PublicSlugPage() {
     rel="noopener noreferrer"
     aria-label="Website"
     style={{
-      height: "3rem",
-      width: "3rem",
+      height: "4rem",
+      width: "4rem",
       borderRadius: "999px",
       border: "1px solid #27272a",
       backgroundColor: "rgba(24,24,27,0.9)",

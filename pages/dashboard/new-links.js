@@ -71,6 +71,7 @@ const SocialIconMap = {
     </svg>
   ),
   x: (
+    // Clean X logo: two crossing strokes
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -134,14 +135,14 @@ const getSocialBaseUrl = (key) => {
   }
 };
 
-// helper: a social is "complete" when it has more than its base prefix
+// Helper: a social is "complete" when it has more than its base prefix
 const isSocialComplete = (key, urls) => {
   const base = getSocialBaseUrl(key);
   const val = urls[key];
   return !!val && val.length > base.length;
 };
 
-// Normalize link URLs: if missing protocol, assume https://
+// Normalize link URLs for validation (not for saving — backend normalizes too)
 const normalizeLinkUrl = (value) => {
   let url = (value || '').trim();
   if (!url) return '';
@@ -182,8 +183,8 @@ export default function NewLinks() {
 
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
-  const draggingIdRef = useRef(null);
   const [linkError, setLinkError] = useState('');
+  const draggingIdRef = useRef(null);
 
   // only count completed socials, not bare prefixes
   const usedSocialCount = SOCIAL_CONFIG.reduce(
@@ -193,7 +194,9 @@ export default function NewLinks() {
 
   const handleLinkChange = (id, field, value) => {
     setLinks((prev) =>
-      prev.map((link) => (link.id === id ? { ...link, [field]: value } : link))
+      prev.map((link) =>
+        link.id === id ? { ...link, [field]: value } : link
+      )
     );
   };
 
@@ -218,51 +221,19 @@ export default function NewLinks() {
     }
   };
 
-  const goToEditor = () => {
-    if (token) {
-      window.location.href = `/dashboard/${token}`;
-    } else {
-      window.location.href = `/dashboard`;
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    setLinkError('');
-
-    const linksWithUrls = links.filter((l) => l.url.trim());
-
-    if (linksWithUrls.length === 0) {
-      setLinkError('Add at least one link URL before continuing.');
-      return;
-    }
-
-    const invalidLinks = linksWithUrls.filter((l) => !isValidLinkUrl(l.url));
-
-    if (invalidLinks.length > 0) {
-      setLinkError(
-        'One or more links have an invalid URL. Try something like backyardsofkeywest.com or https://example.com.'
-      );
-      return;
-    }
-
-    if (saving) return;
-    setSaving(true);
-    goToStep3();
-  };
-
   // --- social icons ---
 
   const handleSocialIconClick = (key) => {
     const complete = isSocialComplete(key, socialUrls);
 
+    // respect the 4-icon limit based on completed socials only
     if (!complete && usedSocialCount >= 4) {
       return;
     }
 
     setActiveSocialKey(key);
 
+    // prefill base if empty
     if (!socialUrls[key]) {
       const base = getSocialBaseUrl(key);
       setSocialUrls((prev) => ({
@@ -278,6 +249,7 @@ export default function NewLinks() {
     let value = e.target.value;
     const base = getSocialBaseUrl(activeSocialKey);
 
+    // allow clearing everything via the × button
     if (!value) {
       setSocialUrls((prev) => ({
         ...prev,
@@ -286,6 +258,7 @@ export default function NewLinks() {
       return;
     }
 
+    // enforce the prefix: user can only type after the base
     if (value.length < base.length) {
       value = base;
     } else if (!value.startsWith(base)) {
@@ -348,6 +321,69 @@ export default function NewLinks() {
     });
   };
 
+  // --- submit: validate, save to API, then go to Step 3 ---
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (saving) return;
+
+    setLinkError('');
+
+    // Only rows where the URL has something
+    const linksWithUrls = links.filter((l) => l.url.trim());
+
+    // 1) Require at least one URL
+    if (linksWithUrls.length === 0) {
+      setLinkError('Add at least one link URL before continuing.');
+      return;
+    }
+
+    // 2) Any URL that exists must be valid
+    const invalidLinks = linksWithUrls.filter(
+      (l) => !isValidLinkUrl(l.url)
+    );
+
+    if (invalidLinks.length > 0) {
+      setLinkError(
+        'One or more links have an invalid URL. Try something like backyardsofkeywest.com or https://example.com.'
+      );
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const resp = await fetch('/api/profile/links-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          editToken: token || '',
+          links,
+          social: socialUrls,
+        }),
+      });
+
+      const json = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !json?.ok) {
+        const msg =
+          json?.error === 'profile_not_found'
+            ? 'We could not find your profile. Try going back to Step 1.'
+            : 'There was a problem saving your links. Please try again.';
+        alert(msg);
+        setSaving(false);
+        return;
+      }
+
+      // All good – move to Step 3
+      goToStep3();
+    } catch (err) {
+      console.error(err);
+      alert('Network error saving links. Please try again.');
+      setSaving(false);
+    }
+  };
+
   return (
     <main className="onboarding-root">
       <div className="logo-row">
@@ -376,6 +412,7 @@ export default function NewLinks() {
 
             <div className="social-icon-row">
               {SOCIAL_CONFIG.map((net) => {
+                const base = getSocialBaseUrl(net.key);
                 const val = socialUrls[net.key];
                 const complete = isSocialComplete(net.key, socialUrls);
                 const isDisabled = !complete && usedSocialCount >= 4;
@@ -504,7 +541,9 @@ export default function NewLinks() {
               >
                 + Add another link
               </button>
-              {linkError && <p className="field-error">{linkError}</p>}
+              {linkError && (
+                <p className="field-error">{linkError}</p>
+              )}
             </section>
 
             <div className="actions-row content-rail">
@@ -588,7 +627,7 @@ export default function NewLinks() {
         }
 
         .progress-bar-fill {
-          width: 50%;
+          width: 50%; /* 2 of 4 steps */
           height: 100%;
           background: linear-gradient(90deg, #6366ff, #a855f7);
           border-radius: 2px;
@@ -738,6 +777,7 @@ export default function NewLinks() {
           padding-left: 4px;
         }
 
+        /* aligned pill with link cards */
         .social-url-pill {
           width: 100%;
           border-radius: 999px;

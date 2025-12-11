@@ -807,7 +807,7 @@ export default function PublicSlugPage() {
               </div>
 
               {/* Handle (@backyards) */}
-              <h1
+<h1
   style={{
     fontSize: "1.7rem",
     lineHeight: 1.2,
@@ -815,8 +815,9 @@ export default function PublicSlugPage() {
     margin: `0 0 ${HEADER_STACK_SPACING}`, // equal gap below, no top margin
   }}
 >
-  {title ? `@${title}` : "Artist"}
+  {title || "Artist"}
 </h1>
+
 
   {/* Description */}
 {bio ? (

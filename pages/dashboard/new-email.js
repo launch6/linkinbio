@@ -385,17 +385,19 @@ export default function NewEmailStep() {
           gap: 18px;
         }
 
-        .panel {
-          width: 100%;
-          background: #181a26;
-          border-radius: 18px;
-          border: 1px solid #272a3e;
-          padding: 14px 14px 16px;
-        }
+.panel {
+  width: 100%;
+  max-width: 480px;      /* controls how wide the sections can get */
+  margin: 0 auto;        /* centers them inside the card */
+  background: #181a26;
+  border-radius: 18px;
+  border: 1px solid #272a3e;
+  padding: 14px 14px 16px;
+}
 
-        .panel-main {
-          background: #1c1f2e;
-        }
+.panel-main {
+  background: #1c1f2e;   /* inherits max-width + margin from .panel */
+}
 
         .panel-header {
           margin-bottom: 10px;

@@ -39,22 +39,21 @@ const SocialIconMap = {
       <path d="M15 2h-2.5A3.5 3.5 0 0 0 9 5.5V9H6v4h3v8h4v-8h3l1-4h-4V5.5A1.5 1.5 0 0 1 14.5 4H18V2z" />
     </svg>
   ),
-tiktok: (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    stroke="none"
-  >
-    <path
-      d="M17 6c.5 1.6 1.7 2.7 3.3 3.1L21 9.3V12c-1.3 0-2.6-.4-3.7-1.1v3.8a5.2 5.2 0 1 1-4.7-5.2V11a2.2 2.2 0 0 0-1.7-.2 2.1 2.1 0 1 0 2.2 2.1V6h3z"
-      transform="translate(12 12) scale(1.2) translate(-12 -12)"
-    />
-  </svg>
-),
-  // YouTube: rounded rectangle with play triangle
+  tiktok: (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="none"
+    >
+      <path
+        d="M17 6c.5 1.6 1.7 2.7 3.3 3.1L21 9.3V12c-1.3 0-2.6-.4-3.7-1.1v3.8a5.2 5.2 0 1 1-4.7-5.2V11a2.2 2.2 0 0 0-1.7-.2 2.1 2.1 0 1 0 2.2 2.1V6h3z"
+        transform="translate(12 12) scale(1.2) translate(-12 -12)"
+      />
+    </svg>
+  ),
   youtube: (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -71,8 +70,7 @@ tiktok: (
       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" stroke="none" />
     </svg>
   ),
- x: (
-    // Clean X logo: two crossing strokes
+  x: (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -129,27 +127,49 @@ const getSocialBaseUrl = (key) => {
       return 'https://www.youtube.com/';
     case 'x':
       return 'https://x.com/';
-case 'website':
-  return '';
+    case 'website':
+      return '';
     default:
       return 'https://';
   }
 };
 
-// Helper: a social is "complete" when it has more than its base prefix
+// helper: a social is "complete" when it has more than its base prefix
 const isSocialComplete = (key, urls) => {
   const base = getSocialBaseUrl(key);
   const val = urls[key];
   return !!val && val.length > base.length;
 };
 
+// Normalize link URLs: if missing protocol, assume https://
+const normalizeLinkUrl = (value) => {
+  let url = (value || '').trim();
+  if (!url) return '';
+
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  return url;
+};
+
+// Basic URL validation: require a hostname with a dot (.com, .org, .art, etc.)
+const isValidLinkUrl = (value) => {
+  const normalized = normalizeLinkUrl(value);
+  try {
+    const parsed = new URL(normalized);
+    return !!parsed.hostname && parsed.hostname.includes('.');
+  } catch {
+    return false;
+  }
+};
+
 export default function NewLinks() {
   const router = useRouter();
   const { token } = router.query;
 
- const [links, setLinks] = useState([
-  { id: 1, label: 'Shop my latest pieces', url: '' },
-]);
+  const [links, setLinks] = useState([
+    { id: 1, label: 'Shop my latest pieces', url: '' },
+  ]);
 
   const [socialUrls, setSocialUrls] = useState({
     instagram: '',
@@ -163,32 +183,7 @@ export default function NewLinks() {
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
   const draggingIdRef = useRef(null);
-// 👇 ADD THIS
-const [linkError, setLinkError] = useState('');
-
-  // Normalize link URLs: if missing protocol, assume https://
-const normalizeLinkUrl = (value) => {
-  let url = (value || '').trim();
-  if (!url) return '';
-
-  // If the user didn't type http/https, assume https://
-  if (!/^https?:\/\//i.test(url)) {
-    url = `https://${url}`;
-  }
-  return url;
-};
-
-// Basic URL validation: require a hostname with a dot (.com, .org, .art, etc.)
-const isValidLinkUrl = (value) => {
-  const normalized = normalizeLinkUrl(value);
-  try {
-    const parsed = new URL(normalized);
-    // Must have a hostname and at least one dot (e.g. example.com)
-    return !!parsed.hostname && parsed.hostname.includes('.');
-  } catch {
-    return false;
-  }
-};
+  const [linkError, setLinkError] = useState('');
 
   // only count completed socials, not bare prefixes
   const usedSocialCount = SOCIAL_CONFIG.reduce(
@@ -198,9 +193,7 @@ const isValidLinkUrl = (value) => {
 
   const handleLinkChange = (id, field, value) => {
     setLinks((prev) =>
-      prev.map((link) =>
-        link.id === id ? { ...link, [field]: value } : link
-      )
+      prev.map((link) => (link.id === id ? { ...link, [field]: value } : link))
     );
   };
 
@@ -216,10 +209,8 @@ const isValidLinkUrl = (value) => {
     });
   };
 
-    // Step navigation helpers
-    // Step navigation helpers
+  // Step navigation helpers
   const goToStep3 = () => {
-    // Later you can branch here based on plan (e.g. canCreateDrops)
     if (token) {
       window.location.href = `/dashboard/new-drop?token=${token}`;
     } else {
@@ -227,7 +218,6 @@ const isValidLinkUrl = (value) => {
     }
   };
 
-  // If you still want a direct path to the editor later, keep this helper:
   const goToEditor = () => {
     if (token) {
       window.location.href = `/dashboard/${token}`;
@@ -237,52 +227,42 @@ const isValidLinkUrl = (value) => {
   };
 
   const handleSubmit = (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // clear any previous error
-  setLinkError('');
+    setLinkError('');
 
-  // Only care about rows where the URL has something
-  const linksWithUrls = links.filter((l) => l.url.trim());
+    const linksWithUrls = links.filter((l) => l.url.trim());
 
-  // 1) Require at least one URL
-  if (linksWithUrls.length === 0) {
-    setLinkError('Add at least one link URL before continuing.');
-    return;
-  }
+    if (linksWithUrls.length === 0) {
+      setLinkError('Add at least one link URL before continuing.');
+      return;
+    }
 
-  // 2) Any URL that exists must be a valid domain/URL
-  const invalidLinks = linksWithUrls.filter(
-    (l) => !isValidLinkUrl(l.url)
-  );
+    const invalidLinks = linksWithUrls.filter((l) => !isValidLinkUrl(l.url));
 
-  if (invalidLinks.length > 0) {
-    setLinkError(
-      'One or more links have an invalid URL. Try something like backyardsofkeywest.com or https://example.com.'
-    );
-    return;
-  }
+    if (invalidLinks.length > 0) {
+      setLinkError(
+        'One or more links have an invalid URL. Try something like backyardsofkeywest.com or https://example.com.'
+      );
+      return;
+    }
 
-  // 3) All good → move to Step 3 (drops), not the editor
-  if (saving) return;
-  setSaving(true);
-  goToStep3();
-};
-
+    if (saving) return;
+    setSaving(true);
+    goToStep3();
+  };
 
   // --- social icons ---
 
   const handleSocialIconClick = (key) => {
     const complete = isSocialComplete(key, socialUrls);
 
-    // respect the 4-icon limit based on completed socials only
     if (!complete && usedSocialCount >= 4) {
       return;
     }
 
     setActiveSocialKey(key);
 
-    // prefill base if empty
     if (!socialUrls[key]) {
       const base = getSocialBaseUrl(key);
       setSocialUrls((prev) => ({
@@ -298,7 +278,6 @@ const isValidLinkUrl = (value) => {
     let value = e.target.value;
     const base = getSocialBaseUrl(activeSocialKey);
 
-    // allow clearing everything via the × button
     if (!value) {
       setSocialUrls((prev) => ({
         ...prev,
@@ -307,11 +286,9 @@ const isValidLinkUrl = (value) => {
       return;
     }
 
-    // enforce the prefix: user can only type after the base
     if (value.length < base.length) {
       value = base;
     } else if (!value.startsWith(base)) {
-      // preserve whatever they typed after the base length
       const tail = value.slice(base.length).replace(/\s+/g, '');
       value = base + tail;
     }
@@ -335,28 +312,25 @@ const isValidLinkUrl = (value) => {
       ? socialUrls[activeSocialKey]
       : '';
 
-const activeSocialPlaceholder = !activeSocialKey
-  ? 'https://yourwebsite.com'
-  : activeSocialKey === 'website'
-  ? 'https://'
-  : getSocialBaseUrl(activeSocialKey);
-
+  const activeSocialPlaceholder = !activeSocialKey
+    ? 'https://yourwebsite.com'
+    : activeSocialKey === 'website'
+    ? 'https://'
+    : getSocialBaseUrl(activeSocialKey);
 
   // --- drag + drop for link cards ---
-
   const handleDragStart = (id) => (event) => {
-  draggingIdRef.current = id;
+    draggingIdRef.current = id;
 
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move';
-    // Some browsers require *something* to be set
-    event.dataTransfer.setData('text/plain', String(id));
-  }
-};
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', String(id));
+    }
+  };
 
-const handleDragEnd = () => {
-  draggingIdRef.current = null;
-};
+  const handleDragEnd = () => {
+    draggingIdRef.current = null;
+  };
 
   const handleDropOn = (targetId) => {
     const sourceId = draggingIdRef.current;
@@ -402,7 +376,6 @@ const handleDragEnd = () => {
 
             <div className="social-icon-row">
               {SOCIAL_CONFIG.map((net) => {
-                const base = getSocialBaseUrl(net.key);
                 const val = socialUrls[net.key];
                 const complete = isSocialComplete(net.key, socialUrls);
                 const isDisabled = !complete && usedSocialCount >= 4;
@@ -476,16 +449,18 @@ const handleDragEnd = () => {
               <div className="links-list">
                 {links.map((link) => (
                   <div
-  key={link.id}
-  className="link-card"
-  draggable
-  onDragStart={handleDragStart(link.id)}
-  onDragEnd={handleDragEnd}
-  onDragOver={(e) => e.preventDefault()}
-  onDrop={() => handleDropOn(link.id)}
->
-
-                    <div className="drag-handle" aria-hidden="true">
+                    key={link.id}
+                    className="link-card"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleDropOn(link.id)}
+                  >
+                    <div
+                      className="drag-handle"
+                      aria-hidden="true"
+                      draggable
+                      onDragStart={handleDragStart(link.id)}
+                      onDragEnd={handleDragEnd}
+                    >
                       <span className="drag-dots">⋮⋮</span>
                     </div>
 
@@ -529,11 +504,8 @@ const handleDragEnd = () => {
               >
                 + Add another link
               </button>
-              {linkError && (
-    <p className="field-error">{linkError}</p>
-  )}
-</section>
-
+              {linkError && <p className="field-error">{linkError}</p>}
+            </section>
 
             <div className="actions-row content-rail">
               <button
@@ -548,7 +520,6 @@ const handleDragEnd = () => {
             <p className="footer-note">
               You can always edit links and socials later from your dashboard.
             </p>
-
           </form>
         </div>
       </div>
@@ -600,12 +571,13 @@ const handleDragEnd = () => {
           align-items: center;
         }
 
-@media (max-width: 600px) {
-  .card-inner {
-    padding: 28px 18px 24px;
-    border-radius: 24px;
-  }
-}
+        @media (max-width: 600px) {
+          .card-inner {
+            padding: 28px 18px 24px;
+            border-radius: 24px;
+          }
+        }
+
         .progress-bar-container {
           width: 100%;
           max-width: 260px;
@@ -615,13 +587,12 @@ const handleDragEnd = () => {
           margin: 0 auto 16px;
         }
 
-       .progress-bar-fill {
-  width: 50%; /* 2 of 4 steps */
-  height: 100%;
-  background: linear-gradient(90deg, #6366ff, #a855f7);
-  border-radius: 2px;
-}
-
+        .progress-bar-fill {
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(90deg, #6366ff, #a855f7);
+          border-radius: 2px;
+        }
 
         .step-label {
           font-size: 11px;
@@ -758,16 +729,15 @@ const handleDragEnd = () => {
           margin: 4px 0 14px;
           text-align: center;
         }
-          .field-error {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #f97373; /* soft red */
-  text-align: left;
-  padding-left: 4px;
-}
 
+        .field-error {
+          margin-top: 6px;
+          font-size: 12px;
+          color: #f97373;
+          text-align: left;
+          padding-left: 4px;
+        }
 
-        /* aligned pill with link cards */
         .social-url-pill {
           width: 100%;
           border-radius: 999px;
@@ -862,11 +832,6 @@ const handleDragEnd = () => {
           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
 
-        .link-card[draggable='true']:active {
-          opacity: 0.8;
-          cursor: grabbing;
-        }
-
         .drag-handle {
           width: 24px;
           display: flex;
@@ -875,6 +840,10 @@ const handleDragEnd = () => {
           color: #62667f;
           cursor: grab;
           margin-right: 8px;
+        }
+
+        .drag-handle:active {
+          cursor: grabbing;
         }
 
         .drag-dots {
@@ -979,21 +948,6 @@ const handleDragEnd = () => {
 
         .btn-full-width {
           width: 100%;
-        }
-
-        .skip-link-button {
-          margin-top: 10px;
-          border: none;
-          background: transparent;
-          color: #8b8fa5;
-          font-size: 13px;
-          cursor: pointer;
-          text-decoration: none;
-        }
-
-        .skip-link-button:hover {
-          text-decoration: underline;
-          color: #ffffff;
         }
 
         .footer-note {

@@ -648,13 +648,25 @@ export default function PublicSlugPage() {
   : [];
 
   const social = profile?.social || {};
+
+  // Ensure website link is always absolute (so it doesn't become /backyardsofkeywest.com)
+  const normalizeHref = (url) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  };
+
+  const websiteHref = normalizeHref(social.website);
+
   const hasSocialRow =
     social.instagram ||
     social.facebook ||
     social.tiktok ||
     social.youtube ||
     social.x ||
-    social.website;
+    websiteHref;
 
   // --- SEO / Social ---
   const firstImage = products?.[0]?.imageUrl || "";
@@ -953,28 +965,29 @@ export default function PublicSlugPage() {
                       <SocialIcon type="x" />
                     </a>
                   )}
-                  {social.website && (
-                    <a
-                      href={social.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Website"
-                      style={{
-                        height: "3rem",
-                        width: "3rem",
-                        borderRadius: "999px",
-                        border: "1px solid #27272a",
-                        backgroundColor: "rgba(24,24,27,0.9)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#f9fafb",
-                        textDecoration: "none",
-                      }}
-                    >
-                      <SocialIcon type="website" />
-                    </a>
-                  )}
+                 {websiteHref && (
+  <a
+    href={websiteHref}
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Website"
+    style={{
+      height: "3rem",
+      width: "3rem",
+      borderRadius: "999px",
+      border: "1px solid #27272a",
+      backgroundColor: "rgba(24,24,27,0.9)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#f9fafb",
+      textDecoration: "none",
+    }}
+  >
+    <SocialIcon type="website" />
+  </a>
+)}
+
                 </div>
               )}
             </div>

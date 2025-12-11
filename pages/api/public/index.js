@@ -1,4 +1,4 @@
-// pages/api/public/index.js
+// pages/api/public.js
 import { MongoClient } from "mongodb";
 
 const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
@@ -26,105 +26,120 @@ function send(res, status, body) {
   return res.status(status).json(body);
 }
 
-/**
- * GET /api/public?slug=backyards
- * Returns a public-safe payload for the profile + published products.
- */
+// GET /api/public?slug=...
 export default async function handler(req, res) {
+  noStore(res);
+
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
-    noStore(res);
     return res.status(405).end("Method Not Allowed");
   }
 
-  const slug = String(req.query.slug || "").trim();
-  if (!slug) {
-    return send(res, 400, { ok: false, error: "missing_slug" });
+  const slugRaw = String(req.query.slug || "").trim();
+  if (!slugRaw) {
+    return send(res, 400, { ok: false, error: "Missing slug" });
   }
+
+  const slug = slugRaw.toLowerCase();
 
   try {
     const client = await getClient();
     const db = client.db(MONGODB_DB);
     const Profiles = db.collection("profiles");
+    const Products = db.collection("products");
 
-    // Only expose public-safe fields
-    const doc = await Profiles.findOne(
+    // Find profile by publicSlug OR slug
+    const profileDoc = await Profiles.findOne(
       {
         $or: [
           { publicSlug: slug },
-          { slug }, // legacy fallback
+          { slug },
         ],
       },
       {
         projection: {
           _id: 0,
+          editToken: 1,
+          plan: 1,
           displayName: 1,
           name: 1,
-          bio: 1,
-          description: 1,
-          collectEmail: 1,
           publicSlug: 1,
           slug: 1,
-          products: 1,
-
-          // socials – support both old and new shapes
-          social: 1,
-          socialLinks: 1,
-          instagram: 1,
-          tiktok: 1,
-          youtube: 1,
-          twitter: 1,
-          facebook: 1,
-          website: 1,
-
-          // custom links
+          status: 1,
+          bio: 1,
+          collectEmail: 1,
+          klaviyoListId: 1,
           links: 1,
+          social: 1,
+          avatarUrl: 1, // ✅ include avatar
         },
       }
     );
 
-    if (!doc) {
-      return send(res, 404, { ok: false, error: "not_found" });
+    if (!profileDoc) {
+      return send(res, 404, { ok: false, error: "profile_not_found" });
     }
 
-    const published = Array.isArray(doc.products)
-      ? doc.products.filter((p) => !!p?.published)
+    const links = Array.isArray(profileDoc.links)
+      ? profileDoc.links.filter(
+          (l) =>
+            l &&
+            typeof l.url === "string" &&
+            l.url.trim().length > 0
+        )
       : [];
 
-    // Normalize socials into profile.social
-    const rawSocial = doc.social || doc.socialLinks || {};
-    const social = {
-      instagram: rawSocial.instagram || doc.instagram || "",
-      facebook: rawSocial.facebook || doc.facebook || "",
-      tiktok: rawSocial.tiktok || doc.tiktok || "",
-      youtube: rawSocial.youtube || doc.youtube || "",
-      x: rawSocial.x || rawSocial.twitter || doc.twitter || "",
-      website: rawSocial.website || doc.website || "",
-    };
-
-    // Normalize links into profile.links
-    const rawLinks = Array.isArray(doc.links) ? doc.links : [];
-    const links = rawLinks.map((l) => ({
-      id: String(l?.id || "").trim() || `link_${Math.random().toString(36).slice(2, 10)}`,
-      label: String(l?.label || "").trim() || String(l?.url || ""),
-      url: String(l?.url || "").trim(),
-    }));
+    // Pull published products for this profile via editToken
+    const products = await Products.find(
+      {
+        editToken: profileDoc.editToken,
+        published: true,
+      },
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          title: 1,
+          description: 1,
+          imageUrl: 1,
+          priceCents: 1,
+          priceDisplay: 1,
+          priceFormatted: 1,
+          priceText: 1,
+          buttonText: 1,
+          priceUrl: 1,
+          unitsLeft: 1,
+          unitsTotal: 1,
+          dropStartsAt: 1,
+          dropEndsAt: 1,
+          showTimer: 1,
+          showInventory: 1,
+          published: 1,
+        },
+      }
+    ).toArray();
 
     return send(res, 200, {
       ok: true,
-      version: "public-v2",
       profile: {
-        displayName: doc.displayName || doc.name || "",
-        bio: doc.bio || doc.description || "",
-        collectEmail: !!doc.collectEmail,
-        publicSlug: doc.publicSlug || doc.slug || slug,
-        social,
+        editToken: profileDoc.editToken,
+        plan: profileDoc.plan || "free",
+        displayName: profileDoc.displayName || profileDoc.name || "",
+        name: profileDoc.name || "",
+        publicSlug: profileDoc.publicSlug || profileDoc.slug || "",
+        slug: profileDoc.slug || "",
+        status: profileDoc.status || "active",
+        bio: profileDoc.bio || "",
+        collectEmail: !!profileDoc.collectEmail,
+        klaviyoListId: profileDoc.klaviyoListId || "",
+        avatarUrl: profileDoc.avatarUrl || "", // ✅ expose to frontend
         links,
+        social: profileDoc.social || {},
       },
-      products: published,
+      products: Array.isArray(products) ? products : [],
     });
   } catch (err) {
-    console.error("public:index ERROR", err?.message);
+    console.error("public ERROR", err?.message || err);
     return send(res, 500, { ok: false, error: "server_error" });
   }
 }

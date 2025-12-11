@@ -639,20 +639,13 @@ export default function PublicSlugPage() {
   const canCollectEmail = !!profile?.collectEmail;
 
   const links = Array.isArray(profile?.links)
-    ? profile.links.filter(
-        (l) =>
-          l &&
-          typeof l.url === "string" &&
-          l.url.trim().length > 0
-      )
-    : [];
-
-  // TEMP: hard-coded test link so we can see link UI
-  links.push({
-    id: "test-link",
-    label: "Backyards of Key West Shop",
-    url: "https://backyardsofkeywest.com",
-  });
+  ? profile.links.filter(
+      (l) =>
+        l &&
+        typeof l.url === "string" &&
+        l.url.trim().length > 0
+    )
+  : [];
 
   const social = profile?.social || {};
   const hasSocialRow =
@@ -683,7 +676,8 @@ export default function PublicSlugPage() {
   const avatarInitial =
     (title && title.trim().charAt(0).toUpperCase()) || "L";
 
-      const avatarUrl = profile?.avatarUrl || profile?.imageUrl || null;
+      const avatarUrl =
+  profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
 
   if (loading) {
     return (
@@ -824,14 +818,15 @@ export default function PublicSlugPage() {
   {title ? `@${title}` : "Artist"}
 </h1>
 
-              {/* Description */}
-            {bio ? (
+  {/* Description */}
+{bio ? (
   <p
     style={{
       color: "#e5e7eb",
       fontSize: "1rem",
       lineHeight: 1.5,
-      margin: `0 0 ${HEADER_STACK_SPACING}`, // same spacing, no top margin
+      margin: `0 0 ${HEADER_STACK_SPACING}`,
+      whiteSpace: "pre-line", // preserve line breaks
     }}
   >
     {bio}

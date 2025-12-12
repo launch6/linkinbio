@@ -49,8 +49,8 @@ export default function NewDrop() {
 
   // --- Draft storage helpers ------------------------------------------------
 
-  const getDraftKey = () =>
-    `${DRAFT_STORAGE_PREFIX}_${typeof token === 'string' && token ? token : 'default'}`;
+  // 🔑 IMPORTANT CHANGE: use a single key, not token-based
+  const getDraftKey = () => DRAFT_STORAGE_PREFIX;
 
   const saveDraftToStorage = () => {
     if (typeof window === 'undefined') return;
@@ -96,13 +96,12 @@ export default function NewDrop() {
     } catch (err) {
       console.error('[new-drop] Failed to load draft', err);
     }
-  }, [router.isReady, token]); // load when token/route is ready
+  }, [router.isReady]); // token is no longer needed here
 
   // --- Navigation helper ---------------------------------------------------
 
   const goToStep4 = () => {
-    // ⬅️ Updated to match email step we actually built
-    const base = '/dashboard/email-settings';
+    const base = '/dashboard/new-email';
     const target = token ? `${base}?token=${token}` : base;
     window.location.href = target;
   };
@@ -195,9 +194,9 @@ export default function NewDrop() {
     }
   };
 
-  // --- Form submit: validate + POST /api/products + go to step 4 ----------
+  // --- Form submit ---------------------------------------------------------
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
 
     // 0) Require a drop title for the public card
@@ -219,19 +218,14 @@ export default function NewDrop() {
     }
 
     // 3) quantity validation: allow blank (open edition) or integer >= 1
-    let unitsTotal = null;
-    let unitsLeft = null;
-    const qtyTrimmed = quantity.trim();
-    if (qtyTrimmed) {
-      const n = Number(qtyTrimmed);
+    if (quantity.trim()) {
+      const n = Number(quantity);
       if (!Number.isInteger(n) || n <= 0) {
         alert(
           'Quantity must be a whole number (leave blank for open edition).'
         );
         return;
       }
-      unitsTotal = n;
-      unitsLeft = n; // new drop starts fully in stock
     }
 
     // 4) basic timer sanity check – only if both are filled
@@ -246,49 +240,8 @@ export default function NewDrop() {
     saveDraftToStorage();
     setSaving(true);
 
-    try {
-      const body = {
-        editToken: typeof token === 'string' ? token : null,
-        title: dropTitle.trim(),
-        description: dropDescription.trim(),
-        buttonText: btnText.trim() || 'Buy Now',
-
-        // Stripe side – your /api/products will use this to look up price
-        stripeProductId: selectedProductId,
-
-        // Inventory + timer flags that [slug].js expects
-        unitsTotal,
-        unitsLeft,
-        showInventory: !!unitsTotal, // show "x/y left" when limited
-        showTimer: isTimerEnabled,
-        dropStartsAt: startsAt || null,
-        dropEndsAt: endsAt || null,
-
-        // Image for the hero card
-        imageUrl: imagePreview || null,
-
-        // Make it visible on the public page
-        published: true,
-      };
-
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || 'Failed to save drop.');
-      }
-
-      // success → move to Step 4 (email settings)
-      goToStep4();
-    } catch (err) {
-      console.error(err);
-      alert(err.message || 'There was a problem saving this drop.');
-      setSaving(false);
-    }
+    // TODO: later POST drop details (imageFile, product, quantity, timer, title, description, etc.)
+    goToStep4();
   };
 
   // --- Render --------------------------------------------------------------

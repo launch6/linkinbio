@@ -33,6 +33,7 @@ export default function NewDrop() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedPriceCents, setSelectedPriceCents] = useState(null);
   const [selectedPriceDisplay, setSelectedPriceDisplay] = useState('');
+  const [priceUrl, setPriceUrl] = useState(''); // Stripe Payment Link
   const [saving, setSaving] = useState(false);
 
   // Drop image state
@@ -111,6 +112,7 @@ export default function NewDrop() {
       selectedProductId,
       selectedPriceCents,
       selectedPriceDisplay,
+      priceUrl,
     };
 
     // Always try to stash imagePreview in sessionStorage (usually more reliable here)
@@ -168,6 +170,7 @@ export default function NewDrop() {
           setSelectedPriceDisplay(d.selectedPriceDisplay);
         if (typeof d.selectedPriceCents === 'number')
           setSelectedPriceCents(d.selectedPriceCents);
+        if (typeof d.priceUrl === 'string') setPriceUrl(d.priceUrl);
 
         // Do NOT eagerly set imagePreview from localStorage yet.
         // We prefer sessionStorage first.
@@ -225,6 +228,7 @@ export default function NewDrop() {
     selectedProductId,
     selectedPriceCents,
     selectedPriceDisplay,
+    priceUrl,
   ]);
 
   // --- Navigation helper ---------------------------------------------------
@@ -353,6 +357,16 @@ export default function NewDrop() {
       return;
     }
 
+    const trimmedPriceUrl = priceUrl.trim();
+    if (!trimmedPriceUrl) {
+      alert('Paste your Stripe Payment Link before continuing.');
+      return;
+    }
+    if (!/^https?:\/\//i.test(trimmedPriceUrl)) {
+      alert('Your Stripe Payment Link should start with https://');
+      return;
+    }
+
     if (quantity.trim()) {
       const n = Number(quantity);
       if (!Number.isInteger(n) || n <= 0) {
@@ -386,7 +400,7 @@ export default function NewDrop() {
       title: dropTitle.trim(),
       description: dropDescription.trim(),
       imageUrl: imagePreview || '',
-      priceUrl: '',
+      priceUrl: trimmedPriceUrl,
       priceCents:
         typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
       priceDisplay: selectedPriceDisplay || '',
@@ -592,6 +606,19 @@ export default function NewDrop() {
                   </select>
                   <p className="helper-text connection-helper">
                     Product name and price are managed in your Stripe Dashboard.
+                  </p>
+
+                  {/* Stripe Payment Link input */}
+                  <input
+                    type="text"
+                    className="input-field connection-product-select"
+                    value={priceUrl}
+                    onChange={(e) => setPriceUrl(e.target.value)}
+                    placeholder="Paste Stripe Payment Link (https://buy.stripe.com/...)"
+                    style={{ marginTop: '8px' }}
+                  />
+                  <p className="helper-text connection-helper">
+                    In Stripe: Payment Links → create/select your link → paste it here.
                   </p>
                 </div>
               )}

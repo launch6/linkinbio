@@ -43,6 +43,20 @@ function toIsoOrEmpty(v) {
   const t = Date.parse(v);
   return Number.isFinite(t) ? new Date(t).toISOString() : "";
 }
+function toTrimmedString(v, max = 4000) {
+  if (v === null || v === undefined) return "";
+  const s = String(v).trim();
+  return s.length > max ? s.slice(0, max) : s;
+}
+function toPriceCentsOrNull(v) {
+  // We treat this as already-cents if it is an integer.
+  // If Step 3 sends dollars->cents, this stays correct.
+  if (v === "" || v === null || v === undefined) return null;
+  const n = typeof v === "number" ? v : parseInt(String(v), 10);
+  if (!Number.isFinite(n)) return null;
+  const int = Math.trunc(n);
+  return int >= 0 ? int : null;
+}
 
 // Enforce plan-based product limits (aligned with frontend)
 function maxProductsForPlan(planRaw) {
@@ -75,8 +89,7 @@ export default async function handler(req, res) {
     const editToken = String(
       req.query.editToken || req.body?.editToken || ""
     ).trim();
-    if (!editToken)
-      return send(res, 400, { ok: false, error: "Missing editToken" });
+    if (!editToken) return send(res, 400, { ok: false, error: "Missing editToken" });
 
     const client = await getClient();
     const db = client.db(MONGODB_DB);
@@ -88,9 +101,7 @@ export default async function handler(req, res) {
     );
 
     if (method === "GET") {
-      const products = Array.isArray(profile?.products)
-        ? profile.products
-        : [];
+      const products = Array.isArray(profile?.products) ? profile.products : [];
       return send(res, 200, { ok: true, products });
     }
 
@@ -108,22 +119,33 @@ export default async function handler(req, res) {
 
     const arr = Array.isArray(body.products) ? body.products : [];
 
-    // sanitize each product + include new flags
     const cleaned = arr.map((p) => {
       const id =
-        String(p?.id || "").trim() ||
+        toTrimmedString(p?.id || "", 120) ||
         `p_${Math.random().toString(36).slice(2, 10)}`;
-      const title = String(p?.title || "").trim();
-      const priceUrl = String(p?.priceUrl || "").trim();
-      const imageUrl = String(p?.imageUrl || "").trim();
+
+      const title = toTrimmedString(p?.title || "", 400);
+      const description = toTrimmedString(p?.description || "", 5000);
+
+      const priceUrl = toTrimmedString(p?.priceUrl || "", 2000);
+      const priceDisplay = toTrimmedString(p?.priceDisplay || "", 80);
+      const priceText = toTrimmedString(p?.priceText || "", 120);
+      const priceCents = toPriceCentsOrNull(p?.priceCents);
+
+      const imageUrl = toTrimmedString(p?.imageUrl || "", 2000);
+
+      const dropStartsAt = toIsoOrEmpty(p?.dropStartsAt || "");
       const dropEndsAt = toIsoOrEmpty(p?.dropEndsAt || "");
+
       const unitsTotal = toNonNegIntOrNull(p?.unitsTotal);
       const unitsLeftRaw = toNonNegIntOrNull(p?.unitsLeft);
+
       const published = !!p?.published;
 
-      // NEW: opt-in flags (timer off by default, inventory ON by default)
       const showTimer = toBool(p?.showTimer, false);
       const showInventory = toBool(p?.showInventory, true);
+
+      const buttonText = toTrimmedString(p?.buttonText || "", 60);
 
       // Guard: unitsLeft cannot exceed unitsTotal if both present
       let safeLeft = unitsLeftRaw;
@@ -134,14 +156,27 @@ export default async function handler(req, res) {
       return {
         id,
         title,
-        priceUrl,
+        description,
+
         imageUrl,
-        dropEndsAt, // ISO string or ""
-        unitsTotal, // number|null
-        unitsLeft: safeLeft, // number|null
-        published: !!published,
+
+        priceUrl,
+        priceDisplay,
+        priceText,
+        priceCents,
+
+        dropStartsAt,
+        dropEndsAt,
+
         showTimer,
         showInventory,
+
+        unitsTotal,
+        unitsLeft: safeLeft,
+
+        buttonText,
+
+        published: !!published,
       };
     });
 

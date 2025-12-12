@@ -40,6 +40,8 @@ export default function NewDrop() {
     }
   }, [stripe_connected]);
 
+
+  
   // Clean up preview if component unmounts
   useEffect(() => {
     return () => {
@@ -94,6 +96,22 @@ export default function NewDrop() {
       console.error('[new-drop] Failed to load draft', err);
     }
   }, [router.isReady]); // load draft when route is ready
+
+    // Auto-save draft whenever the user changes any core field
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    saveDraftToStorage();
+  }, [
+    dropTitle,
+    dropDescription,
+    quantity,
+    btnText,
+    isTimerEnabled,
+    startsAt,
+    endsAt,
+    imagePreview,
+    selectedProductId,
+  ]);
 
   // --- Navigation helper ---------------------------------------------------
 

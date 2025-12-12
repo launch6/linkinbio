@@ -6,7 +6,7 @@ const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
 const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1MB
-const DRAFT_STORAGE_PREFIX = 'launch6_new_drop_draft';
+const DRAFT_STORAGE_KEY = 'launch6_new_drop_draft_v2';
 
 export default function NewDrop() {
   const router = useRouter();
@@ -49,9 +49,6 @@ export default function NewDrop() {
 
   // --- Draft storage helpers ------------------------------------------------
 
-  // 🔑 IMPORTANT CHANGE: use a single key, not token-based
-  const getDraftKey = () => DRAFT_STORAGE_PREFIX;
-
   const saveDraftToStorage = () => {
     if (typeof window === 'undefined') return;
     try {
@@ -66,7 +63,7 @@ export default function NewDrop() {
         imagePreview, // data URL; used for visual restore only
         selectedProductId,
       };
-      window.localStorage.setItem(getDraftKey(), JSON.stringify(payload));
+      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
     } catch (err) {
       console.error('[new-drop] Failed to save draft', err);
     }
@@ -77,7 +74,7 @@ export default function NewDrop() {
     if (!router.isReady) return;
 
     try {
-      const raw = window.localStorage.getItem(getDraftKey());
+      const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
       if (!raw) return;
       const d = JSON.parse(raw);
 
@@ -96,7 +93,7 @@ export default function NewDrop() {
     } catch (err) {
       console.error('[new-drop] Failed to load draft', err);
     }
-  }, [router.isReady]); // token is no longer needed here
+  }, [router.isReady]); // load draft when route is ready
 
   // --- Navigation helper ---------------------------------------------------
 

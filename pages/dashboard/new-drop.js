@@ -8,9 +8,15 @@ const fontStack =
 const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1MB
 const DRAFT_STORAGE_PREFIX = 'launch6_new_drop_draft';
 
+// Persist token across Stripe redirect (Stripe sometimes returns without it)
+const LAST_TOKEN_KEY = 'launch6_last_edit_token';
+
 export default function NewDrop() {
   const router = useRouter();
   const { token, stripe_connected } = router.query;
+
+  // Resolved token (query token OR persisted token)
+  const [resolvedToken, setResolvedToken] = useState('');
 
   // Core drop fields
   const [dropTitle, setDropTitle] = useState('');
@@ -36,6 +42,30 @@ export default function NewDrop() {
   // draft hydration flag (prevents autosave overwriting on first mount)
   const didHydrateDraftRef = useRef(false);
 
+  // --- Resolve token on mount/route ready ---------------------------------
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (typeof window === 'undefined') return;
+
+    const qToken = typeof token === 'string' ? token.trim() : '';
+    const persisted =
+      (window.sessionStorage.getItem(LAST_TOKEN_KEY) || '').trim() ||
+      (window.localStorage.getItem(LAST_TOKEN_KEY) || '').trim();
+
+    const next = qToken || persisted || '';
+    setResolvedToken(next);
+
+    // Persist it for the Stripe round-trip
+    if (next) {
+      try {
+        window.sessionStorage.setItem(LAST_TOKEN_KEY, next);
+      } catch {}
+      try {
+        window.localStorage.setItem(LAST_TOKEN_KEY, next);
+      } catch {}
+    }
+  }, [router.isReady, token]);
+
   // When returning from Stripe with ?stripe_connected=1, mark as connected
   useEffect(() => {
     if (stripe_connected === '1') {
@@ -50,10 +80,18 @@ export default function NewDrop() {
     };
   }, []);
 
-  // --- Draft storage helpers ------------------------------------------------
+  // --- Draft storage helpers ----------------------------------------------
 
-  const getDraftKey = () =>
-    `${DRAFT_STORAGE_PREFIX}_${typeof token === 'string' && token ? token : 'default'}`;
+  const getDraftKey = () => {
+    const t =
+      typeof resolvedToken === 'string' && resolvedToken.trim()
+        ? resolvedToken.trim()
+        : 'default';
+    return `${DRAFT_STORAGE_PREFIX}_${t}`;
+  };
+
+  // Store imagePreview in sessionStorage (survives Stripe redirect in same tab)
+  const getImagePreviewKey = () => `${getDraftKey()}__imagePreview`;
 
   const saveDraftToStorage = () => {
     if (typeof window === 'undefined') return;
@@ -66,10 +104,23 @@ export default function NewDrop() {
       isTimerEnabled,
       startsAt,
       endsAt,
-      imagePreview, // data URL; used for visual restore only
+      // keep in payload too (best effort); primary persistence is sessionStorage
+      imagePreview,
       selectedProductId,
     };
 
+    // Always try to stash imagePreview in sessionStorage (usually more reliable here)
+    try {
+      if (typeof imagePreview === 'string' && imagePreview) {
+        window.sessionStorage.setItem(getImagePreviewKey(), imagePreview);
+      } else {
+        window.sessionStorage.removeItem(getImagePreviewKey());
+      }
+    } catch (err) {
+      console.error('[new-drop] Failed to save imagePreview to sessionStorage', err);
+    }
+
+    // Save full payload to localStorage (best effort)
     try {
       window.localStorage.setItem(getDraftKey(), JSON.stringify(payload));
     } catch (err) {
@@ -77,47 +128,70 @@ export default function NewDrop() {
       try {
         const safePayload = { ...payload, imagePreview: null };
         window.localStorage.setItem(getDraftKey(), JSON.stringify(safePayload));
-        console.error('[new-drop] Draft saved without imagePreview (storage full).', err);
+        console.error(
+          '[new-drop] Draft saved without imagePreview (storage full).',
+          err
+        );
       } catch (err2) {
         console.error('[new-drop] Failed to save draft', err2);
       }
     }
   };
 
-  // Load draft when token/route is ready
+  // Load draft when token/route is ready (use sessionStorage for imagePreview first)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!router.isReady) return;
+    if (!resolvedToken && typeof token === 'undefined') return; // wait until token resolution stabilizes
 
     try {
       const raw = window.localStorage.getItem(getDraftKey());
-      if (!raw) {
-        didHydrateDraftRef.current = true;
-        return;
-      }
-      const d = JSON.parse(raw);
+      if (raw) {
+        const d = JSON.parse(raw);
 
-      if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
-      if (typeof d.dropDescription === 'string')
-        setDropDescription(d.dropDescription);
-      if (typeof d.quantity === 'string') setQuantity(d.quantity);
-      if (typeof d.btnText === 'string') setBtnText(d.btnText);
-      if (typeof d.isTimerEnabled === 'boolean')
-        setIsTimerEnabled(d.isTimerEnabled);
-      if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
-      if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
-      if (typeof d.imagePreview === 'string') setImagePreview(d.imagePreview);
-      if (typeof d.selectedProductId === 'string')
-        setSelectedProductId(d.selectedProductId);
+        if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
+        if (typeof d.dropDescription === 'string')
+          setDropDescription(d.dropDescription);
+        if (typeof d.quantity === 'string') setQuantity(d.quantity);
+        if (typeof d.btnText === 'string') setBtnText(d.btnText);
+        if (typeof d.isTimerEnabled === 'boolean')
+          setIsTimerEnabled(d.isTimerEnabled);
+        if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
+        if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
+        if (typeof d.selectedProductId === 'string')
+          setSelectedProductId(d.selectedProductId);
+
+        // Do NOT eagerly set imagePreview from localStorage yet.
+        // We prefer sessionStorage first.
+      }
     } catch (err) {
       console.error('[new-drop] Failed to load draft', err);
+    }
+
+    // Restore imagePreview (sessionStorage -> localStorage -> null)
+    try {
+      const sessionImg = window.sessionStorage.getItem(getImagePreviewKey());
+      if (typeof sessionImg === 'string' && sessionImg) {
+        setImagePreview(sessionImg);
+      } else {
+        // fallback to localStorage value if present
+        const raw2 = window.localStorage.getItem(getDraftKey());
+        if (raw2) {
+          const d2 = JSON.parse(raw2);
+          if (typeof d2.imagePreview === 'string' && d2.imagePreview) {
+            setImagePreview(d2.imagePreview);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[new-drop] Failed to restore imagePreview', err);
     } finally {
       didHydrateDraftRef.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady, token]);
+  }, [router.isReady, resolvedToken]);
 
-  // Autosave (helps keep title/description from clearing on full redirects)
+  // Autosave (keeps fields consistent across full redirects)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!router.isReady) return;
@@ -131,7 +205,7 @@ export default function NewDrop() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     router.isReady,
-    token,
+    resolvedToken,
     dropTitle,
     dropDescription,
     quantity,
@@ -147,7 +221,8 @@ export default function NewDrop() {
 
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
-    const target = token ? `${base}?token=${token}` : base;
+    const t = resolvedToken || (typeof token === 'string' ? token : '');
+    const target = t ? `${base}?token=${encodeURIComponent(t)}` : base;
     window.location.href = target;
   };
 
@@ -200,6 +275,14 @@ export default function NewDrop() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    // Clear stored preview
+    if (typeof window !== 'undefined') {
+      try {
+        window.sessionStorage.removeItem(getImagePreviewKey());
+      } catch {}
+      // keep text draft intact
+      saveDraftToStorage();
+    }
   };
 
   // --- Stripe connect handler ---------------------------------------------
@@ -212,10 +295,12 @@ export default function NewDrop() {
 
     setConnectingStripe(true);
     try {
+      const t = resolvedToken || (typeof token === 'string' ? token : '');
+
       const res = await fetch('/api/stripe/connect-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token || null }),
+        body: JSON.stringify({ token: t || null }),
       });
 
       let data = null;
@@ -230,7 +315,6 @@ export default function NewDrop() {
         throw new Error(data?.error || 'Unable to start Stripe connection.');
       }
 
-      // Redirect to Stripe's onboarding flow
       window.location.href = data.url;
     } catch (err) {
       console.error(err);
@@ -244,25 +328,21 @@ export default function NewDrop() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 0) Require a drop title for the public card
     if (!dropTitle.trim()) {
       alert('Add a title for this drop before continuing.');
       return;
     }
 
-    // 1) require Stripe
     if (!stripeConnected) {
       alert('Connect Stripe before continuing.');
       return;
     }
 
-    // 2) require a Stripe product selection
     if (!selectedProductId) {
       alert('Choose which Stripe product you want to sell.');
       return;
     }
 
-    // 3) quantity validation: allow blank (open edition) or integer >= 1
     if (quantity.trim()) {
       const n = Number(quantity);
       if (!Number.isInteger(n) || n <= 0) {
@@ -271,7 +351,6 @@ export default function NewDrop() {
       }
     }
 
-    // 4) basic timer sanity check – only if both are filled
     if (startsAt && endsAt && new Date(startsAt) >= new Date(endsAt)) {
       alert('End time must be after the start time.');
       return;
@@ -280,14 +359,13 @@ export default function NewDrop() {
     if (saving) return;
 
     const editToken =
-      typeof token === 'string' && token.trim().length > 0 ? token.trim() : '';
+      (resolvedToken || (typeof token === 'string' ? token : '')).trim();
 
     if (!editToken) {
       alert('Missing edit token. Restart onboarding from Step 1.');
       return;
     }
 
-    // save draft one more time before moving on
     saveDraftToStorage();
     setSaving(true);
 
@@ -346,7 +424,6 @@ export default function NewDrop() {
 
       <div className="card">
         <div className="card-inner">
-          {/* Progress bar – STEP 3 OF 4 (75% filled) */}
           <div className="progress-bar-container">
             <div className="progress-bar-fill step-3" />
           </div>
@@ -359,7 +436,6 @@ export default function NewDrop() {
           </p>
 
           <form onSubmit={handleSubmit} className="stack-form">
-            {/* 1. Drop Image (hero) */}
             <section className="input-group">
               <label className="label">Drop image</label>
 
@@ -426,7 +502,6 @@ export default function NewDrop() {
               {imageError && <p className="field-error">{imageError}</p>}
             </section>
 
-            {/* 1b. Drop title + description (for the public card) */}
             <section className="input-group">
               <label className="label">Drop title</label>
               <input
@@ -454,7 +529,6 @@ export default function NewDrop() {
               />
             </section>
 
-            {/* 2. Stripe connection block + product dropdown */}
             <section className="connection-section">
               <div className="connection-info">
                 <h3 className="connection-title">Connect Stripe (required)</h3>
@@ -471,7 +545,6 @@ export default function NewDrop() {
                     onChange={(e) => setSelectedProductId(e.target.value)}
                   >
                     <option value="">Choose a product…</option>
-                    {/* Placeholder options – later populate from Stripe API */}
                     <option value="prod_1">My Amazing Art Piece (Price: $150)</option>
                     <option value="prod_2">Another Product ($50)</option>
                   </select>
@@ -499,7 +572,6 @@ export default function NewDrop() {
 
             <div className="divider" />
 
-            {/* 3. Quantity (scarcity) */}
             <section className="input-group">
               <label className="label">Quantity available</label>
               <input
@@ -517,7 +589,6 @@ export default function NewDrop() {
 
             <div className="divider" />
 
-            {/* 4. Buy button text */}
             <section className="input-group">
               <label className="label">Buy button text</label>
               <input
@@ -529,7 +600,6 @@ export default function NewDrop() {
               />
             </section>
 
-            {/* 5. Optional countdown timer */}
             <section className="input-group">
               <div className="toggle-row">
                 <label className="label no-margin">
@@ -568,7 +638,6 @@ export default function NewDrop() {
               )}
             </section>
 
-            {/* Primary CTA */}
             <div className="actions-row">
               <button
                 type="submit"
@@ -715,7 +784,6 @@ export default function NewDrop() {
           margin-left: 4px;
         }
 
-        /* Image upload */
         .image-upload-box {
           width: 100%;
           height: 240px;
@@ -843,7 +911,6 @@ export default function NewDrop() {
           border-color: #7e8bff;
         }
 
-        /* Stripe connection */
         .connection-section {
           background: #1c1f2e;
           border-radius: 16px;
@@ -904,7 +971,6 @@ export default function NewDrop() {
           margin: 4px 0 8px;
         }
 
-        /* Countdown timer */
         .toggle-row {
           display: flex;
           justify-content: space-between;

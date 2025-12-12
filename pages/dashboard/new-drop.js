@@ -6,11 +6,11 @@ const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
 const MAX_FILE_SIZE_BYTES = 1024 * 1024; // 1MB
-const DRAFT_STORAGE_KEY = 'launch6_new_drop_draft_v2';
+const DRAFT_STORAGE_PREFIX = 'launch6_new_drop_draft';
 
 export default function NewDrop() {
   const router = useRouter();
-  const { token, stripe_connected, temp_drop_id } = router.query;
+  const { token, stripe_connected } = router.query;
 
   // Core drop fields
   const [dropTitle, setDropTitle] = useState('');
@@ -33,9 +33,8 @@ export default function NewDrop() {
   const [imageError, setImageError] = useState('');
   const fileInputRef = useRef(null);
 
-  // Server-backed draft state
-  const [tempDropId, setTempDropId] = useState('');
-  const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
+  // draft hydration flag (prevents autosave overwriting on first mount)
+  const didHydrateDraftRef = useRef(false);
 
   // When returning from Stripe with ?stripe_connected=1, mark as connected
   useEffect(() => {
@@ -51,35 +50,51 @@ export default function NewDrop() {
     };
   }, []);
 
-  // --- Local storage draft helpers (fallback) -----------------------------
+  // --- Draft storage helpers ------------------------------------------------
+
+  const getDraftKey = () =>
+    `${DRAFT_STORAGE_PREFIX}_${typeof token === 'string' && token ? token : 'default'}`;
 
   const saveDraftToStorage = () => {
     if (typeof window === 'undefined') return;
+
+    const payload = {
+      dropTitle,
+      dropDescription,
+      quantity,
+      btnText,
+      isTimerEnabled,
+      startsAt,
+      endsAt,
+      imagePreview, // data URL; used for visual restore only
+      selectedProductId,
+    };
+
     try {
-      const payload = {
-        dropTitle,
-        dropDescription,
-        quantity,
-        btnText,
-        isTimerEnabled,
-        startsAt,
-        endsAt,
-        imagePreview,
-        selectedProductId,
-      };
-      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      window.localStorage.setItem(getDraftKey(), JSON.stringify(payload));
     } catch (err) {
-      console.error('[new-drop] Failed to save draft locally', err);
+      // If localStorage is full (common when saving base64), still save text-only
+      try {
+        const safePayload = { ...payload, imagePreview: null };
+        window.localStorage.setItem(getDraftKey(), JSON.stringify(safePayload));
+        console.error('[new-drop] Draft saved without imagePreview (storage full).', err);
+      } catch (err2) {
+        console.error('[new-drop] Failed to save draft', err2);
+      }
     }
   };
 
+  // Load draft when token/route is ready
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!router.isReady) return;
 
     try {
-      const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
-      if (!raw) return;
+      const raw = window.localStorage.getItem(getDraftKey());
+      if (!raw) {
+        didHydrateDraftRef.current = true;
+        return;
+      }
       const d = JSON.parse(raw);
 
       if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
@@ -95,143 +110,45 @@ export default function NewDrop() {
       if (typeof d.selectedProductId === 'string')
         setSelectedProductId(d.selectedProductId);
     } catch (err) {
-      console.error('[new-drop] Failed to load draft locally', err);
+      console.error('[new-drop] Failed to load draft', err);
+    } finally {
+      didHydrateDraftRef.current = true;
     }
-  }, [router.isReady]); // load draft when route is ready
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, token]);
 
-  // --- Load server-backed draft if we have temp_drop_id or token ---------
-
+  // Autosave (helps keep title/description from clearing on full redirects)
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (!router.isReady) return;
+    if (!didHydrateDraftRef.current) return;
 
-    const tmpId =
-      typeof temp_drop_id === 'string' && temp_drop_id.trim().length > 0
-        ? temp_drop_id.trim()
-        : '';
-    const editToken =
-      typeof token === 'string' && token.trim().length > 0
-        ? token.trim()
-        : '';
+    const t = window.setTimeout(() => {
+      saveDraftToStorage();
+    }, 250);
 
-    if (!tmpId && !editToken) return;
-
-    (async () => {
-      try {
-        const params = new URLSearchParams();
-        if (tmpId) params.set('tempDropId', tmpId);
-        else if (editToken) params.set('editToken', editToken);
-
-        const res = await fetch(`/api/drops/load-draft?${params.toString()}`);
-        const json = await res.json().catch(() => ({}));
-
-        if (!res.ok || !json?.ok) {
-          console.error('[new-drop] Failed to load server draft', json);
-          return;
-        }
-
-        const d = json.draft || {};
-
-        if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
-        if (typeof d.dropDescription === 'string')
-          setDropDescription(d.dropDescription);
-        if (typeof d.quantity === 'string') setQuantity(d.quantity || '');
-        if (typeof d.btnText === 'string') setBtnText(d.btnText || '');
-        if (typeof d.isTimerEnabled === 'boolean')
-          setIsTimerEnabled(d.isTimerEnabled);
-        if (typeof d.startsAt === 'string') setStartsAt(d.startsAt || '');
-        if (typeof d.endsAt === 'string') setEndsAt(d.endsAt || '');
-        if (typeof d.selectedProductId === 'string')
-          setSelectedProductId(d.selectedProductId || '');
-
-        if (typeof d.tempDropId === 'string') setTempDropId(d.tempDropId);
-
-        if (d.imageUrl) {
-          setUploadedImageUrl(d.imageUrl);
-          setImagePreview(d.imageUrl);
-        }
-      } catch (err) {
-        console.error('[new-drop] Error loading server draft', err);
-      }
-    })();
-  }, [router.isReady, temp_drop_id, token]);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    router.isReady,
+    token,
+    dropTitle,
+    dropDescription,
+    quantity,
+    btnText,
+    isTimerEnabled,
+    startsAt,
+    endsAt,
+    imagePreview,
+    selectedProductId,
+  ]);
 
   // --- Navigation helper ---------------------------------------------------
 
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
-    const qs = new URLSearchParams();
-
-    if (typeof token === 'string' && token.trim().length > 0) {
-      qs.set('token', token.trim());
-    }
-    if (tempDropId) {
-      qs.set('temp_drop_id', tempDropId);
-    }
-
-    const target =
-      qs.toString().length > 0 ? `${base}?${qs.toString()}` : base;
-
+    const target = token ? `${base}?token=${token}` : base;
     window.location.href = target;
-  };
-
-  // --- Server save helper --------------------------------------------------
-
-  const saveDropToServer = async () => {
-    try {
-      const formData = new FormData();
-
-      if (typeof token === 'string' && token.trim().length > 0) {
-        formData.append('editToken', token.trim());
-      }
-      if (tempDropId) {
-        formData.append('tempDropId', tempDropId);
-      }
-
-      formData.append('dropTitle', dropTitle || '');
-      formData.append('dropDescription', dropDescription || '');
-      formData.append('quantity', quantity || '');
-      formData.append('btnText', btnText || '');
-      formData.append('isTimerEnabled', String(isTimerEnabled));
-      formData.append('startsAt', startsAt || '');
-      formData.append('endsAt', endsAt || '');
-      formData.append('selectedProductId', selectedProductId || '');
-
-      if (imageFile) {
-        formData.append('imageFile', imageFile);
-      } else if (uploadedImageUrl) {
-        formData.append('existingImageUrl', uploadedImageUrl);
-      } else if (imagePreview) {
-        formData.append('imagePreview', imagePreview);
-      }
-
-      const res = await fetch('/api/drops/save-draft', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || !json?.ok) {
-        console.error('[new-drop] Failed to save draft on server', json);
-        return null;
-      }
-
-      if (json.tempDropId && !tempDropId) {
-        setTempDropId(json.tempDropId);
-      }
-      if (json.imageUrl) {
-        setUploadedImageUrl(json.imageUrl);
-        setImagePreview(json.imageUrl);
-      }
-
-      // Optional: keep a local backup too
-      saveDraftToStorage();
-
-      return json;
-    } catch (err) {
-      console.error('[new-drop] Error saving draft on server', err);
-      return null;
-    }
   };
 
   // --- Image handling ------------------------------------------------------
@@ -255,7 +172,6 @@ export default function NewDrop() {
     reader.onloadend = () => {
       setImageFile(file);
       setImagePreview(reader.result);
-      setUploadedImageUrl(null); // we’re replacing any previous server-backed image
     };
     reader.readAsDataURL(file);
   };
@@ -280,7 +196,6 @@ export default function NewDrop() {
     e.stopPropagation();
     setImageFile(null);
     setImagePreview(null);
-    setUploadedImageUrl(null);
     setImageError('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -292,25 +207,15 @@ export default function NewDrop() {
   const handleConnectStripe = async () => {
     if (connectingStripe) return;
 
+    // save current work so returning from Stripe restores everything
+    saveDraftToStorage();
+
     setConnectingStripe(true);
     try {
-      // 1) Save draft to server (including image) before leaving
-      const draft = await saveDropToServer();
-      if (!draft || !draft.tempDropId) {
-        throw new Error('Unable to save drop before connecting Stripe.');
-      }
-
-      const body = {
-        token: token || null,
-        tempDropId: draft.tempDropId,
-      };
-
-      // 2) Ask backend for Stripe Connect onboarding link (with return_url
-      //    that includes token + tempDropId)
       const res = await fetch('/api/stripe/connect-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ token: token || null }),
       });
 
       let data = null;
@@ -325,6 +230,7 @@ export default function NewDrop() {
         throw new Error(data?.error || 'Unable to start Stripe connection.');
       }
 
+      // Redirect to Stripe's onboarding flow
       window.location.href = data.url;
     } catch (err) {
       console.error(err);
@@ -360,9 +266,7 @@ export default function NewDrop() {
     if (quantity.trim()) {
       const n = Number(quantity);
       if (!Number.isInteger(n) || n <= 0) {
-        alert(
-          'Quantity must be a whole number (leave blank for open edition).'
-        );
+        alert('Quantity must be a whole number (leave blank for open edition).');
         return;
       }
     }
@@ -375,13 +279,61 @@ export default function NewDrop() {
 
     if (saving) return;
 
+    const editToken =
+      typeof token === 'string' && token.trim().length > 0 ? token.trim() : '';
+
+    if (!editToken) {
+      alert('Missing edit token. Restart onboarding from Step 1.');
+      return;
+    }
+
+    // save draft one more time before moving on
+    saveDraftToStorage();
     setSaving(true);
 
-    // Save draft server-side one more time before moving on
-    await saveDropToServer();
+    const qty = quantity.trim() ? Number(quantity) : null;
 
-    // Then go to Step 4
-    goToStep4();
+    const productPayload = {
+      id: selectedProductId || `p_${Date.now()}`,
+      title: dropTitle.trim(),
+      description: dropDescription.trim(),
+      imageUrl: imagePreview || '',
+      priceUrl: '',
+      dropStartsAt: isTimerEnabled ? startsAt : '',
+      dropEndsAt: isTimerEnabled ? endsAt : '',
+      showTimer: !!isTimerEnabled,
+      showInventory: qty !== null,
+      unitsTotal: qty,
+      unitsLeft: qty,
+      buttonText: btnText.trim() || 'Buy Now',
+      published: true,
+    };
+
+    try {
+      const resp = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          editToken,
+          products: [productPayload],
+        }),
+      });
+
+      const json = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !json?.ok) {
+        console.error('Failed to save product', json);
+        alert(json?.error || 'Could not save this drop. Try again.');
+        setSaving(false);
+        return;
+      }
+
+      goToStep4();
+    } catch (err) {
+      console.error('Error saving product', err);
+      alert('There was a problem saving your drop. Try again.');
+      setSaving(false);
+    }
   };
 
   // --- Render --------------------------------------------------------------
@@ -469,8 +421,7 @@ export default function NewDrop() {
               </label>
 
               <p className="helper-text">
-                This image appears at the top of your drop card. For best
-                results, use a wide (landscape) image.
+                This image appears at the top of your drop card. For best results, use a wide (landscape) image.
               </p>
               {imageError && <p className="field-error">{imageError}</p>}
             </section>
@@ -492,8 +443,7 @@ export default function NewDrop() {
 
             <section className="input-group">
               <label className="label">
-                Short description{' '}
-                <span className="label-optional">(optional)</span>
+                Short description <span className="label-optional">(optional)</span>
               </label>
               <textarea
                 className="textarea-field"
@@ -522,9 +472,7 @@ export default function NewDrop() {
                   >
                     <option value="">Choose a product…</option>
                     {/* Placeholder options – later populate from Stripe API */}
-                    <option value="prod_1">
-                      My Amazing Art Piece (Price: $150)
-                    </option>
+                    <option value="prod_1">My Amazing Art Piece (Price: $150)</option>
                     <option value="prod_2">Another Product ($50)</option>
                   </select>
                   <p className="helper-text connection-helper">
@@ -585,8 +533,7 @@ export default function NewDrop() {
             <section className="input-group">
               <div className="toggle-row">
                 <label className="label no-margin">
-                  Countdown timer{' '}
-                  <span className="label-optional">(optional)</span>
+                  Countdown timer <span className="label-optional">(optional)</span>
                 </label>
                 <button
                   type="button"
@@ -768,6 +715,7 @@ export default function NewDrop() {
           margin-left: 4px;
         }
 
+        /* Image upload */
         .image-upload-box {
           width: 100%;
           height: 240px;
@@ -895,6 +843,7 @@ export default function NewDrop() {
           border-color: #7e8bff;
         }
 
+        /* Stripe connection */
         .connection-section {
           background: #1c1f2e;
           border-radius: 16px;
@@ -955,6 +904,7 @@ export default function NewDrop() {
           margin: 4px 0 8px;
         }
 
+        /* Countdown timer */
         .toggle-row {
           display: flex;
           justify-content: space-between;

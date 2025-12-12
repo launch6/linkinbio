@@ -18,12 +18,24 @@ function sanitizeString(v, max = 2000) {
   if (typeof v !== "string") return "";
   return v.slice(0, max);
 }
-function sanitizeBool(v) { return Boolean(v); }
+
+function sanitizeBool(v, def = false) {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (s === "true" || s === "1") return true;
+    if (s === "false" || s === "0" || s === "") return false;
+  }
+  if (typeof v === "number") return v === 1;
+  return def;
+}
+
 function sanitizeInt(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
   return Math.max(-2147483648, Math.min(2147483647, Math.trunc(n)));
 }
+
 function sanitizeISODate(v) {
   if (typeof v !== "string" || !v) return "";
   return v.length > 40 ? v.slice(0, 40) : v;
@@ -31,14 +43,21 @@ function sanitizeISODate(v) {
 
 function normalizeProduct(p) {
   return {
-    id: sanitizeString(p.id || "", 120),
-    title: sanitizeString(p.title || "", 400),
-    priceUrl: sanitizeString(p.priceUrl || "", 2000),
-    imageUrl: sanitizeString(p.imageUrl || "", 2000),
-    dropEndsAt: sanitizeISODate(p.dropEndsAt || ""),
-    unitsTotal: sanitizeInt(p.unitsTotal),
-    unitsLeft: sanitizeInt(p.unitsLeft),
-    published: sanitizeBool(p.published),
+    id: sanitizeString(p?.id || "", 120),
+    title: sanitizeString(p?.title || "", 400),
+    description: sanitizeString(p?.description || "", 2000),
+    buttonText: sanitizeString(p?.buttonText || "", 200),
+
+    priceUrl: sanitizeString(p?.priceUrl || "", 2000),
+    imageUrl: sanitizeString(p?.imageUrl || "", 2000),
+
+    dropEndsAt: sanitizeISODate(p?.dropEndsAt || ""),
+    unitsTotal: sanitizeInt(p?.unitsTotal),
+    unitsLeft: sanitizeInt(p?.unitsLeft),
+
+    published: sanitizeBool(p?.published, false),
+    showTimer: sanitizeBool(p?.showTimer, false),
+    showInventory: sanitizeBool(p?.showInventory, true),
   };
 }
 
@@ -49,20 +68,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    const editToken = (req.query.editToken || "").toString();
+    const editToken = (req.query.editToken || "").toString().trim();
     if (!editToken) {
-      return res.status(400).json({ ok: false, error: "Missing editToken in query" });
+      return res
+        .status(400)
+        .json({ ok: false, error: "Missing editToken in query" });
     }
 
     const body =
       req.body && typeof req.body === "object"
         ? req.body
         : (() => {
-            try { return JSON.parse(req.body || "{}"); } catch { return {}; }
+            try {
+              return JSON.parse(req.body || "{}");
+            } catch {
+              return {};
+            }
           })();
 
     if (!body || !Array.isArray(body.products)) {
-      return res.status(400).json({ ok: false, error: "Body must include products array" });
+      return res
+        .status(400)
+        .json({ ok: false, error: "Body must include products array" });
     }
 
     const normalized = body.products
@@ -97,8 +124,10 @@ export default async function handler(req, res) {
       upserted: Boolean(result.upsertedId),
     });
   } catch (err) {
-    console.error("products/batch ERROR", { message: err?.message, stack: err?.stack });
+    console.error("products/batch ERROR", {
+      message: err?.message,
+      stack: err?.stack,
+    });
     return res.status(500).json({ ok: false, error: "Internal server error" });
   }
 }
-

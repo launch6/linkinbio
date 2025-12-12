@@ -90,7 +90,10 @@ export default function NewEmailStep() {
     setLaunching(true);
 
     // token comes from ?token=... in the URL
-    const editToken = typeof token === 'string' ? token : '';
+    const editToken =
+      typeof token === 'string' && token.trim().length > 0
+        ? token.trim()
+        : '';
 
     try {
       // Persist Klaviyo + form settings if we have an editToken
@@ -111,15 +114,15 @@ export default function NewEmailStep() {
           if (!resp.ok) {
             const json = await resp.json().catch(() => ({}));
             console.error('Failed to save email settings', json);
-            // We still let them through to the dashboard, but log the error
+            // Still let them through to the dashboard
           }
         } catch (err) {
           console.error('Error calling /api/onboarding/email-settings', err);
-          // Same idea: don’t block launch, log instead
+          // Same idea: log and continue
         }
       }
 
-      // ✅ Then send them to the main dashboard, carrying the editToken
+      // ✅ Send them to the main dashboard WITH the editToken
       if (editToken) {
         router.push(`/dashboard?editToken=${encodeURIComponent(editToken)}`);
       } else {
@@ -131,7 +134,6 @@ export default function NewEmailStep() {
       setLaunching(false);
     }
   };
-
 
   const handleLaunch = (e) => {
     e.preventDefault();
@@ -331,7 +333,7 @@ export default function NewEmailStep() {
 
         .onboarding-root {
           min-height: 100vh;
-          background-color: #121219;
+          background-color: #121219;  /* same as Step 1 */
           color: #ffffff;
           display: flex;
           flex-direction: column;
@@ -364,7 +366,7 @@ export default function NewEmailStep() {
           padding: 32px 32px 28px;
           display: flex;
           flex-direction: column;
-          align-items: stretch;
+          align-items: stretch; /* panels line up dead center */
         }
 
         .progress-bar-container {

@@ -225,14 +225,21 @@ function DropCard({ product: p, slug }) {
     background: "#0b0c15",
     overflow: "hidden",
     width: "100%",
-    aspectRatio: "1 / 1", // perfect square
     position: "relative",
+
+    // ✅ center the image and let the box size to the image
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0",
   };
 
   const heroImg = {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
+    // ✅ preserve image aspect ratio (vertical/horizontal) and keep it centered
+    maxWidth: "100%",
+    maxHeight: "60vh",
+    width: "auto",
+    height: "auto",
     display: "block",
   };
 

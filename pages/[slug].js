@@ -238,13 +238,9 @@ function DropCard({ product: p, slug }) {
 const heroImg = {
   width: "100%",
   height: "auto",
-  maxHeight: "60vh",
-  objectFit: "contain",
-  objectPosition: "center",
   display: "block",
   margin: "0 auto",
 };
-
 
   const heroPlaceholder = {
     width: "100%",

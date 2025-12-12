@@ -31,6 +31,8 @@ export default function NewDrop() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedPriceCents, setSelectedPriceCents] = useState(null);
+  const [selectedPriceDisplay, setSelectedPriceDisplay] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Drop image state
@@ -107,6 +109,8 @@ export default function NewDrop() {
       // keep in payload too (best effort); primary persistence is sessionStorage
       imagePreview,
       selectedProductId,
+      selectedPriceCents,
+      selectedPriceDisplay,
     };
 
     // Always try to stash imagePreview in sessionStorage (usually more reliable here)
@@ -160,6 +164,10 @@ export default function NewDrop() {
         if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
         if (typeof d.selectedProductId === 'string')
           setSelectedProductId(d.selectedProductId);
+        if (typeof d.selectedPriceDisplay === 'string')
+          setSelectedPriceDisplay(d.selectedPriceDisplay);
+        if (typeof d.selectedPriceCents === 'number')
+          setSelectedPriceCents(d.selectedPriceCents);
 
         // Do NOT eagerly set imagePreview from localStorage yet.
         // We prefer sessionStorage first.
@@ -215,6 +223,8 @@ export default function NewDrop() {
     endsAt,
     imagePreview,
     selectedProductId,
+    selectedPriceCents,
+    selectedPriceDisplay,
   ]);
 
   // --- Navigation helper ---------------------------------------------------
@@ -377,6 +387,10 @@ export default function NewDrop() {
       description: dropDescription.trim(),
       imageUrl: imagePreview || '',
       priceUrl: '',
+      priceCents:
+        typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
+      priceDisplay: selectedPriceDisplay || '',
+      priceText: selectedPriceDisplay || '',
       dropStartsAt: isTimerEnabled ? startsAt : '',
       dropEndsAt: isTimerEnabled ? endsAt : '',
       showTimer: !!isTimerEnabled,
@@ -542,11 +556,39 @@ export default function NewDrop() {
                   <select
                     className="input-field connection-product-select"
                     value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedProductId(value);
+
+                      const idx = e.target.selectedIndex;
+                      const opt = e.target.options[idx];
+                      const centsAttr = opt?.getAttribute('data-pricecents');
+                      const displayAttr = opt?.getAttribute('data-pricedisplay');
+
+                      setSelectedPriceCents(
+                        centsAttr != null && centsAttr !== ''
+                          ? Number(centsAttr)
+                          : null
+                      );
+                      setSelectedPriceDisplay(displayAttr || '');
+                    }}
                   >
                     <option value="">Choose a product…</option>
-                    <option value="prod_1">My Amazing Art Piece (Price: $150)</option>
-                    <option value="prod_2">Another Product ($50)</option>
+                    {/* Placeholder options — later populated from Stripe */}
+                    <option
+                      value="prod_1"
+                      data-pricecents="15000"
+                      data-pricedisplay="$150.00"
+                    >
+                      My Amazing Art Piece (Price: $150)
+                    </option>
+                    <option
+                      value="prod_2"
+                      data-pricecents="5000"
+                      data-pricedisplay="$50.00"
+                    >
+                      Another Product ($50)
+                    </option>
                   </select>
                   <p className="helper-text connection-helper">
                     Product name and price are managed in your Stripe Dashboard.

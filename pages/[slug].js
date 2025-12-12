@@ -408,16 +408,19 @@ const heroImg = {
           </div>
         )}
 
-        {/* primary button */}
-        {isEnded || !p.priceUrl ? (
-          <button type="button" style={buttonDisabled} disabled>
-            Drop ended
-          </button>
-        ) : (
-          <a href={buyHref} style={buttonActive}>
-            {buttonText}
-          </a>
-        )}
+{isEnded ? (
+  <button type="button" style={buttonDisabled} disabled>
+    Drop ended
+  </button>
+) : !p.priceUrl ? (
+  <button type="button" style={buttonDisabled} disabled>
+    {buttonText}
+  </button>
+) : (
+  <a href={buyHref} style={buttonActive}>
+    {buttonText}
+  </a>
+)}
       </div>
     </article>
   );

@@ -10,7 +10,7 @@ const DRAFT_STORAGE_KEY = 'launch6_new_drop_draft_v2';
 
 export default function NewDrop() {
   const router = useRouter();
-  const { token, stripe_connected } = router.query;
+  const { token, stripe_connected, temp_drop_id } = router.query;
 
   // Core drop fields
   const [dropTitle, setDropTitle] = useState('');
@@ -33,6 +33,10 @@ export default function NewDrop() {
   const [imageError, setImageError] = useState('');
   const fileInputRef = useRef(null);
 
+  // Server-backed draft state
+  const [tempDropId, setTempDropId] = useState('');
+  const [uploadedImageUrl, setUploadedImageUrl] = useState(null);
+
   // When returning from Stripe with ?stripe_connected=1, mark as connected
   useEffect(() => {
     if (stripe_connected === '1') {
@@ -40,8 +44,6 @@ export default function NewDrop() {
     }
   }, [stripe_connected]);
 
-
-  
   // Clean up preview if component unmounts
   useEffect(() => {
     return () => {
@@ -49,7 +51,7 @@ export default function NewDrop() {
     };
   }, []);
 
-  // --- Draft storage helpers ------------------------------------------------
+  // --- Local storage draft helpers (fallback) -----------------------------
 
   const saveDraftToStorage = () => {
     if (typeof window === 'undefined') return;
@@ -62,12 +64,12 @@ export default function NewDrop() {
         isTimerEnabled,
         startsAt,
         endsAt,
-        imagePreview, // data URL; used for visual restore only
+        imagePreview,
         selectedProductId,
       };
       window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
     } catch (err) {
-      console.error('[new-drop] Failed to save draft', err);
+      console.error('[new-drop] Failed to save draft locally', err);
     }
   };
 
@@ -93,32 +95,143 @@ export default function NewDrop() {
       if (typeof d.selectedProductId === 'string')
         setSelectedProductId(d.selectedProductId);
     } catch (err) {
-      console.error('[new-drop] Failed to load draft', err);
+      console.error('[new-drop] Failed to load draft locally', err);
     }
   }, [router.isReady]); // load draft when route is ready
 
-    // Auto-save draft whenever the user changes any core field
+  // --- Load server-backed draft if we have temp_drop_id or token ---------
+
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    saveDraftToStorage();
-  }, [
-    dropTitle,
-    dropDescription,
-    quantity,
-    btnText,
-    isTimerEnabled,
-    startsAt,
-    endsAt,
-    imagePreview,
-    selectedProductId,
-  ]);
+    if (!router.isReady) return;
+
+    const tmpId =
+      typeof temp_drop_id === 'string' && temp_drop_id.trim().length > 0
+        ? temp_drop_id.trim()
+        : '';
+    const editToken =
+      typeof token === 'string' && token.trim().length > 0
+        ? token.trim()
+        : '';
+
+    if (!tmpId && !editToken) return;
+
+    (async () => {
+      try {
+        const params = new URLSearchParams();
+        if (tmpId) params.set('tempDropId', tmpId);
+        else if (editToken) params.set('editToken', editToken);
+
+        const res = await fetch(`/api/drops/load-draft?${params.toString()}`);
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok || !json?.ok) {
+          console.error('[new-drop] Failed to load server draft', json);
+          return;
+        }
+
+        const d = json.draft || {};
+
+        if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
+        if (typeof d.dropDescription === 'string')
+          setDropDescription(d.dropDescription);
+        if (typeof d.quantity === 'string') setQuantity(d.quantity || '');
+        if (typeof d.btnText === 'string') setBtnText(d.btnText || '');
+        if (typeof d.isTimerEnabled === 'boolean')
+          setIsTimerEnabled(d.isTimerEnabled);
+        if (typeof d.startsAt === 'string') setStartsAt(d.startsAt || '');
+        if (typeof d.endsAt === 'string') setEndsAt(d.endsAt || '');
+        if (typeof d.selectedProductId === 'string')
+          setSelectedProductId(d.selectedProductId || '');
+
+        if (typeof d.tempDropId === 'string') setTempDropId(d.tempDropId);
+
+        if (d.imageUrl) {
+          setUploadedImageUrl(d.imageUrl);
+          setImagePreview(d.imageUrl);
+        }
+      } catch (err) {
+        console.error('[new-drop] Error loading server draft', err);
+      }
+    })();
+  }, [router.isReady, temp_drop_id, token]);
 
   // --- Navigation helper ---------------------------------------------------
 
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
-    const target = token ? `${base}?token=${token}` : base;
+    const qs = new URLSearchParams();
+
+    if (typeof token === 'string' && token.trim().length > 0) {
+      qs.set('token', token.trim());
+    }
+    if (tempDropId) {
+      qs.set('temp_drop_id', tempDropId);
+    }
+
+    const target =
+      qs.toString().length > 0 ? `${base}?${qs.toString()}` : base;
+
     window.location.href = target;
+  };
+
+  // --- Server save helper --------------------------------------------------
+
+  const saveDropToServer = async () => {
+    try {
+      const formData = new FormData();
+
+      if (typeof token === 'string' && token.trim().length > 0) {
+        formData.append('editToken', token.trim());
+      }
+      if (tempDropId) {
+        formData.append('tempDropId', tempDropId);
+      }
+
+      formData.append('dropTitle', dropTitle || '');
+      formData.append('dropDescription', dropDescription || '');
+      formData.append('quantity', quantity || '');
+      formData.append('btnText', btnText || '');
+      formData.append('isTimerEnabled', String(isTimerEnabled));
+      formData.append('startsAt', startsAt || '');
+      formData.append('endsAt', endsAt || '');
+      formData.append('selectedProductId', selectedProductId || '');
+
+      if (imageFile) {
+        formData.append('imageFile', imageFile);
+      } else if (uploadedImageUrl) {
+        formData.append('existingImageUrl', uploadedImageUrl);
+      } else if (imagePreview) {
+        formData.append('imagePreview', imagePreview);
+      }
+
+      const res = await fetch('/api/drops/save-draft', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || !json?.ok) {
+        console.error('[new-drop] Failed to save draft on server', json);
+        return null;
+      }
+
+      if (json.tempDropId && !tempDropId) {
+        setTempDropId(json.tempDropId);
+      }
+      if (json.imageUrl) {
+        setUploadedImageUrl(json.imageUrl);
+        setImagePreview(json.imageUrl);
+      }
+
+      // Optional: keep a local backup too
+      saveDraftToStorage();
+
+      return json;
+    } catch (err) {
+      console.error('[new-drop] Error saving draft on server', err);
+      return null;
+    }
   };
 
   // --- Image handling ------------------------------------------------------
@@ -142,6 +255,7 @@ export default function NewDrop() {
     reader.onloadend = () => {
       setImageFile(file);
       setImagePreview(reader.result);
+      setUploadedImageUrl(null); // we’re replacing any previous server-backed image
     };
     reader.readAsDataURL(file);
   };
@@ -166,6 +280,7 @@ export default function NewDrop() {
     e.stopPropagation();
     setImageFile(null);
     setImagePreview(null);
+    setUploadedImageUrl(null);
     setImageError('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -177,15 +292,25 @@ export default function NewDrop() {
   const handleConnectStripe = async () => {
     if (connectingStripe) return;
 
-    // save current work so returning from Stripe restores everything
-    saveDraftToStorage();
-
     setConnectingStripe(true);
     try {
+      // 1) Save draft to server (including image) before leaving
+      const draft = await saveDropToServer();
+      if (!draft || !draft.tempDropId) {
+        throw new Error('Unable to save drop before connecting Stripe.');
+      }
+
+      const body = {
+        token: token || null,
+        tempDropId: draft.tempDropId,
+      };
+
+      // 2) Ask backend for Stripe Connect onboarding link (with return_url
+      //    that includes token + tempDropId)
       const res = await fetch('/api/stripe/connect-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token || null }),
+        body: JSON.stringify(body),
       });
 
       let data = null;
@@ -200,7 +325,6 @@ export default function NewDrop() {
         throw new Error(data?.error || 'Unable to start Stripe connection.');
       }
 
-      // Redirect to Stripe's onboarding flow
       window.location.href = data.url;
     } catch (err) {
       console.error(err);
@@ -211,7 +335,7 @@ export default function NewDrop() {
 
   // --- Form submit ---------------------------------------------------------
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // 0) Require a drop title for the public card
@@ -251,11 +375,12 @@ export default function NewDrop() {
 
     if (saving) return;
 
-    // save draft one more time before moving on
-    saveDraftToStorage();
     setSaving(true);
 
-    // TODO: later POST drop details (imageFile, product, quantity, timer, title, description, etc.)
+    // Save draft server-side one more time before moving on
+    await saveDropToServer();
+
+    // Then go to Step 4
     goToStep4();
   };
 
@@ -643,8 +768,6 @@ export default function NewDrop() {
           margin-left: 4px;
         }
 
-        /* Image upload */
-
         .image-upload-box {
           width: 100%;
           height: 240px;
@@ -772,8 +895,6 @@ export default function NewDrop() {
           border-color: #7e8bff;
         }
 
-        /* Stripe connection */
-
         .connection-section {
           background: #1c1f2e;
           border-radius: 16px;
@@ -833,8 +954,6 @@ export default function NewDrop() {
           width: 100%;
           margin: 4px 0 8px;
         }
-
-        /* Countdown timer */
 
         .toggle-row {
           display: flex;

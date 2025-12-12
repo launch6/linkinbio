@@ -221,27 +221,30 @@ function DropCard({ product: p, slug }) {
   };
 
   const heroInner = {
-    borderRadius: "20px",
-    background: "#0b0c15",
-    overflow: "hidden",
-    width: "100%",
-    position: "relative",
+  borderRadius: "20px",
+  background: "#0b0c15",
+  overflow: "hidden",
+  width: "100%",
+  position: "relative",
 
-    // ✅ center the image and let the box size to the image
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0",
-  };
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "0",
+  textAlign: "center",
+  lineHeight: 0,
+};
 
-  const heroImg = {
-    // ✅ preserve image aspect ratio (vertical/horizontal) and keep it centered
-    maxWidth: "100%",
-    maxHeight: "60vh",
-    width: "auto",
-    height: "auto",
-    display: "block",
-  };
+const heroImg = {
+  width: "100%",
+  height: "auto",
+  maxHeight: "60vh",
+  objectFit: "contain",
+  objectPosition: "center",
+  display: "block",
+  margin: "0 auto",
+};
+
 
   const heroPlaceholder = {
     width: "100%",

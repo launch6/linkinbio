@@ -44,7 +44,6 @@ export default async function handler(req, res) {
     const client = await getClient();
     const db = client.db(MONGODB_DB);
     const Profiles = db.collection("profiles");
-    const Products = db.collection("products");
 
     // 1) Find profile by publicSlug or slug
     const profileDoc = await Profiles.findOne(
@@ -69,6 +68,7 @@ export default async function handler(req, res) {
           social: 1,
           avatarUrl: 1,
           imageUrl: 1,
+          products: 1, // 👈 important
         },
       }
     );
@@ -77,63 +77,36 @@ export default async function handler(req, res) {
       return send(res, 404, { ok: false, error: "profile_not_found" });
     }
 
-    // 2) Load *published* products tied to this profile
-    const productsRaw = await Products.find(
-      {
-        $and: [
-          {
-            $or: [
-              // cover multiple possible shapes
-              { profileSlug: profileDoc.slug || rawSlug },
-              { profileSlug: profileDoc.publicSlug || rawSlug },
-              { profileEditToken: profileDoc.editToken },
-            ],
-          },
-          { published: true },
-        ],
-      },
-      {
-        projection: {
-          _id: 1,
-          title: 1,
-          description: 1,
-          imageUrl: 1,
-          priceUrl: 1,
-          priceCents: 1,
-          priceDisplay: 1,
-          priceText: 1,
-          dropStartsAt: 1,
-          dropEndsAt: 1,
-          showTimer: 1,
-          showInventory: 1,
-          unitsLeft: 1,
-          unitsTotal: 1,
-          buttonText: 1,
-          published: 1,
-        },
-      }
-    ).toArray();
+    // 2) Load *published* products from this profile
+    const productsRaw = Array.isArray(profileDoc.products)
+      ? profileDoc.products
+      : [];
 
-    const products = productsRaw.map((p) => ({
-      id: String(p._id),
-      title: p.title || "",
-      description: p.description || "",
-      imageUrl: p.imageUrl || "",
-      priceUrl: p.priceUrl || "",
-      priceCents: typeof p.priceCents === "number" ? p.priceCents : null,
-      priceDisplay: p.priceDisplay || "",
-      priceText: p.priceText || "",
-      dropStartsAt: p.dropStartsAt || null,
-      dropEndsAt: p.dropEndsAt || null,
-      showTimer: !!p.showTimer,
-      showInventory: !!p.showInventory,
-      unitsLeft:
-        typeof p.unitsLeft === "number" ? p.unitsLeft : null,
-      unitsTotal:
-        typeof p.unitsTotal === "number" ? p.unitsTotal : null,
-      buttonText: p.buttonText || "",
-      published: !!p.published,
-    }));
+    const products = productsRaw
+      // treat products with no `published` flag as published
+      .filter((p) => p && (p.published === undefined ? true : !!p.published))
+      .map((p) => ({
+        id: String(p.id || ""),
+        title: p.title || "",
+        description: p.description || "",
+        imageUrl: p.imageUrl || "",
+        priceUrl: p.priceUrl || "",
+        priceCents:
+          typeof p.priceCents === "number" ? p.priceCents : null,
+        priceDisplay: p.priceDisplay || "",
+        priceText: p.priceText || "",
+        dropStartsAt: p.dropStartsAt || null,
+        dropEndsAt: p.dropEndsAt || null,
+        showTimer: !!p.showTimer,
+        showInventory:
+          p.showInventory === undefined ? true : !!p.showInventory,
+        unitsLeft:
+          typeof p.unitsLeft === "number" ? p.unitsLeft : null,
+        unitsTotal:
+          typeof p.unitsTotal === "number" ? p.unitsTotal : null,
+        buttonText: p.buttonText || "",
+        published: p.published === undefined ? true : !!p.published,
+      }));
 
     // Normalized links (only keep ones with a URL)
     const links = Array.isArray(profileDoc.links)

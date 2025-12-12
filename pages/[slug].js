@@ -220,26 +220,19 @@ function DropCard({ product: p, slug }) {
       "0 14px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,0.7)",
   };
 
-  const heroInner = {
+ const heroInner = {
   borderRadius: "20px",
   background: "#0b0c15",
   overflow: "hidden",
   width: "100%",
   position: "relative",
-
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "0",
-  textAlign: "center",
-  lineHeight: 0,
+  lineHeight: 0, // removes the tiny inline-image gap on mobile
 };
 
 const heroImg = {
-  width: "100%",
-  height: "auto",
+  width: "100%",   // fill the card width (this is what your “#2” screenshot is doing)
+  height: "auto",  // keep aspect ratio
   display: "block",
-  margin: "0 auto",
 };
 
   const heroPlaceholder = {

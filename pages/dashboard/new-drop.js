@@ -407,9 +407,10 @@ const productPayload = {
   title: dropTitle.trim(),
   description: dropDescription.trim(),
 
-  // store image under both keys so everything can read it
+  // save the art everywhere the app might look
   imageUrl: imagePreview || '',
   image: imagePreview || '',
+  heroImageUrl: imagePreview || '',
 
   priceUrl: priceUrl.trim(),
   priceCents:

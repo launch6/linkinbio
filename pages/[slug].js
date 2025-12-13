@@ -215,7 +215,7 @@ function DropCard({ product: p, slug }) {
   }
 
   // --- styles -------------------------------------------------------------
-  const outer = {
+   = {
     width: "100%",
     maxWidth: "420px",
     margin: "1.5rem auto 1.5rem",
@@ -251,15 +251,16 @@ const heroImg = {
   display: "block",
 };
 
-  const heroPlaceholder = {
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#9ca3af",
-    fontSize: "1rem",
-  };
+  const outer = {
+  width: "100%",
+  margin: "0 auto 1.5rem",
+  borderRadius: "28px",
+  padding: "20px 18px 22px",
+  background:
+    "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
+  boxShadow:
+    "0 20px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)",
+};
 
   const body = {
     padding: "18px 10px 0",

@@ -3,7 +3,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 
-/** Format ms as "Xd Yh Zm Ws". */
+/** Format ms as "Xd Yh Zm Ws". (still used by older status logic if needed) */
 function formatRemaining(ms) {
   if (ms <= 0) return "ended";
   const s = Math.floor(ms / 1000);
@@ -105,6 +105,7 @@ function SocialIcon({ type }) {
 
   return null;
 }
+
 function DropCard({ product: p, slug }) {
   const [now, setNow] = useState(() => new Date());
 
@@ -114,12 +115,10 @@ function DropCard({ product: p, slug }) {
   }, []);
 
   // --- basic fields -------------------------------------------------------
-  // Support both new (imageUrl) and older (image) fields
   const imageUrl = p.imageUrl || p.image || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 
-  // price display: try a few common fields
   let priceDisplay =
     p.priceDisplay ||
     p.priceFormatted ||
@@ -159,7 +158,6 @@ function DropCard({ product: p, slug }) {
   const isEnded = soldOut || phase === "ended";
 
   // --- countdown display --------------------------------------------------
-  // Shows HH:MM:SS under 24h, otherwise DD:HH:MM:SS
   let showTimer = false;
   let timerTitle = "";
   let showDays = false;
@@ -207,14 +205,12 @@ function DropCard({ product: p, slug }) {
     }
   }
 
-
   // inventory text (optional, under price)
   let inventoryText = "";
   if (p.showInventory && left !== null && total !== null) {
     inventoryText = `${left}/${total} available`;
   }
 
-  // --- styles -------------------------------------------------------------
   // --- styles -------------------------------------------------------------
   const outer = {
     width: "100%",
@@ -224,7 +220,7 @@ function DropCard({ product: p, slug }) {
     background:
       "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
     boxShadow:
-      "0 20px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)",
+      "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
   };
 
   const heroFrame = {
@@ -233,7 +229,7 @@ function DropCard({ product: p, slug }) {
     background:
       "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
     boxShadow:
-      "0 14px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,0.7)",
+      "0 14px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7)",
   };
 
   const heroInner = {
@@ -242,12 +238,12 @@ function DropCard({ product: p, slug }) {
     overflow: "hidden",
     width: "100%",
     position: "relative",
-    lineHeight: 0, // removes tiny inline-image gap on mobile
+    lineHeight: 0,
   };
 
   const heroImg = {
-    width: "100%",   // fill the card width
-    height: "auto",  // keep aspect ratio
+    width: "100%",
+    height: "auto",
     display: "block",
   };
 
@@ -260,17 +256,6 @@ function DropCard({ product: p, slug }) {
     color: "#9ca3af",
     fontSize: "1rem",
   };
-
-  const outer = {
-  width: "100%",
-  margin: "0 auto 1.5rem",
-  borderRadius: "28px",
-  padding: "20px 18px 22px",
-  background:
-    "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
-  boxShadow:
-    "0 20px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)",
-};
 
   const body = {
     padding: "18px 10px 0",
@@ -386,12 +371,7 @@ function DropCard({ product: p, slug }) {
       <div style={heroFrame}>
         <div style={heroInner}>
           {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={title}
-              style={heroImg}
-              loading="lazy"
-            />
+            <img src={imageUrl} alt={title} style={heroImg} loading="lazy" />
           ) : (
             <div style={heroPlaceholder}>
               <span>Drop artwork</span>
@@ -406,17 +386,13 @@ function DropCard({ product: p, slug }) {
 
         {priceDisplay && <p style={priceStyle}>{priceDisplay}</p>}
 
-        {inventoryText && (
-          <p style={inventoryStyle}>{inventoryText}</p>
-        )}
+        {inventoryText && <p style={inventoryStyle}>{inventoryText}</p>}
 
         {description && <p style={descStyle}>{description}</p>}
 
         {(timerTitle || showTimer) && (
           <div style={timerCard}>
-            {timerTitle && (
-              <p style={timerLabel}>{timerTitle}</p>
-            )}
+            {timerTitle && <p style={timerLabel}>{timerTitle}</p>}
 
             {showTimer && (
               <>
@@ -440,20 +416,18 @@ function DropCard({ product: p, slug }) {
                 </p>
               </>
             )}
+          </div>
+        )}
 
-{isEnded ? (
-  <button type="button" style={buttonDisabled} disabled>
-    Drop ended
-  </button>
-) : !p.priceUrl ? (
-  <button type="button" style={buttonDisabled} disabled>
-    {buttonText}
-  </button>
-) : (
-  <a href={buyHref} style={buttonActive}>
-    {buttonText}
-  </a>
-)}
+        {isEnded ? (
+          <button type="button" style={buttonDisabled} disabled>
+            Drop ended
+          </button>
+        ) : (
+          <a href={buyHref} style={buttonActive}>
+            {buttonText}
+          </a>
+        )}
       </div>
     </article>
   );
@@ -467,7 +441,6 @@ export default function PublicSlugPage() {
   const [error, setError] = useState("");
   const [profile, setProfile] = useState(null);
   const [products, setProducts] = useState([]);
-  const [remaining, setRemaining] = useState({}); // { [id]: ms }
 
   // email capture UI state
   const [email, setEmail] = useState("");
@@ -475,7 +448,6 @@ export default function PublicSlugPage() {
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
-  const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
   // fetch public profile + products via slug (robust JSON guard)
@@ -546,9 +518,7 @@ export default function PublicSlugPage() {
         type: "page_view",
         ts: Date.now(),
         ref:
-          typeof window !== "undefined"
-            ? window.location.href
-            : "",
+          typeof window !== "undefined" ? window.location.href : "",
         publicSlug: slug,
       };
       const blob = new Blob([JSON.stringify(payload)], {
@@ -558,73 +528,99 @@ export default function PublicSlugPage() {
     } catch {}
   }, [slug]);
 
-  // countdown ticker
-  useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (!products.length) return;
+  const title = profile?.displayName || profile?.name || "Artist";
+  const bio = profile?.bio || profile?.description || "";
+  // default: email capture ON unless explicitly disabled
+  const canCollectEmail = profile?.collectEmail !== false;
 
-    function tick() {
-      const now = Date.now();
-      const next = {};
-      for (const p of products) {
-        const endsIso = p.dropEndsAt || "";
-        const endsMs = endsIso ? Date.parse(endsIso) : null;
-        next[p.id] = endsMs ? Math.max(0, endsMs - now) : null;
-      }
-      setRemaining(next);
-    }
+  const links = Array.isArray(profile?.links)
+    ? profile.links.filter(
+        (l) =>
+          l &&
+          typeof l.url === "string" &&
+          l.url.trim().length > 0
+      )
+    : [];
 
-    tick();
-    timerRef.current = setInterval(tick, 1000);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-    };
-  }, [products]);
+  const social = profile?.social || {};
 
-  // status builder that respects flags
-  function productStatus(p) {
-    const left = toNumberOrNull(p.unitsLeft);
-    const total = toNumberOrNull(p.unitsTotal);
-    const rem = remaining[p.id]; // ms or null
-    const ended = rem === 0;
-    const soldOut = left !== null && left <= 0;
+  // Ensure website link is always absolute
+  const normalizeHref = (url) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return `http://${trimmed}`;
+  };
 
-    if (soldOut)
-      return {
-        key: "soldout",
-        label: "Sold out",
-        ended: false,
-        soldOut: true,
-      };
-    if (ended)
-      return {
-        key: "ended",
-        label: "Drop ended",
-        ended: true,
-        soldOut: false,
-      };
+  const websiteHref = normalizeHref(social.website);
 
-    const parts = [];
+  const hasSocialRow =
+    social.instagram ||
+    social.facebook ||
+    social.tiktok ||
+    social.youtube ||
+    social.x ||
+    websiteHref;
 
-    if (p.showInventory && total !== null && left !== null) {
-      parts.push(`${left}/${total} left`);
-    }
+  // --- SEO / Social ---
+  const firstImage = products?.[0]?.imageUrl || "";
+  const site = "https://linkinbio-tau-pink.vercel.app";
+  const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
+  const seoTitle = title ? `${title} — Drops` : "Drops";
+  const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
+  const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
+  const leftPart =
+    products?.[0]?.showInventory && left0 != null && total0 != null
+      ? ` • ${left0}/${total0} left`
+      : "";
+  const seoDesc =
+    (products?.[0]?.title
+      ? `${products[0].title}${leftPart}`
+      : "Limited releases and timed drops.") +
+    (bio ? ` — ${bio}` : "");
 
-    if (p.showTimer && rem !== null) {
-      parts.push(`Ends in ${formatRemaining(rem)}`);
-    }
+  const avatarInitial =
+    (title && title.trim().charAt(0).toUpperCase()) || "L";
 
-    return {
-      key: "active",
-      label: parts.join(" — "),
-      ended: false,
-      soldOut: false,
-    };
+  const avatarUrl =
+    profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
+
+  // early states
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
+        <div className="opacity-80">Loading…</div>
+      </div>
+    );
   }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-xl w-full rounded-xl border border-red-600/40 bg-red-900/20 p-4">
+          <div className="font-semibold mb-1">Can’t load page</div>
+          <div className="text-sm opacity-80">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Layout: single column, Linktree-style
+  const mainStyle = {
+    maxWidth: "500px",
+    margin: "0 auto",
+    padding: "2.3rem 1.5rem 2.5rem",
+    textAlign: "center",
+  };
+
+  const fullWidthSection = {
+    width: "100%",
+  };
+
+  // vertical rhythm
+  const SECTION_GAP = "1.35rem";
+  const HEADER_STACK_SPACING = "0.8rem";
 
   // handle slug-based subscribe
   async function handleSubscribe(e) {
@@ -643,9 +639,7 @@ export default function PublicSlugPage() {
           publicSlug: slug,
           email,
           ref:
-            typeof window !== "undefined"
-              ? window.location.href
-              : "",
+            typeof window !== "undefined" ? window.location.href : "",
         }),
       });
       const json = await resp.json().catch(() => ({}));
@@ -668,109 +662,6 @@ export default function PublicSlugPage() {
       setSubmitting(false);
     }
   }
-
-  const title = profile?.displayName || profile?.name || "Artist";
-  const bio = profile?.bio || profile?.description || "";
-  // default: email capture ON unless explicitly disabled
-  const canCollectEmail = profile?.collectEmail !== false;
-
-  const links = Array.isArray(profile?.links)
-  ? profile.links.filter(
-      (l) =>
-        l &&
-        typeof l.url === "string" &&
-        l.url.trim().length > 0
-    )
-  : [];
-
-    const social = profile?.social || {};
-
-  // Ensure website link is always absolute
-  // Rules:
-  // - If user typed http:// or https://, keep it as-is
-  // - If they typed a bare domain (mysite.com), prepend http://
-  const normalizeHref = (url) => {
-    if (!url) return "";
-    const trimmed = url.trim();
-    if (!trimmed) return "";
-
-    // If user typed http:// or https://, respect it
-    if (/^https?:\/\//i.test(trimmed)) {
-      return trimmed;
-    }
-
-    // No protocol → assume http:// (their server/Cloudflare/etc. can upgrade to https)
-    return `http://${trimmed}`;
-  };
-
-  const websiteHref = normalizeHref(social.website);
-
-  const hasSocialRow =
-    social.instagram ||
-    social.facebook ||
-    social.tiktok ||
-    social.youtube ||
-    social.x ||
-    websiteHref;
-
-
-  // --- SEO / Social ---
-  const firstImage = products?.[0]?.imageUrl || "";
-  const site = "https://linkinbio-tau-pink.vercel.app";
-  const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
-  const seoTitle = title ? `${title} — Drops` : "Drops";
-  const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
-  const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
-  const leftPart =
-    products?.[0]?.showInventory && left0 != null && total0 != null
-      ? ` • ${left0}/${total0} left`
-      : "";
-  const seoDesc =
-    (products?.[0]?.title
-      ? `${products[0].title}${leftPart}`
-      : "Limited releases and timed drops.") +
-    (bio ? ` — ${bio}` : "");
-
-  const avatarInitial =
-    (title && title.trim().charAt(0).toUpperCase()) || "L";
-
-      const avatarUrl =
-  profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
-        <div className="opacity-80">Loading…</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-xl w-full rounded-xl border border-red-600/40 bg-red-900/20 p-4">
-          <div className="font-semibold mb-1">Can’t load page</div>
-          <div className="text-sm opacity-80">{error}</div>
-        </div>
-      </div>
-    );
-  }
-
-    // Layout: single column, Linktree-style
-  const mainStyle = {
-    maxWidth: "500px",
-    margin: "0 auto",
-    padding: "2.3rem 1.5rem 2.5rem", // slightly tighter top + bottom
-    textAlign: "center",
-  };
-
-  const fullWidthSection = {
-    width: "100%",
-  };
-
-  // vertical rhythm
-  const SECTION_GAP = "1.35rem";        // header↔drop and drop↔links
-  const HEADER_STACK_SPACING = "0.8rem"; // avatar↔handle↔bio↔socials
 
   return (
     <>
@@ -806,8 +697,7 @@ export default function PublicSlugPage() {
 
       <div className="min-h-screen bg-neutral-950 text-white">
         <main style={mainStyle}>
-          
-                {/* HEADER */}
+          {/* HEADER */}
           <header
             style={{
               width: "100%",
@@ -825,73 +715,71 @@ export default function PublicSlugPage() {
                 textAlign: "center",
               }}
             >
-                            {/* Avatar */}
+              {/* Avatar */}
               <div
                 style={{
                   marginBottom: HEADER_STACK_SPACING,
                 }}
               >
                 {avatarUrl ? (
-  <img
-    src={avatarUrl}
-    alt={title || "Avatar"}
-    style={{
-      height: "7rem",
-      width: "7rem",
-      borderRadius: "999px",
-      objectFit: "cover",
-      border: "1px solid #27272a",
-      display: "block",
-    }}
-  />
-) : (
-  <div
-    style={{
-      height: "6.5rem",
-      width: "6.5rem",
-      borderRadius: "999px",
-      backgroundColor: "#18181b",
-      border: "1px solid #27272a",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontWeight: 600,
-      fontSize: "2.2rem",
-    }}
-  >
-    {avatarInitial}
-  </div>
-)}
-
+                  <img
+                    src={avatarUrl}
+                    alt={title || "Avatar"}
+                    style={{
+                      height: "7rem",
+                      width: "7rem",
+                      borderRadius: "999px",
+                      objectFit: "cover",
+                      border: "1px solid #27272a",
+                      display: "block",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      height: "6.5rem",
+                      width: "6.5rem",
+                      borderRadius: "999px",
+                      backgroundColor: "#18181b",
+                      border: "1px solid #27272a",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 600,
+                      fontSize: "2.2rem",
+                    }}
+                  >
+                    {avatarInitial}
+                  </div>
+                )}
               </div>
 
-              {/* Handle (@backyards) */}
-<h1
-  style={{
-    fontSize: "1.7rem",
-    lineHeight: 1.2,
-    fontWeight: 700,
-    margin: `0 0 ${HEADER_STACK_SPACING}`, // equal gap below, no top margin
-  }}
->
-  {title || "Artist"}
-</h1>
+              {/* Handle / name */}
+              <h1
+                style={{
+                  fontSize: "1.7rem",
+                  lineHeight: 1.2,
+                  fontWeight: 700,
+                  margin: `0 0 ${HEADER_STACK_SPACING}`,
+                }}
+              >
+                {title || "Artist"}
+              </h1>
 
-
-  {/* Description */}
-{bio ? (
-  <p
-    style={{
-      color: "#e5e7eb",
-      fontSize: "1rem",
-      lineHeight: 1.5,
-      margin: `0 0 ${HEADER_STACK_SPACING}`,
-      whiteSpace: "pre-line", // preserve line breaks
-    }}
-  >
-    {bio}
-  </p>
-) : null}
+              {/* Description */}
+              {bio ? (
+                <p
+                  style={{
+                    color: "#e5e7eb",
+                    fontSize: "1rem",
+                    lineHeight: 1.5,
+                    margin: `0 0 ${HEADER_STACK_SPACING}`,
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {bio}
+                </p>
+              ) : null}
 
               {/* Social icons */}
               {hasSocialRow && (
@@ -1012,34 +900,32 @@ export default function PublicSlugPage() {
                       <SocialIcon type="x" />
                     </a>
                   )}
-                 {websiteHref && (
-  <a
-    href={websiteHref}
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Website"
-    style={{
-      height: "4rem",
-      width: "4rem",
-      borderRadius: "999px",
-      border: "1px solid #27272a",
-      backgroundColor: "rgba(24,24,27,0.9)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "#f9fafb",
-      textDecoration: "none",
-    }}
-  >
-    <SocialIcon type="website" />
-  </a>
-)}
-
+                  {websiteHref && (
+                    <a
+                      href={websiteHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Website"
+                      style={{
+                        height: "4rem",
+                        width: "4rem",
+                        borderRadius: "999px",
+                        border: "1px solid #27272a",
+                        backgroundColor: "rgba(24,24,27,0.9)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#f9fafb",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <SocialIcon type="website" />
+                    </a>
+                  )}
                 </div>
               )}
             </div>
           </header>
-
 
           {/* EMAIL CAPTURE (optional, still full-width) */}
           {canCollectEmail && (
@@ -1151,9 +1037,7 @@ export default function PublicSlugPage() {
           )}
 
           {/* PRODUCTS / DROP CARD */}
-          {products.length === 0 ? (
-            <></>
-          ) : (
+          {products.length > 0 && (
             <section
               style={{
                 ...fullWidthSection,
@@ -1165,7 +1049,6 @@ export default function PublicSlugPage() {
               ))}
             </section>
           )}
-
 
           {/* LINKS (below drop card OR directly after header if no products) */}
           {links.length > 0 && (
@@ -1222,81 +1105,77 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-{/* FOOTER */}
-<footer
-  style={{
-    fontSize: "0.9rem",
-    color: "#a3a3a3",
-    paddingBottom: "2.25rem",
-    width: "100%",
-    textAlign: "center",
-  }}
->
-  {/* Launch6 logo CTA */}
-  <div
-    style={{
-      display: "flex",
-      justifyContent: "center",
-      marginBottom: "1rem",
-    }}
-  >
-    <a
-  href="https://launch6.com"
-  target="_blank"
-  rel="noopener noreferrer"
-  style={{
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    gap: "0.75rem",
-    padding: "0.95rem 1.2rem",
-    borderRadius: "999px",
-    background:
-      "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
-    border: "1px solid #27272a",
-    textDecoration: "none",
-    color: "#f4f4f5",
-    fontSize: "0.98rem",
-    fontWeight: 500,
-    marginTop: "0.5rem",
-  }}
->
-  <img
-    src="/launch6_white.png"
-    alt="Launch6 logo"
-    style={{
-      height: "1.6rem",
-      width: "auto",
-      display: "block",
-    }}
-  />
-  <span>blastoff here 🚀</span>
-</a>
+          <footer
+            style={{
+              fontSize: "0.9rem",
+              color: "#a3a3a3",
+              paddingBottom: "2.25rem",
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            {/* Launch6 logo CTA */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginBottom: "1rem",
+              }}
+            >
+              <a
+                href="https://launch6.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  gap: "0.75rem",
+                  padding: "0.95rem 1.2rem",
+                  borderRadius: "999px",
+                  background:
+                    "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
+                  border: "1px solid #27272a",
+                  textDecoration: "none",
+                  color: "#f4f4f5",
+                  fontSize: "0.98rem",
+                  fontWeight: 500,
+                  marginTop: "0.5rem",
+                }}
+              >
+                <img
+                  src="/launch6_white.png"
+                  alt="Launch6 logo"
+                  style={{
+                    height: "1.6rem",
+                    width: "auto",
+                    display: "block",
+                  }}
+                />
+                <span>blastoff here 🚀</span>
+              </a>
+            </div>
 
-  </div>
-
-  {/* Legal / utility links */}
-  <div
-    style={{
-      display: "flex",
-      flexWrap: "wrap",
-      justifyContent: "center",
-      gap: "0.9rem",
-    }}
-  >
-    <button style={{ textDecoration: "underline" }}>
-      Cookie preferences
-    </button>
-    <button style={{ textDecoration: "underline" }}>
-      Report page
-    </button>
-    <button style={{ textDecoration: "underline" }}>
-      Privacy
-    </button>
-  </div>
-</footer>
-
-
+            {/* Legal / utility links */}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                gap: "0.9rem",
+              }}
+            >
+              <button style={{ textDecoration: "underline" }}>
+                Cookie preferences
+              </button>
+              <button style={{ textDecoration: "underline" }}>
+                Report page
+              </button>
+              <button style={{ textDecoration: "underline" }}>
+                Privacy
+              </button>
+            </div>
+          </footer>
         </main>
       </div>
     </>

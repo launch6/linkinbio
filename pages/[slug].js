@@ -114,8 +114,14 @@ function DropCard({ product: p, slug }) {
     return () => clearInterval(id);
   }, []);
 
-  // --- basic fields -------------------------------------------------------
-  const imageUrl = p.imageUrl || p.image || null;
+// Support image from multiple fields (Step 3 preview + older records)
+const imageUrl =
+  p.imageUrl ||
+  p.image ||
+  p.imagePreview ||
+  p.heroImageUrl ||
+  null;
+
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 

@@ -402,28 +402,29 @@ useEffect(() => {
 
     const qty = quantity.trim() ? Number(quantity) : null;
 
-    const productPayload = {
-      id: selectedProductId || `p_${Date.now()}`,
-      title: dropTitle.trim(),
-      description: dropDescription.trim(),
-      
-      // store both, so old and new readers are happy
-      imageUrl: imagePreview || '',
-      priceUrl: priceUrl.trim(),
-      priceCents:
+const productPayload = {
+  id: selectedProductId || `p_${Date.now()}`,
+  title: dropTitle.trim(),
+  description: dropDescription.trim(),
 
-        typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
-      priceDisplay: selectedPriceDisplay || '',
-      priceText: selectedPriceDisplay || '',
-      dropStartsAt: isTimerEnabled ? startsAt : '',
-      dropEndsAt: isTimerEnabled ? endsAt : '',
-      showTimer: !!isTimerEnabled,
-      showInventory: qty !== null,
-      unitsTotal: qty,
-      unitsLeft: qty,
-      buttonText: btnText.trim() || 'Buy Now',
-      published: true,
-    };
+  // store image under both keys so everything can read it
+  imageUrl: imagePreview || '',
+  image: imagePreview || '',
+
+  priceUrl: priceUrl.trim(),
+  priceCents:
+    typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
+  priceDisplay: selectedPriceDisplay || '',
+  priceText: selectedPriceDisplay || '',
+  dropStartsAt: isTimerEnabled ? startsAt : '',
+  dropEndsAt: isTimerEnabled ? endsAt : '',
+  showTimer: !!isTimerEnabled,
+  showInventory: qty !== null,
+  unitsTotal: qty,
+  unitsLeft: qty,
+  buttonText: btnText.trim() || 'Buy Now',
+  published: true,
+};
 
     try {
       const resp = await fetch('/api/products', {

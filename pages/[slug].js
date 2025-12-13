@@ -114,7 +114,8 @@ function DropCard({ product: p, slug }) {
   }, []);
 
   // --- basic fields -------------------------------------------------------
-  const imageUrl = p.imageUrl || null;
+  // Support both new (imageUrl) and older (image) fields
+  const imageUrl = p.imageUrl || p.image || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 
@@ -157,10 +158,13 @@ function DropCard({ product: p, slug }) {
 
   const isEnded = soldOut || phase === "ended";
 
-  // --- countdown (hours : minutes : seconds) ------------------------------
+  // --- countdown display --------------------------------------------------
+  // Shows HH:MM:SS under 24h, otherwise DD:HH:MM:SS
   let showTimer = false;
   let timerTitle = "";
-  let h = "00",
+  let showDays = false;
+  let d = "00",
+    h = "00",
     m = "00",
     s = "00";
 
@@ -182,15 +186,27 @@ function DropCard({ product: p, slug }) {
       if (diffMs > 0) {
         showTimer = true;
         const totalSeconds = Math.floor(diffMs / 1000);
-        const hh = Math.floor(totalSeconds / 3600);
-        const mm = Math.floor((totalSeconds % 3600) / 60);
-        const ss = totalSeconds % 60;
-        h = String(hh).padStart(2, "0");
-        m = String(mm).padStart(2, "0");
-        s = String(ss).padStart(2, "0");
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+
+        if (days > 0) {
+          showDays = true;
+          d = String(days).padStart(2, "0");
+          h = String(hours).padStart(2, "0");
+          m = String(mins).padStart(2, "0");
+          s = String(secs).padStart(2, "0");
+        } else {
+          showDays = false;
+          h = String(hours).padStart(2, "0");
+          m = String(mins).padStart(2, "0");
+          s = String(secs).padStart(2, "0");
+        }
       }
     }
   }
+
 
   // inventory text (optional, under price)
   let inventoryText = "";
@@ -202,7 +218,7 @@ function DropCard({ product: p, slug }) {
   const outer = {
     width: "100%",
     maxWidth: "420px",
-    margin: "0 auto 1.5rem",
+    margin: "1.5rem auto 1.5rem",
     borderRadius: "28px",
     padding: "20px 18px 22px",
     background:
@@ -394,6 +410,12 @@ const heroImg = {
             {showTimer && (
               <>
                 <div style={timerValues}>
+                  {showDays && (
+                    <>
+                      <span style={timerValue}>{d}</span>
+                      <span style={timerSeparator}>:</span>
+                    </>
+                  )}
                   <span style={timerValue}>{h}</span>
                   <span style={timerSeparator}>:</span>
                   <span style={timerValue}>{m}</span>
@@ -401,12 +423,12 @@ const heroImg = {
                   <span style={timerValue}>{s}</span>
                 </div>
                 <p style={timerUnits}>
-                  Hours · Minutes · Seconds
+                  {showDays
+                    ? "Days · Hours · Minutes · Seconds"
+                    : "Hours · Minutes · Seconds"}
                 </p>
               </>
             )}
-          </div>
-        )}
 
 {isEnded ? (
   <button type="button" style={buttonDisabled} disabled>
@@ -638,7 +660,8 @@ export default function PublicSlugPage() {
 
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
-  const canCollectEmail = !!profile?.collectEmail;
+  // default: email capture ON unless explicitly disabled
+  const canCollectEmail = profile?.collectEmail !== false;
 
   const links = Array.isArray(profile?.links)
   ? profile.links.filter(

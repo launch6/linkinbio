@@ -399,8 +399,10 @@ export default function NewDrop() {
       id: selectedProductId || `p_${Date.now()}`,
       title: dropTitle.trim(),
       description: dropDescription.trim(),
+      // store both, so old and new readers are happy
       imageUrl: imagePreview || '',
-      priceUrl: trimmedPriceUrl,
+      image: imagePreview || '',
+      priceUrl: '',
       priceCents:
         typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
       priceDisplay: selectedPriceDisplay || '',

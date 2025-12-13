@@ -381,28 +381,30 @@ export default function NewDrop() {
 
     const qty = quantity.trim() ? Number(quantity) : null;
 
-    const productPayload = {
-      id: selectedProductId || `p_${Date.now()}`,
-      title: dropTitle.trim(),
-      description: dropDescription.trim(),
+const productPayload = {
+  id: selectedProductId || `p_${Date.now()}`,
+  title: dropTitle.trim(),
+  description: dropDescription.trim(),
 
-      // store both, so old and new readers are happy
-      heroImageUrl: imagePreview || '',
-      imageUrl: imagePreview || '',
+  // store in multiple fields so old + new readers can find it
+  heroImageUrl: imagePreview || '',
+  imageUrl: imagePreview || '',
+  image: imagePreview || '',
 
-      priceCents:
-        typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
-      priceDisplay: selectedPriceDisplay || '',
-      priceText: selectedPriceDisplay || '',
-      dropStartsAt: isTimerEnabled ? startsAt : '',
-      dropEndsAt: isTimerEnabled ? endsAt : '',
-      showTimer: !!isTimerEnabled,
-      showInventory: qty !== null,
-      unitsTotal: qty,
-      unitsLeft: qty,
-      buttonText: btnText.trim() || 'Buy Now',
-      published: true,
-    };
+  priceCents:
+    typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
+  priceDisplay: selectedPriceDisplay || '',
+  priceText: selectedPriceDisplay || '',
+  dropStartsAt: isTimerEnabled ? startsAt : '',
+  dropEndsAt: isTimerEnabled ? endsAt : '',
+  showTimer: !!isTimerEnabled,
+  showInventory: qty !== null,
+  unitsTotal: qty,
+  unitsLeft: qty,
+  buttonText: btnText.trim() || 'Buy Now',
+  published: true,
+};
+
 
     try {
       const resp = await fetch('/api/products', {

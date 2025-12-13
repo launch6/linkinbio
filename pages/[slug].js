@@ -215,10 +215,10 @@ function DropCard({ product: p, slug }) {
   }
 
   // --- styles -------------------------------------------------------------
-   = {
+  // --- styles -------------------------------------------------------------
+  const outer = {
     width: "100%",
-    maxWidth: "420px",
-    margin: "1.5rem auto 1.5rem",
+    margin: "0 auto 1.5rem",
     borderRadius: "28px",
     padding: "20px 18px 22px",
     background:
@@ -231,25 +231,35 @@ function DropCard({ product: p, slug }) {
     borderRadius: "24px",
     padding: "3px",
     background:
-    "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
+      "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
     boxShadow:
       "0 14px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,0.7)",
   };
 
- const heroInner = {
-  borderRadius: "20px",
-  background: "#0b0c15",
-  overflow: "hidden",
-  width: "100%",
-  position: "relative",
-  lineHeight: 0, // removes the tiny inline-image gap on mobile
-};
+  const heroInner = {
+    borderRadius: "20px",
+    background: "#0b0c15",
+    overflow: "hidden",
+    width: "100%",
+    position: "relative",
+    lineHeight: 0, // removes tiny inline-image gap on mobile
+  };
 
-const heroImg = {
-  width: "100%",   // fill the card width (this is what your “#2” screenshot is doing)
-  height: "auto",  // keep aspect ratio
-  display: "block",
-};
+  const heroImg = {
+    width: "100%",   // fill the card width
+    height: "auto",  // keep aspect ratio
+    display: "block",
+  };
+
+  const heroPlaceholder = {
+    width: "100%",
+    minHeight: "220px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#9ca3af",
+    fontSize: "1rem",
+  };
 
   const outer = {
   width: "100%",

@@ -33,7 +33,6 @@ export default function NewDrop() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedPriceCents, setSelectedPriceCents] = useState(null);
   const [selectedPriceDisplay, setSelectedPriceDisplay] = useState('');
-  const [priceUrl, setPriceUrl] = useState('');      // ⬅️ new
   const [saving, setSaving] = useState(false);
 
   // Drop image state
@@ -96,91 +95,86 @@ export default function NewDrop() {
   // Store imagePreview in sessionStorage (survives Stripe redirect in same tab)
   const getImagePreviewKey = () => `${getDraftKey()}__imagePreview`;
 
-const saveDraftToStorage = () => {
-  if (typeof window === 'undefined') return;
+  const saveDraftToStorage = () => {
+    if (typeof window === 'undefined') return;
 
-  const payload = {
-    dropTitle,
-    dropDescription,
-    quantity,
-    btnText,
-    isTimerEnabled,
-    startsAt,
-    endsAt,
-    // keep in payload too (best effort); primary persistence is sessionStorage
-    imagePreview,
-    selectedProductId,
-    selectedPriceCents,
-    selectedPriceDisplay,
-    priceUrl, // <-- this is the only new piece
+    const payload = {
+      dropTitle,
+      dropDescription,
+      quantity,
+      btnText,
+      isTimerEnabled,
+      startsAt,
+      endsAt,
+      // keep in payload too (best effort); primary persistence is sessionStorage
+      imagePreview,
+      selectedProductId,
+      selectedPriceCents,
+      selectedPriceDisplay,
+    };
+
+    // Always try to stash imagePreview in sessionStorage (usually more reliable here)
+    try {
+      if (typeof imagePreview === 'string' && imagePreview) {
+        window.sessionStorage.setItem(getImagePreviewKey(), imagePreview);
+      } else {
+        window.sessionStorage.removeItem(getImagePreviewKey());
+      }
+    } catch (err) {
+      console.error('[new-drop] Failed to save imagePreview to sessionStorage', err);
+    }
+
+    // Save full payload to localStorage (best effort)
+    try {
+      window.localStorage.setItem(getDraftKey(), JSON.stringify(payload));
+    } catch (err) {
+      // If localStorage is full (common when saving base64), still save text-only
+      try {
+        const safePayload = { ...payload, imagePreview: null };
+        window.localStorage.setItem(getDraftKey(), JSON.stringify(safePayload));
+        console.error(
+          '[new-drop] Draft saved without imagePreview (storage full).',
+          err
+        );
+      } catch (err2) {
+        console.error('[new-drop] Failed to save draft', err2);
+      }
+    }
   };
 
-  // Always try to stash imagePreview in sessionStorage (usually more reliable here)
-  try {
-    if (typeof imagePreview === 'string' && imagePreview) {
-      window.sessionStorage.setItem(getImagePreviewKey(), imagePreview);
-    } else {
-      window.sessionStorage.removeItem(getImagePreviewKey());
-    }
-  } catch (err) {
-    console.error('[new-drop] Failed to save imagePreview to sessionStorage', err);
-  }
-
-  // Save full payload to localStorage (best effort)
-  try {
-    window.localStorage.setItem(getDraftKey(), JSON.stringify(payload));
-  } catch (err) {
-    // If localStorage is full (common when saving base64), still save text-only
-    try {
-      const safePayload = { ...payload, imagePreview: null };
-      window.localStorage.setItem(getDraftKey(), JSON.stringify(safePayload));
-      console.error(
-        '[new-drop] Draft saved without imagePreview (storage full).',
-        err
-      );
-    } catch (err2) {
-      console.error('[new-drop] Failed to save draft', err2);
-    }
-  }
-};
-
-
   // Load draft when token/route is ready (use sessionStorage for imagePreview first)
-useEffect(() => {
-  if (typeof window === 'undefined') return;
-  if (!router.isReady) return;
-  if (!resolvedToken && typeof token === 'undefined') return; // wait until token resolution stabilizes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!router.isReady) return;
+    if (!resolvedToken && typeof token === 'undefined') return; // wait until token resolution stabilizes
 
-  try {
-    const raw = window.localStorage.getItem(getDraftKey());
-    if (raw) {
-      const d = JSON.parse(raw);
+    try {
+      const raw = window.localStorage.getItem(getDraftKey());
+      if (raw) {
+        const d = JSON.parse(raw);
 
-      if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
-      if (typeof d.dropDescription === 'string')
-        setDropDescription(d.dropDescription);
-      if (typeof d.quantity === 'string') setQuantity(d.quantity);
-      if (typeof d.btnText === 'string') setBtnText(d.btnText);
-      if (typeof d.isTimerEnabled === 'boolean')
-        setIsTimerEnabled(d.isTimerEnabled);
-      if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
-      if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
-      if (typeof d.selectedProductId === 'string')
-        setSelectedProductId(d.selectedProductId);
-      if (typeof d.selectedPriceDisplay === 'string')
-        setSelectedPriceDisplay(d.selectedPriceDisplay);
-      if (typeof d.selectedPriceCents === 'number')
-        setSelectedPriceCents(d.selectedPriceCents);
+        if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
+        if (typeof d.dropDescription === 'string')
+          setDropDescription(d.dropDescription);
+        if (typeof d.quantity === 'string') setQuantity(d.quantity);
+        if (typeof d.btnText === 'string') setBtnText(d.btnText);
+        if (typeof d.isTimerEnabled === 'boolean')
+          setIsTimerEnabled(d.isTimerEnabled);
+        if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
+        if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
+        if (typeof d.selectedProductId === 'string')
+          setSelectedProductId(d.selectedProductId);
+        if (typeof d.selectedPriceDisplay === 'string')
+          setSelectedPriceDisplay(d.selectedPriceDisplay);
+        if (typeof d.selectedPriceCents === 'number')
+          setSelectedPriceCents(d.selectedPriceCents);
 
-      // ⬇️ this is the new line
-      if (typeof d.priceUrl === 'string') setPriceUrl(d.priceUrl);
-
-      // Do NOT eagerly set imagePreview from localStorage yet.
-      // We prefer sessionStorage first.
+        // Do NOT eagerly set imagePreview from localStorage yet.
+        // We prefer sessionStorage first.
+      }
+    } catch (err) {
+      console.error('[new-drop] Failed to load draft', err);
     }
-  } catch (err) {
-    console.error('[new-drop] Failed to load draft', err);
-  }
 
     // Restore imagePreview (sessionStorage -> localStorage -> null)
     try {
@@ -231,7 +225,6 @@ useEffect(() => {
     selectedProductId,
     selectedPriceCents,
     selectedPriceDisplay,
-    priceUrl,
   ]);
 
   // --- Navigation helper ---------------------------------------------------
@@ -355,11 +348,10 @@ useEffect(() => {
       return;
     }
 
-  if (!selectedProductId) {
-   alert('Choose which Stripe product you want to sell.');
-   return;
- }
-
+    if (!selectedProductId) {
+      alert('Choose which Stripe product you want to sell.');
+      return;
+    }
 
     if (quantity.trim()) {
       const n = Number(quantity);
@@ -389,30 +381,28 @@ useEffect(() => {
 
     const qty = quantity.trim() ? Number(quantity) : null;
 
-const productPayload = {
-  id: selectedProductId || `p_${Date.now()}`,
-  title: dropTitle.trim(),
-  description: dropDescription.trim(),
+    const productPayload = {
+      id: selectedProductId || `p_${Date.now()}`,
+      title: dropTitle.trim(),
+      description: dropDescription.trim(),
 
-   // store both, so old and new readers are happy
-   heroImageUrl: imagePreview || '',
-   imageUrl: imagePreview || '',
-   priceCents:
+      // store both, so old and new readers are happy
+      heroImageUrl: imagePreview || '',
+      imageUrl: imagePreview || '',
 
-  priceUrl: priceUrl.trim(),
-  priceCents:
-    typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
-  priceDisplay: selectedPriceDisplay || '',
-  priceText: selectedPriceDisplay || '',
-  dropStartsAt: isTimerEnabled ? startsAt : '',
-  dropEndsAt: isTimerEnabled ? endsAt : '',
-  showTimer: !!isTimerEnabled,
-  showInventory: qty !== null,
-  unitsTotal: qty,
-  unitsLeft: qty,
-  buttonText: btnText.trim() || 'Buy Now',
-  published: true,
-};
+      priceCents:
+        typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
+      priceDisplay: selectedPriceDisplay || '',
+      priceText: selectedPriceDisplay || '',
+      dropStartsAt: isTimerEnabled ? startsAt : '',
+      dropEndsAt: isTimerEnabled ? endsAt : '',
+      showTimer: !!isTimerEnabled,
+      showInventory: qty !== null,
+      unitsTotal: qty,
+      unitsLeft: qty,
+      buttonText: btnText.trim() || 'Buy Now',
+      published: true,
+    };
 
     try {
       const resp = await fetch('/api/products', {
@@ -606,35 +596,8 @@ const productPayload = {
                   <p className="helper-text connection-helper">
                     Product name and price are managed in your Stripe Dashboard.
                   </p>
-
-                  {/* Temporary: paste Stripe Checkout / Payment Link URL */}
-                  <div style={{ marginTop: "10px" }}>
-                    <label
-                      style={{
-                        display: "block",
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: "#d0d2ff",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      Stripe checkout link
-                    </label>
-                    <input
-                      type="url"
-                      className="input-field"
-                      placeholder="Paste your Stripe checkout or payment link"
-                      value={priceUrl}
-                      onChange={(e) => setPriceUrl(e.target.value)}
-                    />
-                    <p className="helper-text" style={{ marginTop: "4px" }}>
-                      Temporary step: paste the Stripe URL buyers should land on.
-                      We’ll auto-fill this from your Stripe product in a later update.
-                    </p>
-                  </div>
                 </div>
               )}
-
 
               <button
                 type="button"

@@ -355,24 +355,11 @@ useEffect(() => {
       return;
     }
 
-    if (!selectedProductId) {
-      alert('Choose which Stripe product you want to sell.');
-      return;
-    }
-    if (!priceUrl.trim()) {
-      alert('Paste the Stripe checkout link for this product.');
-      return;
-    }
+  if (!selectedProductId) {
+   alert('Choose which Stripe product you want to sell.');
+   return;
+ }
 
-    const trimmedPriceUrl = priceUrl.trim();
-    if (!trimmedPriceUrl) {
-      alert('Paste your Stripe Payment Link before continuing.');
-      return;
-    }
-    if (!/^https?:\/\//i.test(trimmedPriceUrl)) {
-      alert('Your Stripe Payment Link should start with https://');
-      return;
-    }
 
     if (quantity.trim()) {
       const n = Number(quantity);
@@ -407,10 +394,10 @@ const productPayload = {
   title: dropTitle.trim(),
   description: dropDescription.trim(),
 
-  // save the art everywhere the app might look
-  imageUrl: imagePreview || '',
-  image: imagePreview || '',
-  heroImageUrl: imagePreview || '',
+   // store both, so old and new readers are happy
+   heroImageUrl: imagePreview || '',
+   imageUrl: imagePreview || '',
+   priceCents:
 
   priceUrl: priceUrl.trim(),
   priceCents:

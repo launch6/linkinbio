@@ -221,7 +221,7 @@ function DropCard({ product: p, slug }) {
     background:
       "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
     boxShadow:
-      "0 20px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)",
+      "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
   };
 
   const heroFrame = {
@@ -229,7 +229,7 @@ function DropCard({ product: p, slug }) {
     padding: "3px",
     background:
       "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
-    boxShadow: "0 14px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,0.7)",
+    boxShadow: "0 14px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7)",
   };
 
   const heroInner = {
@@ -420,7 +420,7 @@ function DropCard({ product: p, slug }) {
         )}
 
         {/* primary button */}
-        {isEnded || !p.priceUrl ? (
+        {isEnded ? (
           <button type="button" style={buttonDisabled} disabled>
             Drop ended
           </button>
@@ -433,7 +433,6 @@ function DropCard({ product: p, slug }) {
     </article>
   );
 }
-
 
 export default function PublicSlugPage() {
   const router = useRouter();

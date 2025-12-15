@@ -8,6 +8,10 @@ const fontStack =
 export default function NewEmailStep() {
   const router = useRouter();
   const { token } = router.query;
+    const [formHeadline, setFormHeadline] = useState("Get first dibs on drops");
+  const [formSubtext, setFormSubtext] = useState(
+    "We’ll only email you about releases. Unsubscribe anytime."
+  );
 
   // Basic state for this step
   const [klaviyoConnected, setKlaviyoConnected] = useState(false);
@@ -15,11 +19,6 @@ export default function NewEmailStep() {
   const [collectName, setCollectName] = useState(true);
   const [klaviyoListId, setKlaviyoListId] = useState('');
   const [launching, setLaunching] = useState(false);
-    // ✅ add these here
-  const [formHeadline, setFormHeadline] = useState('Get first dibs on drops');
-  const [formSubtext, setFormSubtext] = useState(
-    "We’ll only email you about releases. Unsubscribe anytime."
-  );
 
   // Klaviyo lists
   const [lists, setLists] = useState([]);
@@ -262,8 +261,29 @@ export default function NewEmailStep() {
                   <span className="panel-title">Form Preview</span>
                 </div>
 
+<div className="input-group" style={{ marginTop: 8 }}>
+  <label className="sync-label">Headline (shown above the form)</label>
+  <input
+    className="input-field"
+    value={formHeadline}
+    onChange={(e) => setFormHeadline(e.target.value)}
+    placeholder="Get on the list for future drops"
+  />
+</div>
+
+<div className="input-group" style={{ marginTop: 10 }}>
+  <label className="sync-label">Subtext (optional)</label>
+  <input
+    className="input-field"
+    value={formSubtext}
+    onChange={(e) => setFormSubtext(e.target.value)}
+    placeholder="We’ll only email you about releases. Unsubscribe anytime."
+  />
+</div>
+
                 <div className="form-preview">
-                  <h2 className="preview-title">Get Notified About Future Drops</h2>
+                <h2 className="preview-title">{formHeadline || "Get first dibs on drops"}</h2>
+
 
                   {collectName && (
                     <div className="preview-field">

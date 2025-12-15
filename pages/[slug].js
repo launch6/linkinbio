@@ -932,7 +932,20 @@ const canCollectEmail =
             </div>
           </header>
 
-          {/* EMAIL CAPTURE (optional, still full-width) */}
+          {/* PRODUCTS / DROP CARD */}
+          {products.length > 0 && (
+            <section
+              style={{
+                ...fullWidthSection,
+                marginBottom: SECTION_GAP,
+              }}
+            >
+              {products.map((p) => (
+                <DropCard key={p.id} product={p} slug={slug} />
+              ))}
+            </section>
+          )}
+{/* EMAIL CAPTURE (optional, still full-width) */}
           {canCollectEmail && (
             <section
               style={{
@@ -1040,20 +1053,6 @@ const canCollectEmail =
 {(profile?.formSubtext || profile?.emailSubtext || "We’ll only email you about releases. Unsubscribe anytime.").trim()}
 
               </div>
-            </section>
-          )}
-
-          {/* PRODUCTS / DROP CARD */}
-          {products.length > 0 && (
-            <section
-              style={{
-                ...fullWidthSection,
-                marginBottom: SECTION_GAP,
-              }}
-            >
-              {products.map((p) => (
-                <DropCard key={p.id} product={p} slug={slug} />
-              ))}
             </section>
           )}
 

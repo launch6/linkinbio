@@ -416,14 +416,29 @@ const productPayload = {
         }),
       });
 
-      const json = await resp.json().catch(() => ({}));
+const raw = await resp.text().catch(() => "");
+let json = {};
+try {
+  json = raw ? JSON.parse(raw) : {};
+} catch {}
 
-      if (!resp.ok || !json?.ok) {
-        console.error('Failed to save product', json);
-        alert(json?.error || 'Could not save this drop. Try again.');
-        setSaving(false);
-        return;
-      }
+if (!resp.ok || !json?.ok) {
+  console.error("SAVE DROP FAILED", {
+    status: resp.status,
+    statusText: resp.statusText,
+    raw,
+    json,
+  });
+
+  const msg =
+    json?.error ||
+    (raw && raw.slice(0, 180)) ||
+    `Save failed (${resp.status}). Open DevTools → Console.`;
+
+  alert(msg);
+  setSaving(false);
+  return;
+}
 
       goToStep4();
     } catch (err) {

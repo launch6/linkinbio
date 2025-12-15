@@ -52,6 +52,10 @@ export default async function handler(req, res) {
       },
       {
         projection: {
+                    collectName: 1,
+          klaviyoEnabled: 1,
+          formHeadline: 1,
+          formSubtext: 1,
           _id: 1,
           editToken: 1,
           plan: 1,
@@ -134,6 +138,11 @@ export default async function handler(req, res) {
         description: profileDoc.description || profileDoc.bio || "",
 
         collectEmail: !!profileDoc.collectEmail,
+                showForm: !!profileDoc.collectEmail, // alias for the frontend
+        collectName: !!profileDoc.collectName,
+        klaviyoEnabled: !!profileDoc.klaviyoEnabled,
+        formHeadline: profileDoc.formHeadline || "",
+        formSubtext: profileDoc.formSubtext || "",
         klaviyoListId: profileDoc.klaviyoListId || "",
         avatarUrl: profileDoc.avatarUrl || profileDoc.imageUrl || "",
         links,

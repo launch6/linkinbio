@@ -1001,13 +1001,15 @@ const canCollectEmail =
                     inputMode="email"
                     autoComplete="email"
                     style={{
-                      borderRadius: "0.5rem",
-                      backgroundColor: "#020617",
-                      border: "1px solid #3f3f46",
-                      padding: "0.5rem 0.75rem",
-                      fontSize: "0.95rem",
-                      color: "white",
-                    }}
+  borderRadius: "9999px",
+  backgroundColor: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  padding: "0.9rem 1.05rem",
+  fontSize: "0.95rem",
+  color: "white",
+  outline: "none",
+  boxShadow: "none",
+}}
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => {
@@ -1022,17 +1024,18 @@ const canCollectEmail =
                   <button
                     type="submit"
                     disabled={submitting}
-                    style={{
-                      borderRadius: "0.5rem",
-                      border: "1px solid #059669",
-                      padding: "0.55rem 0.9rem",
-                      fontSize: "0.95rem",
-                      fontWeight: 600,
-                      backgroundColor: "transparent",
-                      color: "white",
-                      cursor: "pointer",
-                      opacity: submitting ? 0.6 : 1,
-                    }}
+                  style={{
+  borderRadius: "9999px",
+  border: "1px solid rgba(255,255,255,0.14)",
+  padding: "0.9rem 1.1rem",
+  fontSize: "0.95rem",
+  fontWeight: 700,
+  backgroundColor: "rgba(255,255,255,0.10)",
+  color: "white",
+  cursor: "pointer",
+  opacity: submitting ? 0.6 : 1,
+  whiteSpace: "nowrap",
+}}
                   >
                     {submitting ? "Joining…" : "Join"}
                   </button>

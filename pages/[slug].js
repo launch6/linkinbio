@@ -216,6 +216,7 @@ function DropCard({ product: p, slug }) {
     width: "100%",
     maxWidth: "420px",
     margin: "0 auto 1.5rem",
+    boxSizing: "border-box", // ✅ prevents width+padding overflow
     borderRadius: "28px",
     padding: "20px 18px 22px",
     background:

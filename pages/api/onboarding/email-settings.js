@@ -60,18 +60,21 @@ export default async function handler(req, res) {
       body.klaviyoListId != null ? String(body.klaviyoListId) : "";
     const klaviyoListId = enableForm ? rawListId.trim() : "";
 
+    const formHeadline = String(body.formHeadline || body.emailHeadline || "").trim();
+const formSubtext = String(body.formSubtext || body.emailSubtext || "").trim();
+
+
     const client = await getClient();
     const db = client.db(MONGODB_DB);
     const Profiles = db.collection("profiles");
-
-    const formHeadline = String(body.formHeadline || "").trim().slice(0, 120);
-    const formSubtext = String(body.formSubtext || "").trim().slice(0, 240);
 
     const update = {
       collectEmail: enableForm,
       collectName,
       klaviyoEnabled,
       klaviyoListId: enableForm ? klaviyoListId : "",
+      formHeadline,
+      formSubtext,
       updatedAt: new Date(),
     };
 

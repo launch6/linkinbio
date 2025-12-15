@@ -534,7 +534,9 @@ export default function PublicSlugPage() {
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
   // default: email capture ON unless explicitly disabled
-  const canCollectEmail = profile?.collectEmail !== false;
+const canCollectEmail =
+  profile?.showForm === true ||
+  (profile?.showForm !== false && profile?.collectEmail !== false);
 
   const links = Array.isArray(profile?.links)
     ? profile.links.filter(
@@ -949,7 +951,8 @@ export default function PublicSlugPage() {
                   marginBottom: "0.5rem",
                 }}
               >
-                Get first dibs on drops
+{(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
+
               </div>
               {!subscribed ? (
                 <form
@@ -1034,7 +1037,8 @@ export default function PublicSlugPage() {
                   color: "#737373",
                 }}
               >
-                We’ll only email you about releases. Unsubscribe anytime.
+{(profile?.formSubtext || profile?.emailSubtext || "We’ll only email you about releases. Unsubscribe anytime.").trim()}
+
               </div>
             </section>
           )}

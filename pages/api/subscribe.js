@@ -83,13 +83,13 @@ export default async function handler(req, res) {
         { editToken },
         { projection: { _id: 0, editToken: 1, collectEmail: 1, klaviyoListId: 1 } }
       );
-    } else if (publicSlug) {
-      profile = await Profiles.findOne(
-        { publicSlug },
-        { projection: { _id: 0, editToken: 1, collectEmail: 1, klaviyoListId: 1 } }
-      );
-      if (profile?.editToken) editToken = profile.editToken; // normalize to editToken downstream
-    }
+} else if (publicSlug) {
+  profile = await Profiles.findOne(
+    { $or: [{ publicSlug }, { slug: publicSlug }] },
+    { projection: { _id: 0, editToken: 1, collectEmail: 1, klaviyoListId: 1 } }
+  );
+  if (profile?.editToken) editToken = profile.editToken; // normalize to editToken downstream
+}
 
     if (!profile) {
       return res.status(404).json({ ok: false, error: "profile_not_found" });

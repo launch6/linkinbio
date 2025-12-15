@@ -2,10 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
-const [formHeadline, setFormHeadline] = useState('Get first dibs on drops');
-const [formSubtext, setFormSubtext] = useState("We’ll only email you about releases. Unsubscribe anytime.");
-
-
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
@@ -19,6 +15,11 @@ export default function NewEmailStep() {
   const [collectName, setCollectName] = useState(true);
   const [klaviyoListId, setKlaviyoListId] = useState('');
   const [launching, setLaunching] = useState(false);
+    // ✅ add these here
+  const [formHeadline, setFormHeadline] = useState('Get first dibs on drops');
+  const [formSubtext, setFormSubtext] = useState(
+    "We’ll only email you about releases. Unsubscribe anytime."
+  );
 
   // Klaviyo lists
   const [lists, setLists] = useState([]);

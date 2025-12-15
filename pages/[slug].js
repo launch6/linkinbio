@@ -996,49 +996,63 @@ const canCollectEmail =
   />
 )}
 
-                  <input
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    style={{
-  borderRadius: "9999px",
-  backgroundColor: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  padding: "0.9rem 1.05rem",
-  fontSize: "0.95rem",
-  color: "white",
-  outline: "none",
-  boxShadow: "none",
-}}
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (emailErr) setEmailErr("");
-                    }}
-                    aria-invalid={!!emailErr}
-                    aria-describedby={
-                      emailErr ? "email-error" : undefined
-                    }
-                  />
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                  style={{
-  borderRadius: "9999px",
-  border: "1px solid rgba(255,255,255,0.14)",
-  padding: "0.9rem 1.1rem",
-  fontSize: "0.95rem",
-  fontWeight: 700,
-  backgroundColor: "rgba(255,255,255,0.10)",
-  color: "white",
-  cursor: "pointer",
-  opacity: submitting ? 0.6 : 1,
-  whiteSpace: "nowrap",
-}}
-                  >
-                    {submitting ? "Joining…" : "Join"}
-                  </button>
+<div
+  style={{
+    display: "flex",
+    alignItems: "stretch",
+    width: "100%",
+    maxWidth: "520px",
+    borderRadius: "999px",
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.14)",
+  }}
+>
+  <input
+    type="email"
+    inputMode="email"
+    autoComplete="email"
+    style={{
+      flex: 1,
+      backgroundColor: "transparent",
+      border: "none",
+      outline: "none",
+      boxShadow: "none",
+      padding: "0.8rem 1rem",
+      fontSize: "0.95rem",
+      color: "white",
+      minWidth: 0,
+    }}
+    placeholder="you@example.com"
+    value={email}
+    onChange={(e) => {
+      setEmail(e.target.value);
+      if (emailErr) setEmailErr("");
+    }}
+    aria-invalid={!!emailErr}
+    aria-describedby={emailErr ? "email-error" : undefined}
+  />
+  <button
+    type="submit"
+    disabled={submitting}
+    style={{
+      border: "none",
+      outline: "none",
+      boxShadow: "none",
+      padding: "0.8rem 1.05rem",
+      fontSize: "0.95rem",
+      fontWeight: 700,
+      backgroundColor: "#10b981",
+      color: "#06281a",
+      cursor: "pointer",
+      opacity: submitting ? 0.6 : 1,
+      whiteSpace: "nowrap",
+    }}
+  >
+    {submitting ? "Joining…" : "Join"}
+  </button>
+</div>
+
                 </form>
               ) : (
                 <div

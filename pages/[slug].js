@@ -114,17 +114,12 @@ function DropCard({ product: p, slug }) {
     return () => clearInterval(id);
   }, []);
 
-// Support image from multiple fields (Step 3 preview + older records)
-const imageUrl =
-  p.imageUrl ||
-  p.image ||
-  p.imagePreview ||
-  p.heroImageUrl ||
-  null;
-
+  // --- basic fields -------------------------------------------------------
+  const imageUrl = p.imageUrl || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 
+  // price display: try a few common fields
   let priceDisplay =
     p.priceDisplay ||
     p.priceFormatted ||
@@ -163,14 +158,14 @@ const imageUrl =
 
   const isEnded = soldOut || phase === "ended";
 
-  // --- countdown display --------------------------------------------------
+  // --- countdown (Days : Hours : Minutes : Seconds) -----------------------
   let showTimer = false;
   let timerTitle = "";
-  let showDays = false;
-  let d = "00",
-    h = "00",
-    m = "00",
-    s = "00";
+  let mode = "hours"; // "hours" = H:M:S, "days" = D:H:M:S
+  let d = "0";
+  let h = "00";
+  let m = "00";
+  let s = "00";
 
   if (p.showTimer && (startsAt || endsAt)) {
     let target = null;
@@ -189,24 +184,23 @@ const imageUrl =
       const diffMs = target.getTime() - now.getTime();
       if (diffMs > 0) {
         showTimer = true;
+
         const totalSeconds = Math.floor(diffMs / 1000);
         const days = Math.floor(totalSeconds / 86400);
-        const hours = Math.floor((totalSeconds % 86400) / 3600);
-        const mins = Math.floor((totalSeconds % 3600) / 60);
-        const secs = totalSeconds % 60;
+        const remAfterDays = totalSeconds % 86400;
+        const hours = Math.floor(remAfterDays / 3600);
+        const remAfterHours = remAfterDays % 3600;
+        const mins = Math.floor(remAfterHours / 60);
+        const secs = remAfterHours % 60;
 
         if (days > 0) {
-          showDays = true;
-          d = String(days).padStart(2, "0");
-          h = String(hours).padStart(2, "0");
-          m = String(mins).padStart(2, "0");
-          s = String(secs).padStart(2, "0");
-        } else {
-          showDays = false;
-          h = String(hours).padStart(2, "0");
-          m = String(mins).padStart(2, "0");
-          s = String(secs).padStart(2, "0");
+          mode = "days";
+          d = String(days); // days can be 1, 2, 10, etc.
         }
+
+        h = String(hours).padStart(2, "0");
+        m = String(mins).padStart(2, "0");
+        s = String(secs).padStart(2, "0");
       }
     }
   }
@@ -220,13 +214,14 @@ const imageUrl =
   // --- styles -------------------------------------------------------------
   const outer = {
     width: "100%",
+    maxWidth: "420px",
     margin: "0 auto 1.5rem",
     borderRadius: "28px",
     padding: "20px 18px 22px",
     background:
       "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
     boxShadow:
-      "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+      "0 20px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04)",
   };
 
   const heroFrame = {
@@ -234,8 +229,7 @@ const imageUrl =
     padding: "3px",
     background:
       "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
-    boxShadow:
-      "0 14px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7)",
+    boxShadow: "0 14px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,0.7)",
   };
 
   const heroInner = {
@@ -255,7 +249,8 @@ const imageUrl =
 
   const heroPlaceholder = {
     width: "100%",
-    minHeight: "220px",
+    height: "100%",
+    minHeight: "200px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -370,7 +365,6 @@ const imageUrl =
     opacity: 0.7,
   };
 
-  // -----------------------------------------------------------------
   return (
     <article style={outer}>
       {/* hero */}
@@ -403,7 +397,7 @@ const imageUrl =
             {showTimer && (
               <>
                 <div style={timerValues}>
-                  {showDays && (
+                  {mode === "days" && (
                     <>
                       <span style={timerValue}>{d}</span>
                       <span style={timerSeparator}>:</span>
@@ -416,7 +410,7 @@ const imageUrl =
                   <span style={timerValue}>{s}</span>
                 </div>
                 <p style={timerUnits}>
-                  {showDays
+                  {mode === "days"
                     ? "Days · Hours · Minutes · Seconds"
                     : "Hours · Minutes · Seconds"}
                 </p>
@@ -425,7 +419,8 @@ const imageUrl =
           </div>
         )}
 
-        {isEnded ? (
+        {/* primary button */}
+        {isEnded || !p.priceUrl ? (
           <button type="button" style={buttonDisabled} disabled>
             Drop ended
           </button>
@@ -438,6 +433,7 @@ const imageUrl =
     </article>
   );
 }
+
 
 export default function PublicSlugPage() {
   const router = useRouter();

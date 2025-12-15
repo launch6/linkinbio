@@ -447,6 +447,7 @@ export default function PublicSlugPage() {
 
   // email capture UI state
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [emailErr, setEmailErr] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
@@ -643,6 +644,7 @@ const canCollectEmail =
         body: JSON.stringify({
           publicSlug: slug,
           email,
+          name: fullName,
           ref:
             typeof window !== "undefined" ? window.location.href : "",
         }),
@@ -976,6 +978,24 @@ const canCollectEmail =
                     gap: "0.75rem",
                   }}
                 >
+                  {profile?.collectName && (
+  <input
+    type="text"
+    autoComplete="name"
+    style={{
+      borderRadius: "0.5rem",
+      backgroundColor: "#020617",
+      border: "1px solid #3f3f46",
+      padding: "0.5rem 0.75rem",
+      fontSize: "0.95rem",
+      color: "white",
+    }}
+    placeholder="Full name (optional)"
+    value={fullName}
+    onChange={(e) => setFullName(e.target.value)}
+  />
+)}
+
                   <input
                     type="email"
                     inputMode="email"

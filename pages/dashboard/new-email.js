@@ -2,6 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 
+const [formHeadline, setFormHeadline] = useState('Get first dibs on drops');
+const [formSubtext, setFormSubtext] = useState("We’ll only email you about releases. Unsubscribe anytime.");
+
+
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
@@ -108,6 +112,8 @@ export default function NewEmailStep() {
               klaviyoListId: klaviyoConnected ? klaviyoListId || '' : '',
               showForm: !!enableForm,
               collectName,
+              formHeadline,
+              formSubtext,
             }),
           });
 

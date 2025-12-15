@@ -334,21 +334,22 @@ function DropCard({ product: p, slug }) {
     margin: 0,
   };
 
-  const buttonBase = {
-    width: "100%",
-    borderRadius: "999px",
-    padding: "0.8rem 1.1rem",
-    fontSize: "0.98rem",
-    fontWeight: 600,
-    border: "none",
-    cursor: "pointer",
-    textDecoration: "none",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: "0.1rem",
-    transition: "transform 0.08s ease, boxShadow 0.08s ease, opacity 0.12s",
-  };
+const buttonBase = {
+  width: "100%",
+  borderRadius: "999px",
+  padding: "0.8rem 1.1rem",
+  fontSize: "0.98rem",
+  fontWeight: 600,
+  border: "none",
+  cursor: "pointer",
+  textDecoration: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  margin: "0.1rem auto 0",
+  boxSizing: "border-box",
+  transition: "transform 0.08s ease, boxShadow 0.08s ease, opacity 0.12s",
+};
 
   const buttonActive = {
     ...buttonBase,

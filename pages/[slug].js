@@ -1093,16 +1093,7 @@ const canCollectEmail =
                   {emailErr}
                 </div>
               ) : null}
-              <div
-                style={{
-                  marginTop: "0.35rem",
-                  fontSize: "0.75rem",
-                  color: "#737373",
-                }}
-              >
-{(profile?.formSubtext || profile?.emailSubtext || "We’ll only email you about releases. Unsubscribe anytime.").trim()}
 
-              </div>
             </section>
           )}
 

@@ -534,6 +534,7 @@ export default function PublicSlugPage() {
 
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
+  
   // default: email capture ON unless explicitly disabled
 const canCollectEmail =
   profile?.showForm === true ||
@@ -948,13 +949,23 @@ const canCollectEmail =
             </section>
           )}
 {/* EMAIL CAPTURE (optional, still full-width) */}
-          {canCollectEmail && (
-            <section
-  style={{
-    ...fullWidthSection,
-    marginBottom: SECTION_GAP,
-  }}
->
+{canCollectEmail && (
+  <section
+    style={{
+      width: "100%",
+      maxWidth: "420px",
+      margin: `0 auto ${SECTION_GAP}`,
+      padding: "20px 18px 22px",
+      borderRadius: "28px",
+      textAlign: "center",
+      background:
+        "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
+      boxShadow:
+        "0 20px 60px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.06)",
+      boxSizing: "border-box",
+    }}
+  >
+
 <h2
   style={{
     width: "100%",

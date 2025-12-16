@@ -61,6 +61,7 @@ export default async function handler(req, res) {
 
     const email = String(body.email || "").trim().toLowerCase();
     const ref = typeof body.ref === "string" ? body.ref : "";
+const name = String(body.name || "").trim();
 
     // Accept editToken OR publicSlug (and infer slug from ref)
     let editToken = String(body.editToken || "").trim();
@@ -120,7 +121,7 @@ export default async function handler(req, res) {
       });
     } catch {}
 
-// Optional Klaviyo (DIAGNOSTIC — makes failures visible)
+// Optional Klaviyo (STRICT — fail response if Klaviyo fails so UI never lies)
 let klaviyo = { attempted: false, ok: false, status: null, reason: null };
 
 if (!profile?.klaviyoListId) {
@@ -130,41 +131,105 @@ if (!profile?.klaviyoListId) {
 } else {
   klaviyo.attempted = true;
 
-  try {
-    // best-effort name split (safe if blank)
-    const rawName = (name || "").trim();
-    const parts = rawName ? rawName.split(/\s+/) : [];
-    const firstName = parts[0] || "";
-    const lastName = parts.slice(1).join(" ").trim();
+  // name split (safe)
+  const rawName = (name || "").trim();
+  const parts = rawName ? rawName.split(/\s+/) : [];
+  const firstName = parts[0] || "";
+  const lastName = parts.slice(1).join(" ").trim();
+  const consentedAt = new Date().toISOString();
 
-    const profilePayload = { email };
-    if (firstName) profilePayload.first_name = firstName;
-    if (lastName) profilePayload.last_name = lastName;
+  // Attempt A (JSON:API style — aligns with current docs examples)
+  const payloadA = {
+    data: {
+      type: "profile-subscription-bulk-create-job",
+      attributes: {
+        list_id: profile.klaviyoListId,
+        profiles: {
+          data: [
+            {
+              type: "profile",
+              attributes: {
+                email,
+                ...(firstName ? { first_name: firstName } : {}),
+                ...(lastName ? { last_name: lastName } : {}),
+                subscriptions: {
+                  email: {
+                    marketing: {
+                      consent: "SUBSCRIBED",
+                      consented_at: consentedAt,
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+        historical_import: true,
+      },
+    },
+  };
 
-    const kRes = await fetch(
-      `https://a.klaviyo.com/api/v2/list/${encodeURIComponent(
-        profile.klaviyoListId
-      )}/subscribe?api_key=${encodeURIComponent(KLAVIYO_API_KEY)}`,
+  async function callKlaviyo(body) {
+    const r = await fetch(
+      "https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profiles: [profilePayload] }),
+        headers: {
+          Authorization: `Klaviyo-API-Key ${KLAVIYO_API_KEY}`,
+          accept: "application/vnd.api+json",
+          "content-type": "application/vnd.api+json",
+          // use a pinned revision; you can upgrade later
+          revision: "2024-10-15",
+        },
+        body: JSON.stringify(body),
       }
     );
 
-    klaviyo.status = kRes.status;
-    const kText = await kRes.text().catch(() => "");
-    klaviyo.ok = kRes.ok;
+    const text = await r.text().catch(() => "");
+    return { r, text };
+  }
 
-    if (!kRes.ok) {
-      klaviyo.reason = kText ? kText.slice(0, 240) : "klaviyo_non_200";
+  let resp = await callKlaviyo(payloadA);
+  klaviyo.status = resp.r.status;
+  klaviyo.ok = resp.r.ok;
+
+  if (!resp.r.ok) {
+    // Attempt B (older, widely-used shape) as a fallback
+    const payloadB = {
+      data: {
+        type: "profile-subscription-bulk-create-job",
+        attributes: {
+          list_id: profile.klaviyoListId,
+          custom_source: "Launch6 public page",
+          subscriptions: [
+            {
+              channels: { email: ["MARKETING"] },
+              email,
+            },
+          ],
+        },
+      },
+    };
+
+    const resp2 = await callKlaviyo(payloadB);
+    klaviyo.status = resp2.r.status;
+    klaviyo.ok = resp2.r.ok;
+
+    if (!resp2.r.ok) {
+      klaviyo.reason = (resp2.text || resp.text || "klaviyo_non_2xx").slice(
+        0,
+        240
+      );
     }
-  } catch (e) {
-    klaviyo.reason = e?.message || "klaviyo_fetch_error";
   }
 }
 
-  return res.status(200).json({ ok: true, klaviyo });
+// If we attempted Klaviyo and it failed, return non-200 so the UI shows an error
+if (klaviyo.attempted && !klaviyo.ok) {
+  return res.status(502).json({ ok: false, error: "klaviyo_failed", klaviyo });
+}
+
+return res.status(200).json({ ok: true, klaviyo });
   } catch (err) {
     console.error("subscribe ERROR", err?.message);
     return res.status(500).json({ ok: false, error: "server_error" });

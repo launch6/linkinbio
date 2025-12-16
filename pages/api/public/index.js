@@ -21,11 +21,18 @@ function noStore(res) {
   res.setHeader("Vercel-CDN-Cache-Control", "no-store");
 }
 
+function send(res, status, body) {
+  noStore(res);
+  return res.status(status).json(body);
+}
+
+// --- minimal defang + url validation (preserves production data:image/ images) ---
 function defangText(v, maxLen = 5000) {
   let s = typeof v === "string" ? v : v == null ? "" : String(v);
-  // Drop control chars (keep newline/tab), cap length
-  s = s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").slice(0, maxLen);
-  // Remove angle brackets to neutralize tag injection without HTML-encoding UI text
+  s = s
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .slice(0, maxLen);
+  // Neutralize tag injection without changing frontend rendering
   s = s.replace(/[<>]/g, "");
   return s.trim();
 }
@@ -42,7 +49,7 @@ function isDataImage(s) {
   return typeof s === "string" && s.startsWith("data:image/");
 }
 
-// For image src fields: allow https/http, allow /relative, allow data:image/ (production uses this)
+// For image src fields: allow http/https, allow /relative, allow data:image/ (production uses this)
 function sanitizeImageSrc(v) {
   const s = typeof v === "string" ? v.trim() : "";
   if (!s) return "";
@@ -52,45 +59,7 @@ function sanitizeImageSrc(v) {
   return "";
 }
 
-// For clickable href fields (links, priceUrl): allow http/https only; block javascript:/data:
-function sanitizeHref(v) {
-  const s = typeof v === "string" ? v.trim() : "";
-  if (!s) return "";
-  if (isHttpUrl(s)) return s;
-  return "";
-}
-function defangText(v, maxLen = 5000) {
-  let s = typeof v === "string" ? v : v == null ? "" : String(v);
-  // Drop control chars (keep newline/tab), cap length
-  s = s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").slice(0, maxLen);
-  // Remove angle brackets to neutralize tag injection without HTML-encoding UI text
-  s = s.replace(/[<>]/g, "");
-  return s.trim();
-}
-
-function isHttpUrl(s) {
-  return typeof s === "string" && (s.startsWith("http://") || s.startsWith("https://"));
-}
-
-function isRelativePath(s) {
-  return typeof s === "string" && s.startsWith("/") && !s.startsWith("//");
-}
-
-function isDataImage(s) {
-  return typeof s === "string" && s.startsWith("data:image/");
-}
-
-// For image src fields: allow https/http, allow /relative, allow data:image/ (production uses this)
-function sanitizeImageSrc(v) {
-  const s = typeof v === "string" ? v.trim() : "";
-  if (!s) return "";
-  if (isHttpUrl(s)) return s;
-  if (isRelativePath(s)) return s;
-  if (isDataImage(s)) return s;
-  return "";
-}
-
-// For clickable href fields (links, priceUrl): allow http/https only; block javascript:/data:
+// For clickable href fields (links, priceUrl): allow http/https only (blocks javascript:, data:, relative)
 function sanitizeHref(v) {
   const s = typeof v === "string" ? v.trim() : "";
   if (!s) return "";
@@ -119,12 +88,10 @@ export default async function handler(req, res) {
 
     // 1) Find profile by publicSlug or slug
     const profileDoc = await Profiles.findOne(
-      {
-        $or: [{ publicSlug: rawSlug }, { slug: rawSlug }],
-      },
+      { $or: [{ publicSlug: rawSlug }, { slug: rawSlug }] },
       {
         projection: {
-                    collectName: 1,
+          collectName: 1,
           klaviyoEnabled: 1,
           formHeadline: 1,
           formSubtext: 1,
@@ -144,7 +111,7 @@ export default async function handler(req, res) {
           social: 1,
           avatarUrl: 1,
           imageUrl: 1,
-          products: 1, // 👈 important
+          products: 1, // important
         },
       }
     );
@@ -154,52 +121,48 @@ export default async function handler(req, res) {
     }
 
     // 2) Load *published* products from this profile
-    const productsRaw = Array.isArray(profileDoc.products)
-      ? profileDoc.products
+    const productsRaw = Array.isArray(profileDoc.products) ? profileDoc.products : [];
+
+    const products = productsRaw
+      // treat products with no `published` flag as published
+      .filter((p) => p && (p.published === undefined ? true : !!p.published))
+      .map((p) => ({
+        id: String(p.id || ""),
+        title: defangText(p.title || "", 200),
+        description: defangText(p.description || "", 5000),
+        imageUrl: sanitizeImageSrc(p.imageUrl || ""),
+        priceUrl: sanitizeHref(p.priceUrl || ""),
+        priceCents: typeof p.priceCents === "number" ? p.priceCents : null,
+        priceDisplay: defangText(p.priceDisplay || "", 80),
+        priceText: defangText(p.priceText || "", 80),
+        dropStartsAt: p.dropStartsAt || null,
+        dropEndsAt: p.dropEndsAt || null,
+        showTimer: !!p.showTimer,
+        showInventory: p.showInventory === undefined ? true : !!p.showInventory,
+        unitsLeft: typeof p.unitsLeft === "number" ? p.unitsLeft : null,
+        unitsTotal: typeof p.unitsTotal === "number" ? p.unitsTotal : null,
+        buttonText: defangText(p.buttonText || "", 80),
+        published: p.published === undefined ? true : !!p.published,
+      }));
+
+    // 3) Normalize links (http/https only)
+    const links = Array.isArray(profileDoc.links)
+      ? profileDoc.links
+          .map((l) => {
+            const url = sanitizeHref(l?.url || "");
+            if (!url) return null;
+            return {
+              ...l,
+              label: defangText(l?.label || "", 80),
+              url,
+            };
+          })
+          .filter(Boolean)
       : [];
-
-const products = productsRaw
-  // treat products with no `published` flag as published
-  .filter((p) => p && (p.published === undefined ? true : !!p.published))
-  .map((p) => ({
-    id: String(p.id || ""),
-    title: defangText(p.title || "", 200),
-    description: defangText(p.description || "", 5000),
-    imageUrl: sanitizeImageSrc(p.imageUrl || ""),
-    priceUrl: sanitizeHref(p.priceUrl || ""),
-    priceCents: typeof p.priceCents === "number" ? p.priceCents : null,
-    priceDisplay: defangText(p.priceDisplay || "", 80),
-    priceText: defangText(p.priceText || "", 80),
-    dropStartsAt: p.dropStartsAt || null,
-    dropEndsAt: p.dropEndsAt || null,
-    showTimer: !!p.showTimer,
-    showInventory: p.showInventory === undefined ? true : !!p.showInventory,
-    unitsLeft: typeof p.unitsLeft === "number" ? p.unitsLeft : null,
-    unitsTotal: typeof p.unitsTotal === "number" ? p.unitsTotal : null,
-    buttonText: defangText(p.buttonText || "", 80),
-    published: p.published === undefined ? true : !!p.published,
-  }));
-
-    // Normalized links (only keep ones with a URL)
-const links = Array.isArray(profileDoc.links)
-  ? profileDoc.links
-      .map((l) => {
-        const url = sanitizeHref(l?.url || "");
-        if (!url) return null;
-        return {
-          ...l,
-          label: defangText(l?.label || "", 80),
-          url,
-        };
-      })
-      .filter(Boolean)
-  : [];
-
 
     return send(res, 200, {
       ok: true,
-      
-profile: {
+      profile: {
         displayName: defangText(profileDoc.displayName || profileDoc.name || "", 120),
         name: defangText(profileDoc.name || "", 120),
         publicSlug: defangText(profileDoc.publicSlug || profileDoc.slug || rawSlug, 80),
@@ -207,7 +170,7 @@ profile: {
         status: defangText(profileDoc.status || "active", 40),
         plan: defangText(profileDoc.plan || "free", 40),
 
-        // 🔥 KEY BIT: bring description back for old + new records
+        // bring description back for old + new records
         bio: defangText(profileDoc.bio || profileDoc.description || "", 5000),
         description: defangText(profileDoc.description || profileDoc.bio || "", 5000),
 
@@ -222,7 +185,6 @@ profile: {
         links,
         social: profileDoc.social || {},
       },
-
       products,
     });
   } catch (err) {

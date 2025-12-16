@@ -136,7 +136,8 @@ if (!profile?.klaviyoListId) {
   const parts = rawName ? rawName.split(/\s+/) : [];
   const firstName = parts[0] || "";
   const lastName = parts.slice(1).join(" ").trim();
-  const consentedAt = new Date().toISOString();
+  const consentedAt = new Date(Date.now() - 5000).toISOString(); // must be in the past when historical_import=true
+
 
   // Attempt A (JSON:API style — aligns with current docs examples)
   const payloadA = {
@@ -224,12 +225,17 @@ if (!profile?.klaviyoListId) {
   }
 }
 
-// If we attempted Klaviyo and it failed, return non-200 so the UI shows an error
-if (klaviyo.attempted && !klaviyo.ok) {
+// STRICT: never return ok:true unless Klaviyo is configured AND succeeded
+if (!klaviyo.attempted) {
+  return res.status(502).json({ ok: false, error: "klaviyo_not_configured", klaviyo });
+}
+
+if (!klaviyo.ok) {
   return res.status(502).json({ ok: false, error: "klaviyo_failed", klaviyo });
 }
 
 return res.status(200).json({ ok: true, klaviyo });
+
   } catch (err) {
     console.error("subscribe ERROR", err?.message);
     return res.status(500).json({ ok: false, error: "server_error" });

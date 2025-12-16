@@ -985,15 +985,11 @@ const canCollectEmail =
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}
-style={{
-  width: "100%",
-  borderRadius: "0.5rem",
-  backgroundColor: "#020617",
-  border: "1px solid #3f3f46",
-  padding: "0.6rem 0.85rem",
-  fontSize: "0.95rem",
-  color: "white",
-}}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                  }}
                 >
                   {profile?.collectName && (
   <input

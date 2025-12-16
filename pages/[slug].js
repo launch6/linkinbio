@@ -955,20 +955,20 @@ const canCollectEmail =
     marginBottom: SECTION_GAP,
   }}
 >
-  <h2
-    style={{
-      width: "100%",
-      maxWidth: "420px",
-      margin: "0 auto 0.9rem",
-      textAlign: "center",
-      fontSize: "2.15rem",
-      fontWeight: 800,
-      lineHeight: 1.1,
-      letterSpacing: "-0.02em",
-    }}
-  >
-    {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
-  </h2>
+<h2
+  style={{
+    width: "100%",
+    maxWidth: "420px",
+    margin: "0 auto 0.25rem",
+    textAlign: "center",
+    fontSize: "1.4rem",
+    fontWeight: 700,
+    lineHeight: 1.2,
+  }}
+>
+  {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
+</h2>
+
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}

@@ -950,48 +950,25 @@ const canCollectEmail =
 {/* EMAIL CAPTURE (optional, still full-width) */}
           {canCollectEmail && (
             <section
-              style={{
-                ...fullWidthSection,
-                borderRadius: "1rem",
-                border: "1px solid #27272a",
-                padding: "1.25rem",
-                textAlign: "left",
-                marginBottom: SECTION_GAP,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "1.05rem",
-                  fontWeight: 600,
-                  marginBottom: "0.5rem",
-                }}
-              >
-<span
   style={{
-    width: "100%",
-    maxWidth: "560px",
-    margin: "0 auto",
-    display: "grid",
-    gap: "0.75rem",
+    ...fullWidthSection,
+    marginBottom: SECTION_GAP,
   }}
 >
-<div
-  style={{
-    textAlign: "center",
-    fontSize: "2rem",
-    fontWeight: 800,
-    lineHeight: 1.1,
-    margin: "0 0 0.85rem 0",
-    letterSpacing: "-0.02em",
-  }}
->
-  {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
-</div>
-
-</span>
-
-
-              </div>
+  <h2
+    style={{
+      width: "100%",
+      maxWidth: "420px",
+      margin: "0 auto 0.9rem",
+      textAlign: "center",
+      fontSize: "2.15rem",
+      fontWeight: 800,
+      lineHeight: 1.1,
+      letterSpacing: "-0.02em",
+    }}
+  >
+    {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
+  </h2>
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}
@@ -1006,12 +983,18 @@ const canCollectEmail =
     type="text"
     autoComplete="name"
     style={{
-      borderRadius: "0.5rem",
-      backgroundColor: "#020617",
-      border: "1px solid #3f3f46",
-      padding: "0.5rem 0.75rem",
-      fontSize: "0.95rem",
+      width: "100%",
+      maxWidth: "420px",
+      margin: "0 auto",
+      borderRadius: "9999px",
+      backgroundColor: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      padding: "0.9rem 1.1rem",
+      fontSize: "1.05rem",
       color: "white",
+      outline: "none",
+      boxShadow: "none",
+      boxSizing: "border-box",
     }}
     placeholder="Full name (optional)"
     value={fullName}
@@ -1022,12 +1005,15 @@ const canCollectEmail =
 <div
   style={{
     width: "100%",
+    maxWidth: "420px",
+    margin: "0 auto",
     display: "flex",
     alignItems: "stretch",
     borderRadius: "9999px",
     backgroundColor: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.12)",
     overflow: "hidden",
+    boxSizing: "border-box",
   }}
 >
   <input
@@ -1068,8 +1054,8 @@ const canCollectEmail =
       opacity: submitting ? 0.75 : 1,
 
       // TEMP: matches BUY NOW look (replace these 2 lines with the exact BUY NOW button styles in this file)
-      backgroundImage: "linear-gradient(90deg, #6366f1, #a855f7)",
-      boxShadow: "0 0 24px rgba(99,102,241,0.35)",
+backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
+boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
     }}
   >
     {submitting ? "Joining…" : "Join"}

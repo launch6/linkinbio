@@ -939,19 +939,11 @@ const canCollectEmail =
           {/* PRODUCTS / DROP CARD */}
           {products.length > 0 && (
             <section
-  style={{
-    ...fullWidthSection,
-    marginBottom: SECTION_GAP,
-
-    // timer-style outlined card
-    borderRadius: "18px",
-    border: "1px solid rgba(148,163,184,0.4)",
-    background: "#0b0c17",
-    padding: "1.25rem 1.25rem 1.1rem",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.75)",
-  }}
->
-
+              style={{
+                ...fullWidthSection,
+                marginBottom: SECTION_GAP,
+              }}
+            >
               {products.map((p) => (
                 <DropCard key={p.id} product={p} slug={slug} />
               ))}

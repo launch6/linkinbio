@@ -120,21 +120,51 @@ export default async function handler(req, res) {
       });
     } catch {}
 
-    // Optional Klaviyo (best-effort)
-    if (profile.klaviyoListId && KLAVIYO_API_KEY) {
-      try {
-        await fetch(
-          `https://a.klaviyo.com/api/v2/list/${encodeURIComponent(profile.klaviyoListId)}/subscribe?api_key=${encodeURIComponent(KLAVIYO_API_KEY)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ profiles: [{ email }] }),
-          }
-        ).catch(() => null);
-      } catch {}
-    }
+// Optional Klaviyo (DIAGNOSTIC — makes failures visible)
+let klaviyo = { attempted: false, ok: false, status: null, reason: null };
 
-    return res.status(200).json({ ok: true, upserted: !!upRes?.upsertedId });
+if (!profile?.klaviyoListId) {
+  klaviyo.reason = "missing_klaviyo_list_id_on_profile";
+} else if (!KLAVIYO_API_KEY) {
+  klaviyo.reason = "missing_KLAVIYO_API_KEY_env";
+} else {
+  klaviyo.attempted = true;
+
+  try {
+    // best-effort name split (safe if blank)
+    const rawName = (name || "").trim();
+    const parts = rawName ? rawName.split(/\s+/) : [];
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ").trim();
+
+    const profilePayload = { email };
+    if (firstName) profilePayload.first_name = firstName;
+    if (lastName) profilePayload.last_name = lastName;
+
+    const kRes = await fetch(
+      `https://a.klaviyo.com/api/v2/list/${encodeURIComponent(
+        profile.klaviyoListId
+      )}/subscribe?api_key=${encodeURIComponent(KLAVIYO_API_KEY)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profiles: [profilePayload] }),
+      }
+    );
+
+    klaviyo.status = kRes.status;
+    const kText = await kRes.text().catch(() => "");
+    klaviyo.ok = kRes.ok;
+
+    if (!kRes.ok) {
+      klaviyo.reason = kText ? kText.slice(0, 240) : "klaviyo_non_200";
+    }
+  } catch (e) {
+    klaviyo.reason = e?.message || "klaviyo_fetch_error";
+  }
+}
+
+  return res.status(200).json({ ok: true, klaviyo });
   } catch (err) {
     console.error("subscribe ERROR", err?.message);
     return res.status(500).json({ ok: false, error: "server_error" });

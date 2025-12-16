@@ -959,7 +959,10 @@ const canCollectEmail =
   style={{
     width: "100%",
     maxWidth: "420px",
-    margin: "0 auto 0.25rem",
+    marginTop: "-0.25rem",
+    marginRight: "auto",
+    marginLeft: "auto",
+    marginBottom: "0.95rem",
     textAlign: "center",
     fontSize: "1.4rem",
     fontWeight: 700,

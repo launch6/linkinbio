@@ -966,7 +966,20 @@ const canCollectEmail =
                   marginBottom: "0.5rem",
                 }}
               >
-{(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
+<span
+  style={{
+    display: "block",
+    textAlign: "center",
+    fontSize: "1.6rem",
+    fontWeight: 800,
+    lineHeight: 1.15,
+    letterSpacing: "-0.01em",
+    marginBottom: "0.9rem",
+  }}
+>
+  {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
+</span>
+
 
               </div>
               {!subscribed ? (

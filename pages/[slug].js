@@ -961,8 +961,9 @@ const canCollectEmail =
       textAlign: "center",
       background:
         "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
-      boxShadow:
-        "0 20px 60px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.06)",
+        border: "1px solid rgba(148,163,184,0.4)",
+boxShadow: "0 20px 60px rgba(0,0,0,0.75)",
+
       boxSizing: "border-box",
     }}
   >

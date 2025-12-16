@@ -19,93 +19,14 @@ function noStore(res) {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Vercel-CDN-Cache-Control", "no-store");
-  res.setHeader("x-public-version", "v1-published-sanitize");
 }
 
-function safeString(v, maxLen = 2000) {
-  if (typeof v !== "string") return "";
-  const s = v.replace(/[\u0000-\u001F\u007F]/g, "").trim(); // strip control chars
-  return s.length > maxLen ? s.slice(0, maxLen) : s;
+function send(res, status, body) {
+  noStore(res);
+  return res.status(status).json(body);
 }
 
-// React already escapes string output, so do NOT HTML-escape to &amp; etc.
-// Instead, strip tags to prevent any stored HTML from being replayed elsewhere.
-function stripTags(s) {
-  return s.replace(/<[^>]*>/g, "");
-}
-
-function safeText(v, maxLen = 2000) {
-  return stripTags(safeString(v, maxLen));
-}
-
-function safeUrl(v) {
-  const s = safeString(v, 2048);
-  if (!s) return "";
-  try {
-    const u = new URL(s);
-    const p = u.protocol.toLowerCase();
-    if (p !== "http:" && p !== "https:") return "";
-    return u.toString();
-  } catch {
-    return "";
-  }
-}
-
-function sanitizeLinks(arr) {
-  if (!Array.isArray(arr)) return [];
-  return arr
-    .map((l) => {
-      if (!l || typeof l !== "object") return null;
-      const url = safeUrl(l.url);
-      if (!url) return null;
-      return {
-        id: safeString(l.id || "", 120) || undefined,
-        label: safeText(l.label || "", 160) || undefined,
-        url,
-      };
-    })
-    .filter(Boolean);
-}
-
-function sanitizeSocial(social) {
-  const s = social && typeof social === "object" ? social : {};
-  return {
-    instagram: safeUrl(s.instagram),
-    facebook: safeUrl(s.facebook),
-    tiktok: safeUrl(s.tiktok),
-    youtube: safeUrl(s.youtube),
-    x: safeUrl(s.x),
-    website: safeUrl(s.website),
-  };
-}
-
-function sanitizeProduct(p) {
-  const obj = p && typeof p === "object" ? p : {};
-  const imageUrl = safeUrl(obj.imageUrl);
-
-  // Keep common fields your UI expects; strip any HTML from text.
-  return {
-    id: safeString(obj.id || obj._id || "", 120),
-    published: !!obj.published,
-    title: safeText(obj.title || "", 200),
-    description: safeText(obj.description || "", 5000),
-    imageUrl: imageUrl || null,
-
-    // optional UI fields
-    buttonText: safeText(obj.buttonText || "", 80),
-    priceDisplay: safeText(obj.priceDisplay || obj.priceFormatted || obj.priceText || "", 80),
-
-    // inventory + timer fields (pass-through safely)
-    showInventory: !!obj.showInventory,
-    unitsLeft: typeof obj.unitsLeft === "number" ? obj.unitsLeft : obj.unitsLeft == null ? null : Number(obj.unitsLeft),
-    unitsTotal: typeof obj.unitsTotal === "number" ? obj.unitsTotal : obj.unitsTotal == null ? null : Number(obj.unitsTotal),
-
-    showTimer: !!obj.showTimer,
-    dropStartsAt: obj.dropStartsAt || null,
-    dropEndsAt: obj.dropEndsAt || null,
-  };
-}
-
+// GET /api/public?slug=<publicSlug or slug>
 export default async function handler(req, res) {
   noStore(res);
 
@@ -114,102 +35,123 @@ export default async function handler(req, res) {
     return res.status(405).end("Method Not Allowed");
   }
 
-  try {
-    const slug = safeString(req.query?.slug || "", 120);
-    if (!slug) return res.status(400).json({ ok: false, error: "missing_slug" });
+  const rawSlug = String(req.query.slug || "").trim().toLowerCase();
+  if (!rawSlug) {
+    return send(res, 400, { ok: false, error: "missing_slug" });
+  }
 
+  try {
     const client = await getClient();
     const db = client.db(MONGODB_DB);
-
     const Profiles = db.collection("profiles");
 
-    // Pull only what the public page needs. Keep editToken INTERNAL (used to fetch products).
+    // 1) Find profile by publicSlug or slug
     const profileDoc = await Profiles.findOne(
-      { $or: [{ publicSlug: slug }, { slug }] },
+      {
+        $or: [{ publicSlug: rawSlug }, { slug: rawSlug }],
+      },
       {
         projection: {
-          _id: 0,
+                    collectName: 1,
+          klaviyoEnabled: 1,
+          formHeadline: 1,
+          formSubtext: 1,
+          _id: 1,
           editToken: 1,
-
-          // display fields
+          plan: 1,
           displayName: 1,
           name: 1,
+          publicSlug: 1,
+          slug: 1,
+          status: 1,
           bio: 1,
           description: 1,
-
-          // images + urls
-          avatarUrl: 1,
-          imageUrl: 1,
-          avatar: 1,
-
+          collectEmail: 1,
+          klaviyoListId: 1,
           links: 1,
           social: 1,
-
-          // email capture config + text
-          showForm: 1,
-          collectEmail: 1,
-          collectName: 1,
-          formHeadline: 1,
-          emailHeadline: 1,
-
-          // fallback if you ever stored products on profile
-          products: 1,
+          avatarUrl: 1,
+          imageUrl: 1,
+          products: 1, // 👈 important
         },
       }
     );
 
     if (!profileDoc) {
-      return res.status(404).json({ ok: false, error: "profile_not_found" });
+      return send(res, 404, { ok: false, error: "profile_not_found" });
     }
 
-    const editToken = safeString(profileDoc.editToken || "", 200);
-
-    // Sanitize/shape profile for public response (and remove internal fields)
-    const profile = {
-      displayName: safeText(profileDoc.displayName || "", 200),
-      name: safeText(profileDoc.name || "", 200),
-      bio: safeText(profileDoc.bio || profileDoc.description || "", 5000),
-
-      avatarUrl: safeUrl(profileDoc.avatarUrl) || safeUrl(profileDoc.imageUrl) || safeUrl(profileDoc.avatar) || null,
-
-      links: sanitizeLinks(profileDoc.links),
-      social: sanitizeSocial(profileDoc.social),
-
-      showForm: profileDoc.showForm,
-      collectEmail: !!profileDoc.collectEmail,
-      collectName: !!profileDoc.collectName,
-      formHeadline: safeText(profileDoc.formHeadline || "", 240),
-      emailHeadline: safeText(profileDoc.emailHeadline || "", 240),
-    };
-
-    // Products: published-only (server-enforced)
-    let products = [];
-
-    // Preferred: separate products collection keyed by editToken
-    if (editToken) {
-      try {
-        const Products = db.collection("products");
-        const rows = await Products.find({ editToken, published: true }).toArray();
-        if (Array.isArray(rows) && rows.length) {
-          products = rows;
-        }
-      } catch {
-        // ignore and fallback to profile.products
-      }
-    }
-
-    // Fallback: products stored on profile document
-    if (!products.length && Array.isArray(profileDoc.products)) {
-      products = profileDoc.products.filter((p) => !!p?.published);
-    }
-
-    const sanitizedProducts = Array.isArray(products)
-      ? products.map(sanitizeProduct).filter((p) => p && p.published)
+    // 2) Load *published* products from this profile
+    const productsRaw = Array.isArray(profileDoc.products)
+      ? profileDoc.products
       : [];
 
-    return res.status(200).json({ ok: true, profile, products: sanitizedProducts });
+    const products = productsRaw
+      // treat products with no `published` flag as published
+      .filter((p) => p && (p.published === undefined ? true : !!p.published))
+      .map((p) => ({
+        id: String(p.id || ""),
+        title: p.title || "",
+        description: p.description || "",
+        imageUrl: p.imageUrl || "",
+        priceUrl: p.priceUrl || "",
+        priceCents:
+          typeof p.priceCents === "number" ? p.priceCents : null,
+        priceDisplay: p.priceDisplay || "",
+        priceText: p.priceText || "",
+        dropStartsAt: p.dropStartsAt || null,
+        dropEndsAt: p.dropEndsAt || null,
+        showTimer: !!p.showTimer,
+        showInventory:
+          p.showInventory === undefined ? true : !!p.showInventory,
+        unitsLeft:
+          typeof p.unitsLeft === "number" ? p.unitsLeft : null,
+        unitsTotal:
+          typeof p.unitsTotal === "number" ? p.unitsTotal : null,
+        buttonText: p.buttonText || "",
+        published: p.published === undefined ? true : !!p.published,
+      }));
+
+    // Normalized links (only keep ones with a URL)
+    const links = Array.isArray(profileDoc.links)
+      ? profileDoc.links.filter(
+          (l) =>
+            l &&
+            typeof l.url === "string" &&
+            l.url.trim().length > 0
+        )
+      : [];
+
+    return send(res, 200, {
+      ok: true,
+      profile: {
+        displayName: profileDoc.displayName || profileDoc.name || "",
+        name: profileDoc.name || "",
+        publicSlug:
+          profileDoc.publicSlug || profileDoc.slug || rawSlug,
+        slug: profileDoc.slug || rawSlug,
+        status: profileDoc.status || "active",
+        plan: profileDoc.plan || "free",
+
+        // 🔥 KEY BIT: bring description back for old + new records
+        bio: profileDoc.bio || profileDoc.description || "",
+        description: profileDoc.description || profileDoc.bio || "",
+
+        collectEmail: !!profileDoc.collectEmail,
+                showForm: !!profileDoc.collectEmail, // alias for the frontend
+        collectName: !!profileDoc.collectName,
+        klaviyoEnabled: !!profileDoc.klaviyoEnabled,
+        formHeadline: profileDoc.formHeadline || "",
+        formSubtext: profileDoc.formSubtext || "",
+        klaviyoListId: profileDoc.klaviyoListId || "",
+        avatarUrl: profileDoc.avatarUrl || profileDoc.imageUrl || "",
+        links,
+        social: profileDoc.social || {},
+      },
+      products,
+    });
   } catch (err) {
-    console.error("public ERROR", err?.message);
-    return res.status(500).json({ ok: false, error: "server_error" });
+    console.error("public:index ERROR", err?.message || err);
+    return send(res, 500, { ok: false, error: "server_error" });
   }
 }

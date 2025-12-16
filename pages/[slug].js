@@ -975,7 +975,19 @@ const canCollectEmail =
     gap: "0.75rem",
   }}
 >
+<div
+  style={{
+    textAlign: "center",
+    fontSize: "2rem",
+    fontWeight: 800,
+    lineHeight: 1.1,
+    margin: "0 0 0.85rem 0",
+    letterSpacing: "-0.02em",
+  }}
+>
   {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
+</div>
+
 </span>
 
 

@@ -968,13 +968,11 @@ const canCollectEmail =
               >
 <span
   style={{
-    display: "block",
-    textAlign: "center",
-    fontSize: "1.6rem",
-    fontWeight: 800,
-    lineHeight: 1.15,
-    letterSpacing: "-0.01em",
-    marginBottom: "0.9rem",
+    width: "100%",
+    maxWidth: "560px",
+    margin: "0 auto",
+    display: "grid",
+    gap: "0.75rem",
   }}
 >
   {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
@@ -1011,14 +1009,13 @@ const canCollectEmail =
 
 <div
   style={{
+    width: "100%",
     display: "flex",
     alignItems: "stretch",
-    width: "100%",
-    maxWidth: "520px",
-    borderRadius: "999px",
-    overflow: "hidden",
+    borderRadius: "9999px",
     backgroundColor: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.14)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    overflow: "hidden",
   }}
 >
   <input
@@ -1027,14 +1024,14 @@ const canCollectEmail =
     autoComplete="email"
     style={{
       flex: 1,
-      backgroundColor: "transparent",
+      minWidth: 0,
       border: "none",
+      backgroundColor: "transparent",
+      padding: "0.9rem 1.1rem",
+      fontSize: "1.05rem",
+      color: "white",
       outline: "none",
       boxShadow: "none",
-      padding: "0.8rem 1rem",
-      fontSize: "0.95rem",
-      color: "white",
-      minWidth: 0,
     }}
     placeholder="you@example.com"
     value={email}
@@ -1045,21 +1042,22 @@ const canCollectEmail =
     aria-invalid={!!emailErr}
     aria-describedby={emailErr ? "email-error" : undefined}
   />
+
   <button
     type="submit"
     disabled={submitting}
     style={{
       border: "none",
-      outline: "none",
-      boxShadow: "none",
-      padding: "0.8rem 1.05rem",
-      fontSize: "0.95rem",
-      fontWeight: 700,
-      backgroundColor: "#10b981",
-      color: "#06281a",
+      padding: "0 1.4rem",
+      fontSize: "1.05rem",
+      fontWeight: 800,
+      color: "white",
       cursor: "pointer",
-      opacity: submitting ? 0.6 : 1,
-      whiteSpace: "nowrap",
+      opacity: submitting ? 0.75 : 1,
+
+      // TEMP: matches BUY NOW look (replace these 2 lines with the exact BUY NOW button styles in this file)
+      backgroundImage: "linear-gradient(90deg, #6366f1, #a855f7)",
+      boxShadow: "0 0 24px rgba(99,102,241,0.35)",
     }}
   >
     {submitting ? "Joining…" : "Join"}

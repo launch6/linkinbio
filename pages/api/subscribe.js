@@ -1,7 +1,13 @@
 // pages/api/subscribe.js
 import { MongoClient } from "mongodb";
 
-const { MONGODB_URI, MONGODB_DB = "linkinbio", KLAVIYO_API_KEY } = process.env;
+const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
+
+// Accept either env var name (you currently have KLAVIYO_PRIVATE_API_KEY in Vercel)
+const KLAVIYO_API_KEY =
+  process.env.KLAVIYO_API_KEY ||
+  process.env.KLAVIYO_PRIVATE_API_KEY ||
+  "";
 
 // --- DB bootstrap with global cache ---
 let _client = global._launch6MongoClient;

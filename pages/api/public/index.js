@@ -45,36 +45,6 @@ function isRelativePath(s) {
   return typeof s === "string" && s.startsWith("/") && !s.startsWith("//");
 }
 
-function hasAnyScheme(s) {
-  // e.g. "javascript:", "data:", "ftp:", etc.
-  return typeof s === "string" && /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s);
-}
-
-function isMailto(s) {
-  return typeof s === "string" && s.toLowerCase().startsWith("mailto:");
-}
-
-function isTel(s) {
-  return typeof s === "string" && s.toLowerCase().startsWith("tel:");
-}
-
-function looksLikeDomainOrUrlWithoutScheme(s) {
-  // very lightweight heuristic: contains a dot, no spaces, not starting with "/" or "//"
-  if (typeof s !== "string") return false;
-  if (!s || /\s/.test(s)) return false;
-  if (s.startsWith("/") || s.startsWith("//")) return false;
-  if (!s.includes(".")) return false;
-  return true;
-}
-
-function normalizeToHttpsIfSchemless(s) {
-  if (!s || typeof s !== "string") return "";
-  if (isHttpUrl(s)) return s;
-  if (hasAnyScheme(s)) return ""; // block non-http schemes
-  if (!looksLikeDomainOrUrlWithoutScheme(s)) return "";
-  return `https://${s}`;
-}
-
 function isDataImage(s) {
   if (typeof s !== "string" || !s.startsWith("data:image/")) return false;
   // data:image/<subtype>[;...]
@@ -83,7 +53,7 @@ function isDataImage(s) {
   return ["jpeg", "jpg", "png", "webp", "gif"].includes(String(subtype || "").toLowerCase());
 }
 
-// For image src fields: allow http/https, allow /relative, allow data:image/ (raster only)
+// For image src fields: allow http/https, allow /relative, allow data:image/ (production uses this)
 function sanitizeImageSrc(v) {
   const s = typeof v === "string" ? v.trim() : "";
   if (!s) return "";
@@ -93,42 +63,54 @@ function sanitizeImageSrc(v) {
   return "";
 }
 
-// For checkout + other strict external targets: allow http/https only
-function sanitizeHrefHttpOnly(v) {
-  const s = typeof v === "string" ? v.trim() : "";
-  if (!s) return "";
-  if (isHttpUrl(s)) return s;
-  // optionally allow schemeless domains by normalizing to https
-  const normalized = normalizeToHttpsIfSchemless(s);
-  return normalized || "";
+// Heuristic: allow bare domains like "example.com/path" by prepending https://
+// (keeps behavior aligned with your frontend normalizeHref, but enforced server-side)
+function normalizeSchemelessToHttps(s) {
+  if (typeof s !== "string") return "";
+  const t = s.trim();
+  if (!t) return "";
+  // already has a scheme or is relative
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(t)) return t;
+  if (t.startsWith("/")) return t;
+
+  // looks like a domain (must contain a dot, no spaces)
+  if (t.includes(".") && !t.includes(" ")) return `https://${t}`;
+  return t;
 }
 
-// For creator-controlled "links" (buttons): allow http/https + mailto: + tel:
+// For clickable profile links + social: allow http/https, mailto:, tel:, and schemeless -> https://
 function sanitizeHrefLink(v) {
-  const s = typeof v === "string" ? v.trim() : "";
-  if (!s) return "";
+  const raw = typeof v === "string" ? v.trim() : "";
+  if (!raw) return "";
+
+  const s = normalizeSchemelessToHttps(raw);
+
+  if (s.startsWith("mailto:") || s.startsWith("tel:")) return s;
   if (isHttpUrl(s)) return s;
-  if (isMailto(s) || isTel(s)) return s;
-  // support schemeless domains like "example.com" by normalizing to https
-  if (!hasAnyScheme(s)) {
-    const normalized = normalizeToHttpsIfSchemless(s);
-    return normalized || "";
-  }
+
   return "";
 }
 
-function sanitizeSocialObject(social) {
-  const src = social && typeof social === "object" ? social : {};
-  // Social icons should never accept mailto/tel; keep them http/https (or normalized https)
-  const out = {
-    instagram: sanitizeHrefHttpOnly(src.instagram || ""),
-    facebook: sanitizeHrefHttpOnly(src.facebook || ""),
-    tiktok: sanitizeHrefHttpOnly(src.tiktok || ""),
-    youtube: sanitizeHrefHttpOnly(src.youtube || ""),
-    x: sanitizeHrefHttpOnly(src.x || ""),
-    website: sanitizeHrefHttpOnly(src.website || ""),
+// For product priceUrl: allow http/https only (plus schemeless -> https://), block mailto/tel/relative/data/javascript
+function sanitizeHrefPrice(v) {
+  const raw = typeof v === "string" ? v.trim() : "";
+  if (!raw) return "";
+  const s = normalizeSchemelessToHttps(raw);
+  if (isHttpUrl(s)) return s;
+  return "";
+}
+
+// Sanitize social object defensively (only allow known keys and safe hrefs)
+function sanitizeSocialObject(socialRaw) {
+  const s = socialRaw && typeof socialRaw === "object" ? socialRaw : {};
+  return {
+    instagram: sanitizeHrefLink(s.instagram || ""),
+    facebook: sanitizeHrefLink(s.facebook || ""),
+    tiktok: sanitizeHrefLink(s.tiktok || ""),
+    youtube: sanitizeHrefLink(s.youtube || ""),
+    x: sanitizeHrefLink(s.x || ""),
+    website: sanitizeHrefLink(s.website || ""),
   };
-  return out;
 }
 
 // GET /api/public?slug=<publicSlug or slug>
@@ -193,8 +175,7 @@ export default async function handler(req, res) {
         title: defangText(p.title || "", 200),
         description: defangText(p.description || "", 5000),
         imageUrl: sanitizeImageSrc(p.imageUrl || ""),
-        // checkout targets: http/https only
-        priceUrl: sanitizeHrefHttpOnly(p.priceUrl || ""),
+        priceUrl: sanitizeHrefPrice(p.priceUrl || ""),
         priceCents: typeof p.priceCents === "number" ? p.priceCents : null,
         priceDisplay: defangText(p.priceDisplay || "", 80),
         priceText: defangText(p.priceText || "", 80),
@@ -208,7 +189,7 @@ export default async function handler(req, res) {
         published: p.published === undefined ? true : !!p.published,
       }));
 
-    // 3) Normalize links (http/https + mailto/tel + schemeless domain -> https)
+    // 3) Normalize links (http/https + mailto/tel + schemeless -> https)
     const links = Array.isArray(profileDoc.links)
       ? profileDoc.links
           .map((l) => {
@@ -240,7 +221,7 @@ export default async function handler(req, res) {
         description: defangText(profileDoc.description || profileDoc.bio || "", 5000),
 
         collectEmail: !!profileDoc.collectEmail,
-        showForm: !!profileDoc.collectEmail, // alias for the frontend
+        showForm: !!profileDoc.collectEmail,
         collectName: !!profileDoc.collectName,
         klaviyoEnabled: !!profileDoc.klaviyoEnabled,
         formHeadline: defangText(profileDoc.formHeadline || "", 200),

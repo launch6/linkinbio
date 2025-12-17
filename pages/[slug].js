@@ -472,10 +472,8 @@ export default function PublicSlugPage() {
 
         setProfile(j.profile || null);
        setProducts(Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []);
-
-
   }
-
+  
   // initial + periodic refresh
   useEffect(() => {
     if (!slug) return;
@@ -549,20 +547,44 @@ const canCollectEmail =
 
   const socialRaw = profile?.social || {};
 
-  // External link safety: allow http/https; allow bare domains via https://; block other schemes
-  const normalizeHref = (url) => {
-    if (!url || typeof url !== "string") return "";
-    const trimmed = url.trim();
-    if (!trimmed) return "";
+  // External link safety: allow http/https; allow bare domains via https://; allow mailto/tel; block dangerous schemes
+const normalizeHref = (url) => {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
 
-    // If it has a scheme (e.g., mailto:, javascript:, data:), allow only http/https
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
-      if (/^https?:\/\//i.test(trimmed)) return trimmed;
-      return "";
-    }
+  const lower = trimmed.toLowerCase();
 
-    // Block relative and protocol-relative URLs
-    if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
+  // Hard-block dangerous schemes
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:")
+  ) {
+    return "";
+  }
+
+  // Allow mailto/tel
+  if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
+    return trimmed;
+  }
+
+  // If it has any other scheme, only allow http/https
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return "";
+  }
+
+  // Block relative and protocol-relative URLs
+  if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
+
+  // Allow bare domains by prepending https://
+  if (trimmed.includes(".") && !/\s/.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return "";
+};
 
     // Basic bare-domain heuristic
     if (!trimmed.includes(".") || /\s/.test(trimmed)) return "";

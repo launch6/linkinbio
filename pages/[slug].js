@@ -38,6 +38,41 @@ function isValidEmail(email) {
   return true;
 }
 
+// External link safety: allow http/https; allow bare domains via https://; allow mailto/tel; block dangerous schemes
+function normalizeHref(url) {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  const lower = trimmed.toLowerCase();
+
+  // Hard-block dangerous schemes
+  if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+    return "";
+  }
+
+  // Allow mailto/tel
+  if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
+    return trimmed;
+  }
+
+  // If it has any other scheme, only allow http/https
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return "";
+  }
+
+  // Block relative and protocol-relative URLs
+  if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
+
+  // Allow bare domains by prepending https://
+  if (trimmed.includes(".") && !/\s/.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return "";
+}
+
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
   const common = {
@@ -114,12 +149,10 @@ function DropCard({ product: p, slug }) {
     return () => clearInterval(id);
   }, []);
 
-  // --- basic fields -------------------------------------------------------
   const imageUrl = p.imageUrl || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 
-  // price display: try a few common fields
   let priceDisplay =
     p.priceDisplay ||
     p.priceFormatted ||
@@ -132,9 +165,10 @@ function DropCard({ product: p, slug }) {
     slug ? `&slug=${encodeURIComponent(slug)}` : ""
   }`;
 
-  // --- inventory / ended logic -------------------------------------------
-  const left = p.unitsLeft === null || p.unitsLeft === undefined ? null : Number(p.unitsLeft);
-  const total = p.unitsTotal === null || p.unitsTotal === undefined ? null : Number(p.unitsTotal);
+  const left =
+    p.unitsLeft === null || p.unitsLeft === undefined ? null : Number(p.unitsLeft);
+  const total =
+    p.unitsTotal === null || p.unitsTotal === undefined ? null : Number(p.unitsTotal);
 
   const soldOut = left !== null && left <= 0;
 
@@ -142,15 +176,11 @@ function DropCard({ product: p, slug }) {
   const endsAt = p.dropEndsAt ? new Date(p.dropEndsAt) : null;
 
   let phase = "open"; // "upcoming" | "open" | "ended"
-  if (startsAt && now < startsAt) {
-    phase = "upcoming";
-  } else if (endsAt && now >= endsAt) {
-    phase = "ended";
-  }
+  if (startsAt && now < startsAt) phase = "upcoming";
+  else if (endsAt && now >= endsAt) phase = "ended";
 
   const isEnded = soldOut || phase === "ended";
 
-  // --- countdown (Days : Hours : Minutes : Seconds) -----------------------
   let showTimer = false;
   let timerTitle = "";
   let mode = "hours"; // "hours" = H:M:S, "days" = D:H:M:S
@@ -197,13 +227,11 @@ function DropCard({ product: p, slug }) {
     }
   }
 
-  // inventory text (optional, under price)
   let inventoryText = "";
   if (p.showInventory && left !== null && total !== null) {
     inventoryText = `${left}/${total} available`;
   }
 
-  // --- styles -------------------------------------------------------------
   const outer = {
     width: "100%",
     maxWidth: "420px",
@@ -211,7 +239,8 @@ function DropCard({ product: p, slug }) {
     boxSizing: "border-box",
     borderRadius: "28px",
     padding: "20px 18px 22px",
-    background: "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
+    background:
+      "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
     boxShadow:
       "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
   };
@@ -219,7 +248,8 @@ function DropCard({ product: p, slug }) {
   const heroFrame = {
     borderRadius: "24px",
     padding: "3px",
-    background: "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
+    background:
+      "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
     boxShadow: "0 14px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7)",
   };
 
@@ -400,7 +430,9 @@ function DropCard({ product: p, slug }) {
                   <span style={timerValue}>{s}</span>
                 </div>
                 <p style={timerUnits}>
-                  {mode === "days" ? "Days · Hours · Minutes · Seconds" : "Hours · Minutes · Seconds"}
+                  {mode === "days"
+                    ? "Days · Hours · Minutes · Seconds"
+                    : "Hours · Minutes · Seconds"}
                 </p>
               </>
             )}
@@ -430,7 +462,6 @@ export default function PublicSlugPage() {
   const [profile, setProfile] = useState(null);
   const [products, setProducts] = useState([]);
 
-  // email capture UI state
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [emailErr, setEmailErr] = useState("");
@@ -439,45 +470,8 @@ export default function PublicSlugPage() {
 
   const refreshIntervalRef = useRef(null);
 
-  // External link safety: allow http/https; allow bare domains via https://; allow mailto/tel; block dangerous schemes
-  const normalizeHref = (url) => {
-    if (!url || typeof url !== "string") return "";
-    const trimmed = url.trim();
-    if (!trimmed) return "";
-
-    const lower = trimmed.toLowerCase();
-
-    // Hard-block dangerous schemes
-    if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
-      return "";
-    }
-
-    // Allow mailto/tel
-    if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
-      return trimmed;
-    }
-
-    // If it has any other scheme, only allow http/https
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
-      if (/^https?:\/\//i.test(trimmed)) return trimmed;
-      return "";
-    }
-
-    // Block relative and protocol-relative URLs
-    if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
-
-    // Allow bare domains by prepending https://
-    if (trimmed.includes(".") && !/\s/.test(trimmed)) {
-      return `https://${trimmed}`;
-    }
-
-    return "";
-  };
-
-  // fetch public profile + products via slug (robust JSON guard)
-  async function fetchAll(slugVal, opts = {}) {
-    const trackView = !!opts.trackView;
-    const url = `/api/public?slug=${encodeURIComponent(slugVal)}${trackView ? "&trackView=1" : ""}`;
+  async function fetchAll(slugVal) {
+    const url = `/api/public?slug=${encodeURIComponent(slugVal)}`;
     const r = await fetch(url, { cache: "no-store" });
 
     const ct = (r.headers.get("content-type") || "").toLowerCase();
@@ -495,30 +489,14 @@ export default function PublicSlugPage() {
     setProducts(Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []);
   }
 
-  // initial + periodic refresh (trackView only once per session)
   useEffect(() => {
     if (!slug) return;
     let alive = true;
 
-    const viewKey = `l6_view_tracked_${String(slug)}`;
-    let shouldTrackView = false;
-
-    try {
-      if (typeof window !== "undefined" && window.sessionStorage) {
-        if (!sessionStorage.getItem(viewKey)) {
-          sessionStorage.setItem(viewKey, "1");
-          shouldTrackView = true;
-        }
-      }
-    } catch {
-      // If storage is blocked, degrade gracefully: do not spam counts.
-      shouldTrackView = false;
-    }
-
     (async () => {
       try {
         setLoading(true);
-        await fetchAll(slug, { trackView: shouldTrackView });
+        await fetchAll(slug);
         if (!alive) return;
         setError("");
       } catch (e) {
@@ -529,39 +507,36 @@ export default function PublicSlugPage() {
       }
     })();
 
-    // Poll without tracking (prevents inflated viewCount)
     refreshIntervalRef.current = setInterval(() => {
-      fetchAll(slug, { trackView: false }).catch(() => {});
+      fetchAll(slug).catch(() => {});
     }, 15000);
 
     const onVis = () => {
       if (document.visibilityState === "visible") {
-        fetchAll(slug, { trackView: false }).catch(() => {});
+        fetchAll(slug).catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
-      alive = false;
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
+      alive = false;
     };
   }, [slug]);
 
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
 
-  // default: email capture ON unless explicitly disabled
   const canCollectEmail =
     profile?.showForm === true || (profile?.showForm !== false && profile?.collectEmail !== false);
 
-  // Normalize links again client-side (defense-in-depth)
   const links = Array.isArray(profile?.links)
     ? profile.links
         .map((l) => {
-          const url = normalizeHref(l?.url || "");
-          if (!url) return null;
-          return { ...l, url };
+          const href = normalizeHref(l?.url || "");
+          if (!href) return null;
+          return { ...l, url: href };
         })
         .filter(Boolean)
     : [];
@@ -577,15 +552,16 @@ export default function PublicSlugPage() {
   };
 
   const websiteHref = social.website;
-
   const hasSocialRow =
     social.instagram || social.facebook || social.tiktok || social.youtube || social.x || websiteHref;
 
-  // --- SEO / Social ---
   const firstImage = products?.[0]?.imageUrl || "";
-  const site = "https://linkinbio-tau-pink.vercel.app";
+  const site =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://linkinbio-git-main-mark-barattos-projects.vercel.app";
   const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
+
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
   const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
   const leftPart =
@@ -597,7 +573,6 @@ export default function PublicSlugPage() {
   const avatarInitial = (title && title.trim().charAt(0).toUpperCase()) || "L";
   const avatarUrl = profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
 
-  // early states
   if (loading) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
@@ -617,7 +592,6 @@ export default function PublicSlugPage() {
     );
   }
 
-  // Layout: single column, Linktree-style
   const mainStyle = {
     maxWidth: "500px",
     margin: "0 auto",
@@ -627,11 +601,9 @@ export default function PublicSlugPage() {
 
   const fullWidthSection = { width: "100%" };
 
-  // vertical rhythm
   const SECTION_GAP = "1.35rem";
   const HEADER_STACK_SPACING = "0.8rem";
 
-  // handle slug-based subscribe
   async function handleSubscribe(e) {
     e.preventDefault();
     setEmailErr("");
@@ -653,15 +625,10 @@ export default function PublicSlugPage() {
       });
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json?.ok) {
-        if (json?.error === "email_collection_disabled") {
-          setEmailErr("Email signup is unavailable right now.");
-        } else if (json?.error === "invalid_email") {
-          setEmailErr("Please enter a valid email.");
-        } else if (json?.error === "profile_not_found") {
-          setEmailErr("Creator not found.");
-        } else {
-          setEmailErr("Subscribe failed. Please try again.");
-        }
+        if (json?.error === "email_collection_disabled") setEmailErr("Email signup is unavailable right now.");
+        else if (json?.error === "invalid_email") setEmailErr("Please enter a valid email.");
+        else if (json?.error === "profile_not_found") setEmailErr("Creator not found.");
+        else setEmailErr("Subscribe failed. Please try again.");
         return;
       }
       setSubscribed(true);
@@ -679,24 +646,22 @@ export default function PublicSlugPage() {
         <meta name="description" content={seoDesc} />
         <meta name="robots" content="index,follow,max-image-preview:large" />
 
-        {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
         {firstImage ? <meta property="og:image" content={firstImage} /> : null}
 
-        {/* Twitter */}
         <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDesc} />
         {firstImage ? <meta name="twitter:image" content={firstImage} /> : null}
+
         <link rel="canonical" href={pageUrl} />
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
         <main style={mainStyle}>
-          {/* HEADER */}
           <header style={{ width: "100%", marginBottom: SECTION_GAP }}>
             <div
               style={{
@@ -709,7 +674,6 @@ export default function PublicSlugPage() {
                 textAlign: "center",
               }}
             >
-              {/* Avatar */}
               <div style={{ marginBottom: HEADER_STACK_SPACING }}>
                 {avatarUrl ? (
                   <img
@@ -744,7 +708,6 @@ export default function PublicSlugPage() {
                 )}
               </div>
 
-              {/* Handle / name */}
               <h1
                 style={{
                   fontSize: "1.7rem",
@@ -756,7 +719,6 @@ export default function PublicSlugPage() {
                 {title || "Artist"}
               </h1>
 
-              {/* Description */}
               {bio ? (
                 <p
                   style={{
@@ -771,14 +733,13 @@ export default function PublicSlugPage() {
                 </p>
               ) : null}
 
-              {/* Social icons */}
               {hasSocialRow && (
                 <div style={{ display: "flex", justifyContent: "center", gap: "0.9rem" }}>
                   {social.instagram && (
                     <a
                       href={social.instagram}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
                       aria-label="Instagram"
                       style={{
                         height: "4rem",
@@ -800,7 +761,7 @@ export default function PublicSlugPage() {
                     <a
                       href={social.facebook}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
                       aria-label="Facebook"
                       style={{
                         height: "4rem",
@@ -822,7 +783,7 @@ export default function PublicSlugPage() {
                     <a
                       href={social.tiktok}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
                       aria-label="TikTok"
                       style={{
                         height: "4rem",
@@ -844,7 +805,7 @@ export default function PublicSlugPage() {
                     <a
                       href={social.youtube}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
                       aria-label="YouTube"
                       style={{
                         height: "4rem",
@@ -866,7 +827,7 @@ export default function PublicSlugPage() {
                     <a
                       href={social.x}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
                       aria-label="X"
                       style={{
                         height: "4rem",
@@ -888,7 +849,7 @@ export default function PublicSlugPage() {
                     <a
                       href={websiteHref}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
                       aria-label="Website"
                       style={{
                         height: "4rem",
@@ -911,7 +872,6 @@ export default function PublicSlugPage() {
             </div>
           </header>
 
-          {/* PRODUCTS / DROP CARD */}
           {products.length > 0 && (
             <section style={{ ...fullWidthSection, marginBottom: SECTION_GAP }}>
               {products.map((p) => (
@@ -920,7 +880,6 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* EMAIL CAPTURE */}
           {canCollectEmail && (
             <section
               style={{
@@ -955,10 +914,7 @@ export default function PublicSlugPage() {
               </h2>
 
               {!subscribed ? (
-                <form
-                  onSubmit={handleSubscribe}
-                  style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-                >
+                <form onSubmit={handleSubscribe} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   {profile?.collectName && (
                     <input
                       type="text"
@@ -1064,15 +1020,8 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* LINKS */}
           {links.length > 0 && (
-            <section
-              style={{
-                width: "100%",
-                marginTop: products.length === 0 ? SECTION_GAP : 0,
-                marginBottom: "2rem",
-              }}
-            >
+            <section style={{ width: "100%", marginTop: products.length === 0 ? SECTION_GAP : 0, marginBottom: "2rem" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {links.map((l) => {
                   const label = l.label || l.url || "Link";
@@ -1081,15 +1030,14 @@ export default function PublicSlugPage() {
                       key={l.id || l.url}
                       href={l.url}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
                       style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
                         padding: "0.95rem 1.2rem",
                         borderRadius: "999px",
-                        background:
-                          "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
+                        background: "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
                         border: "1px solid #27272a",
                         textDecoration: "none",
                         color: "#f4f4f5",
@@ -1105,21 +1053,12 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* FOOTER */}
-          <footer
-            style={{
-              fontSize: "0.9rem",
-              color: "#a3a3a3",
-              paddingBottom: "2.25rem",
-              width: "100%",
-              textAlign: "center",
-            }}
-          >
+          <footer style={{ fontSize: "0.9rem", color: "#a3a3a3", paddingBottom: "2.25rem", width: "100%", textAlign: "center" }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
               <a
                 href="https://launch6.com"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer nofollow"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -1136,21 +1075,15 @@ export default function PublicSlugPage() {
                   marginTop: "0.5rem",
                 }}
               >
-                <img src="/launch6_white.png" alt="Launch6 logo" style={{ height: "1.6rem", width: "auto" }} />
+                <img src="/launch6_white.png" alt="Launch6 logo" style={{ height: "1.6rem", width: "auto", display: "block" }} />
                 <span>blastoff here 🚀</span>
               </a>
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0.9rem" }}>
-              <button type="button" style={{ textDecoration: "underline" }}>
-                Cookie preferences
-              </button>
-              <button type="button" style={{ textDecoration: "underline" }}>
-                Report page
-              </button>
-              <button type="button" style={{ textDecoration: "underline" }}>
-                Privacy
-              </button>
+              <button style={{ textDecoration: "underline" }}>Cookie preferences</button>
+              <button style={{ textDecoration: "underline" }}>Report page</button>
+              <button style={{ textDecoration: "underline" }}>Privacy</button>
             </div>
           </footer>
         </main>
@@ -1160,6 +1093,5 @@ export default function PublicSlugPage() {
 }
 
 export async function getServerSideProps() {
-  // Force SSR so any slug resolves at request time.
   return { props: {} };
 }

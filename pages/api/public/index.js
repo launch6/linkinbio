@@ -69,12 +69,29 @@ function normalizeSchemelessToHttps(s) {
   if (typeof s !== "string") return "";
   const t = s.trim();
   if (!t) return "";
-  // already has a scheme or is relative
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(t)) return t;
+
+  // keep relative paths as-is (they’ll be rejected by sanitizeHrefLink anyway)
   if (t.startsWith("/")) return t;
 
-  // looks like a domain (must contain a dot, no spaces)
-  if (t.includes(".") && !t.includes(" ")) return `https://${t}`;
+  // reject obvious whitespace early
+  if (/\s/.test(t)) return "";
+
+  // allow these schemes to pass through unchanged
+  if (/^https?:\/\//i.test(t)) return t;
+  if (/^(mailto:|tel:)/i.test(t)) return t;
+
+  // If it *looks* like it has a scheme, distinguish real schemes from host:port
+  // e.g. "example.com:3000" should be treated as schemeless and become https://example.com:3000
+  const m = t.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/);
+  if (m) {
+    const beforeColon = String(m[1] || "");
+    if (beforeColon.includes(".")) return `https://${t}`; // host:port case
+    return t; // real scheme like javascript:, data:, etc. (sanitizers will drop it)
+  }
+
+  // plain bare domain/path
+  if (t.includes(".")) return `https://${t}`;
+
   return t;
 }
 

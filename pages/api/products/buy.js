@@ -3,7 +3,7 @@ import { MongoClient } from "mongodb";
 
 const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
 
-// --- DB bootstrap with global cache (serverless-friendly) ---
+// --- DB bootstrap with global cache ---
 let _client = global._launch6MongoClient;
 async function getClient() {
   if (_client) return _client;
@@ -15,38 +15,22 @@ async function getClient() {
   return c;
 }
 
-function noStore(res) {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Vercel-CDN-Cache-Control", "no-store");
-}
-
 function pickParam(qs, keys) {
   for (const k of keys) {
-    const v = qs[k];
+    const v = qs?.[k];
     if (Array.isArray(v)) return v[0] ?? "";
     if (typeof v === "string") return v;
   }
   return "";
 }
 
-function cleanText(v, maxLen = 200) {
+function cleanId(v, maxLen = 120) {
   const s = typeof v === "string" ? v : v == null ? "" : String(v);
   return s.replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, maxLen);
 }
 
 function cleanSlug(v, maxLen = 80) {
-  return cleanText(v, maxLen).toLowerCase();
-}
-
-function toHttpUrl(u) {
-  try {
-    const url = new URL(u);
-    if (!/^https?:$/i.test(url.protocol)) return null;
-    return url.toString();
-  } catch {
-    return null;
-  }
+  return cleanId(v, maxLen).toLowerCase();
 }
 
 function toNumberOrNull(v) {
@@ -62,23 +46,39 @@ function toMsOrNull(iso) {
 }
 
 function isPublished(p) {
-  // IMPORTANT: match public API behavior: missing flag means "published"
+  // Match public API behavior: missing flag => published
   return p?.published === undefined ? true : !!p.published;
 }
 
-function redirectToProfile(res, { slug, reason }) {
+// Stripe-only allowlist for the outbound redirect
+function toStripeCheckoutUrl(u) {
+  try {
+    const url = new URL(String(u || "").trim());
+    if (!/^https?:$/i.test(url.protocol)) return null;
+
+    const host = (url.hostname || "").toLowerCase();
+    const isStripe = host === "stripe.com" || host.endsWith(".stripe.com");
+    if (!isStripe) return null;
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function redirectToProfile(res, { slug, editToken, reason }) {
   const qp = new URLSearchParams();
+  if (editToken) qp.set("editToken", editToken);
   if (reason) qp.set("reason", reason);
 
   const base = slug ? `/${encodeURIComponent(slug)}` : "/public";
-  const location = `${base}${qp.toString() ? `?${qp.toString()}` : ""}`;
+  const location = `${base}${qp.toString() ? "?" + qp.toString() : ""}`;
 
-  noStore(res);
   res.writeHead(302, { Location: location });
   return res.end();
 }
 
-function fireAndForgetBeginCheckout({ db, productId, slug, req }) {
+function logBeginCheckoutRedirect({ db, productId, slug, req }) {
   try {
     const utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
     const utm = {};
@@ -89,7 +89,7 @@ function fireAndForgetBeginCheckout({ db, productId, slug, req }) {
 
     db.collection("analytics")
       .insertOne({
-        type: "begin_checkout",
+        type: "begin_checkout_redirect",
         ts: new Date(),
         productId: String(productId || ""),
         slug: String(slug || ""),
@@ -102,15 +102,21 @@ function fireAndForgetBeginCheckout({ db, productId, slug, req }) {
 }
 
 async function findProductBound({ db, id, editToken, slug }) {
-  // If editToken is present, allow privileged preview (no slug binding).
-  // Otherwise REQUIRE slug binding to prevent cross-profile IDOR.
+  // If editToken is present, allow lookup by editToken + product id.
+  // Otherwise, REQUIRE slug binding to prevent cross-profile IDOR.
   const query = editToken
     ? { editToken, "products.id": id }
-    : { $and: [{ "products.id": id }, { $or: [{ publicSlug: slug }, { slug }] }] };
+    : {
+        $and: [
+          { "products.id": id },
+          { $or: [{ publicSlug: slug }, { slug: slug }] },
+        ],
+      };
 
   const doc = await db.collection("profiles").findOne(query, {
     projection: {
       _id: 0,
+      editToken: 1,
       slug: 1,
       publicSlug: 1,
       status: 1,
@@ -120,51 +126,44 @@ async function findProductBound({ db, id, editToken, slug }) {
 
   const product = doc?.products?.[0];
   if (!product) return { status: "error", code: "not_found" };
-
-  const resolvedSlug = cleanSlug(doc.publicSlug || doc.slug || slug || "");
-  return { status: "ok", product, resolvedSlug };
+  return { status: "ok", product, profile: doc };
 }
 
 export default async function handler(req, res) {
-  noStore(res);
-
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).end("Method Not Allowed");
   }
 
-  const id = cleanText(pickParam(req.query, ["id", "productId"]), 120);
-  const editToken = cleanText(pickParam(req.query, ["editToken"]), 200);
-  const slug = cleanSlug(pickParam(req.query, ["slug", "publicSlug"]), 80);
+  const id = cleanId(pickParam(req.query, ["id", "productId"]));
+  const editToken = cleanId(pickParam(req.query, ["editToken"]));
+  const slug = cleanSlug(pickParam(req.query, ["slug", "publicSlug"]));
   const debug = pickParam(req.query, ["debug"]).trim() === "1";
 
   try {
     if (!id) {
       if (debug) return res.status(200).json({ ok: false, stage: "pre", error: "missing_product_id" });
-      return res.status(400).json({ ok: false, error: "Missing product id" });
+      return res.status(400).json({ ok: false, error: "missing_product_id" });
     }
 
-    // Public buys must be slug-bound (IDOR protection)
+    // Public buy MUST be bound to a slug (IDOR protection)
     if (!editToken && !slug) {
       if (debug) return res.status(200).json({ ok: false, stage: "pre", error: "missing_slug" });
-      return redirectToProfile(res, { slug: "", reason: "missing_slug" });
+      return redirectToProfile(res, { slug: "", editToken: "", reason: "missing_slug" });
     }
 
-    const client = await getClient();
-    const db = client.db(MONGODB_DB);
+    const db = (await getClient()).db(MONGODB_DB);
 
     const found = await findProductBound({ db, id, editToken, slug });
     if (found.status !== "ok") {
       if (debug) return res.status(200).json({ ok: false, stage: "lookup", error: "not_found" });
-      return redirectToProfile(res, { slug, reason: "unpublished" });
+      return redirectToProfile(res, { slug, editToken, reason: "unpublished" });
     }
 
     const p = found.product;
-    const resolvedSlug = found.resolvedSlug || slug;
 
-    const priceUrl = toHttpUrl(cleanText(p.priceUrl || "", 2000));
+    const priceUrl = toStripeCheckoutUrl(p.priceUrl || "");
     const left = toNumberOrNull(p.unitsLeft);
-    const total = toNumberOrNull(p.unitsTotal);
 
     const startsMs = toMsOrNull(p.dropStartsAt);
     const endsMs = toMsOrNull(p.dropEndsAt);
@@ -181,35 +180,35 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         stage: "post-guard",
-        block,
-        resolvedSlug,
         product: {
           id: String(p.id || ""),
           published: isPublished(p),
           priceUrlPresent: !!priceUrl,
           unitsLeft: left,
-          unitsTotal: total,
           dropStartsAt: p.dropStartsAt || null,
+          dropStartsAtMs: startsMs,
           dropEndsAt: p.dropEndsAt || null,
+          dropEndsAtMs: endsMs,
         },
+        block,
       });
     }
 
     if (block) {
-      return redirectToProfile(res, { slug: resolvedSlug, reason: block });
+      return redirectToProfile(res, { slug, editToken, reason: block });
     }
 
-    // Track "begin checkout" (best-effort)
-    fireAndForgetBeginCheckout({ db, productId: id, slug: resolvedSlug, req });
+    // Fire-and-forget analytics (low risk if spammed; do not block redirect)
+    logBeginCheckoutRedirect({ db, productId: id, slug, req });
 
-    // Redirect to Stripe URL safely and append tracking params
+    // Build outgoing URL (tag product id & pass UTMs if any)
     const out = new URL(priceUrl);
 
-    if (!out.searchParams.has("client_reference_id")) {
-      out.searchParams.set("client_reference_id", id);
-    }
-    if (resolvedSlug && !out.searchParams.has("l6_slug")) {
-      out.searchParams.set("l6_slug", resolvedSlug);
+    // Do not trust inbound overrides
+    out.searchParams.set("client_reference_id", id);
+
+    if (slug && !out.searchParams.has("l6_slug")) {
+      out.searchParams.set("l6_slug", slug);
     }
 
     const passthrough = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
@@ -218,13 +217,16 @@ export default async function handler(req, res) {
       if (val && !out.searchParams.has(key)) out.searchParams.set(key, val);
     }
 
-    noStore(res);
     res.writeHead(302, { Location: out.toString() });
     return res.end();
   } catch (err) {
     console.error("products/buy error:", err);
-    if (pickParam(req.query, ["debug"]).trim() === "1") {
-      return res.status(200).json({ ok: false, stage: "catch", error: String(err?.message || err) });
+    if (debug) {
+      return res.status(200).json({
+        ok: false,
+        stage: "catch",
+        error: String((err && err.message) || err),
+      });
     }
     return res.status(500).json({ ok: false, error: "Buy redirect failed" });
   }

@@ -470,8 +470,12 @@ export default function PublicSlugPage() {
       throw new Error(j?.error || "Failed to load");
     }
 
-    setProfile(j.profile || null);
-    setProducts(Array.isArray(j.products) ? j.products : []);
+        setProfile(j.profile || null);
+    setProducts(
+      Array.isArray(j.products)
+        ? j.products.filter((p) => p && (p.published === undefined ? true : !!p.published))
+        : []
+    );
 
   }
 

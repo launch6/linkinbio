@@ -46,7 +46,11 @@ function isRelativePath(s) {
 }
 
 function isDataImage(s) {
-  return typeof s === "string" && s.startsWith("data:image/");
+  if (typeof s !== "string" || !s.startsWith("data:image/")) return false;
+  // data:image/<subtype>[;...]
+  const subtype = s.substring(11).split(";")[0];
+  // Allow only safe raster types; explicitly blocks svg+xml
+  return ["jpeg", "jpg", "png", "webp", "gif"].includes(String(subtype || "").toLowerCase());
 }
 
 // For image src fields: allow http/https, allow /relative, allow data:image/ (production uses this)

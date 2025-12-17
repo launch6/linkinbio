@@ -14,6 +14,25 @@ async function getClient() {
   return c;
 }
 
+function pickParam(qs, keys) {
+  for (const k of keys) {
+    const v = qs[k];
+    if (Array.isArray(v)) return v[0] ?? "";
+    if (typeof v === "string") return v;
+  }
+  return "";
+}
+
+function cleanId(v, maxLen = 120) {
+  const s = typeof v === "string" ? v : v == null ? "" : String(v);
+  // remove control chars + cap length
+  return s.replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, maxLen);
+}
+
+function cleanSlug(v, maxLen = 80) {
+  return cleanId(v, maxLen).toLowerCase();
+}
+
 function toHttpUrl(u) {
   try {
     const url = new URL(u);
@@ -22,6 +41,23 @@ function toHttpUrl(u) {
   } catch {
     return null;
   }
+}
+
+function toNumberOrNull(v) {
+  if (v === "" || v === null || v === undefined) return null;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toMsOrNull(iso) {
+  if (!iso) return null;
+  const ms = Date.parse(String(iso));
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function isPublished(p) {
+  // IMPORTANT: match public API behavior: missing flag means "published"
+  return p?.published === undefined ? true : !!p.published;
 }
 
 function redirectToReason(res, { editToken, reason }) {
@@ -33,37 +69,28 @@ function redirectToReason(res, { editToken, reason }) {
   return res.end();
 }
 
-function pickParam(qs, keys) {
-  for (const k of keys) {
-    const v = qs[k];
-    if (Array.isArray(v)) return v[0] ?? "";
-    if (typeof v === "string") return v;
-  }
-  return "";
-}
-
-function toNumberOrNull(v) {
-  if (v === "" || v === null || v === undefined) return null;
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) ? n : null;
-}
-
-async function findProduct({ db, id, editToken }) {
+async function findProductBound({ db, id, editToken, slug }) {
+  // If editToken is present, this is a privileged preview/edit context.
+  // Otherwise, REQUIRE slug binding to prevent cross-profile IDOR.
   const baseQuery = editToken
     ? { editToken, "products.id": id }
-    : { "products.id": id };
+    : {
+        $and: [
+          { "products.id": id },
+          { $or: [{ publicSlug: slug }, { slug: slug }] },
+        ],
+      };
 
-  const doc = await db.collection("profiles").findOne(
-    baseQuery,
-    {
-      projection: {
-        _id: 0,
-        editToken: 1,
-        slug: 1,
-        products: { $elemMatch: { id } },
-      },
-    }
-  );
+  const doc = await db.collection("profiles").findOne(baseQuery, {
+    projection: {
+      _id: 0,
+      editToken: 1,
+      slug: 1,
+      publicSlug: 1,
+      status: 1,
+      products: { $elemMatch: { id } },
+    },
+  });
 
   const product = doc?.products?.[0];
   if (!product) return { status: "error", code: "not_found" };
@@ -76,27 +103,43 @@ export default async function handler(req, res) {
     return res.status(405).end("Method Not Allowed");
   }
 
-  const id = pickParam(req.query, ["id", "productId"]).trim();
-  const editToken = pickParam(req.query, ["editToken"]).trim();
+  const id = cleanId(pickParam(req.query, ["id", "productId"]));
+  const editToken = cleanId(pickParam(req.query, ["editToken"]));
+  const slug = cleanSlug(pickParam(req.query, ["slug", "publicSlug"]));
   const debug = pickParam(req.query, ["debug"]).trim() === "1";
 
   try {
     if (!id) {
       if (debug) {
-        return res
-          .status(200)
-          .json({ ok: false, stage: "pre", error: "Missing product id", query: req.query });
+        return res.status(200).json({
+          ok: false,
+          stage: "pre",
+          error: "Missing product id",
+          query: req.query,
+        });
       }
       return res.status(400).json({ ok: false, error: "Missing product id" });
     }
 
-    // Stage 1: env + DB
+    // If this is a public buy (no editToken), require slug binding for IDOR protection.
+    if (!editToken && !slug) {
+      if (debug) {
+        return res.status(200).json({
+          ok: false,
+          stage: "pre",
+          error: "Missing slug",
+          query: req.query,
+        });
+      }
+      return redirectToReason(res, { editToken: "", reason: "missing_slug" });
+    }
+
     const diag = {
       ok: true,
       stage: "pre-connect",
       hasEnv: !!MONGODB_URI,
       dbName: MONGODB_DB,
-      query: { id, editToken },
+      query: { id, editToken: !!editToken, slug: slug || "" },
     };
 
     let db;
@@ -111,10 +154,10 @@ export default async function handler(req, res) {
       throw e;
     }
 
-    // Stage 2: lookup
+    // Lookup, bound to slug unless editToken is provided
     let found;
     try {
-      found = await findProduct({ db, id, editToken });
+      found = await findProductBound({ db, id, editToken, slug });
       diag.stage = "post-lookup";
       diag.lookupStatus = found.status;
     } catch (e) {
@@ -133,34 +176,39 @@ export default async function handler(req, res) {
     }
 
     const p = found.product;
+
     const priceUrl = toHttpUrl((p.priceUrl || "").trim());
     const left = toNumberOrNull(p.unitsLeft);
     const total = toNumberOrNull(p.unitsTotal);
-    const endsIso = p.dropEndsAt || "";
-    const endsMs = endsIso ? Date.parse(endsIso) : null;
+
+    const startsMs = toMsOrNull(p.dropStartsAt);
+    const endsMs = toMsOrNull(p.dropEndsAt);
+
+    const publishedOk = isPublished(p);
 
     const block =
-      (!p.published && "unpublished") ||
+      (!publishedOk && "unpublished") ||
       (!priceUrl && "noprice") ||
+      ((startsMs !== null && startsMs > Date.now()) && "not_started") ||
       ((left !== null && left <= 0) && "soldout") ||
-      ((Number.isFinite(endsMs) && endsMs <= Date.now()) && "expired") ||
+      ((endsMs !== null && endsMs <= Date.now()) && "expired") ||
       null;
 
     if (debug) {
       diag.stage = "post-guard";
       diag.product = {
-        id: p.id,
-        published: !!p.published,
+        id: String(p.id || ""),
+        published: publishedOk,
         priceUrlPresent: !!priceUrl,
         unitsLeft: left,
         unitsTotal: total,
-        dropEndsAt: endsIso || null,
-        dropEndsAtMs: endsMs ?? null,
+        dropStartsAt: p.dropStartsAt || null,
+        dropStartsAtMs: startsMs,
+        dropEndsAt: p.dropEndsAt || null,
+        dropEndsAtMs: endsMs,
       };
       diag.block = block;
-      if (block) {
-        return res.status(200).json(diag);
-      }
+      if (block) return res.status(200).json(diag);
     }
 
     if (block) {
@@ -169,9 +217,17 @@ export default async function handler(req, res) {
 
     // Build outgoing URL (tag product id & pass UTMs if any)
     const out = new URL(priceUrl);
+
+    // Always tag product id (do not trust any inbound override)
     if (!out.searchParams.has("client_reference_id")) {
       out.searchParams.set("client_reference_id", id);
     }
+
+    // Optional: tag slug for analytics/debugging (non-sensitive)
+    if (slug && !out.searchParams.has("l6_slug")) {
+      out.searchParams.set("l6_slug", slug);
+    }
+
     const passthrough = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
     for (const key of passthrough) {
       const val = pickParam(req.query, [key]);
@@ -182,10 +238,12 @@ export default async function handler(req, res) {
     return res.end();
   } catch (err) {
     console.error("products/buy error:", err);
-    if (debug) {
-      return res
-        .status(200)
-        .json({ ok: false, stage: "catch", error: String((err && err.message) || err) });
+    if (pickParam(req.query, ["debug"]).trim() === "1") {
+      return res.status(200).json({
+        ok: false,
+        stage: "catch",
+        error: String((err && err.message) || err),
+      });
     }
     return res.status(500).json({ ok: false, error: "Buy redirect failed" });
   }

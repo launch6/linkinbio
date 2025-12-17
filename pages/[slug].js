@@ -550,18 +550,39 @@ const canCollectEmail =
       )
     : [];
 
-  const social = profile?.social || {};
+  const socialRaw = profile?.social || {};
 
-  // Ensure website link is always absolute
+  // External link safety: allow http/https; allow bare domains via https://; block other schemes
   const normalizeHref = (url) => {
-    if (!url) return "";
+    if (!url || typeof url !== "string") return "";
     const trimmed = url.trim();
     if (!trimmed) return "";
-    if (/^https?:\/\//i.test(trimmed)) return trimmed;
-    return `http://${trimmed}`;
+
+    // If it has a scheme (e.g., mailto:, javascript:, data:), allow only http/https
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      return "";
+    }
+
+    // Block relative and protocol-relative URLs
+    if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
+
+    // Basic bare-domain heuristic
+    if (!trimmed.includes(".") || /\s/.test(trimmed)) return "";
+
+    return `https://${trimmed}`;
   };
 
-  const websiteHref = normalizeHref(social.website);
+  const social = {
+    instagram: normalizeHref(socialRaw.instagram),
+    facebook: normalizeHref(socialRaw.facebook),
+    tiktok: normalizeHref(socialRaw.tiktok),
+    youtube: normalizeHref(socialRaw.youtube),
+    x: normalizeHref(socialRaw.x),
+    website: normalizeHref(socialRaw.website),
+  };
+
+  const websiteHref = social.website;
 
   const hasSocialRow =
     social.instagram ||

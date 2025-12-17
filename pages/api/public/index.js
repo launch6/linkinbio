@@ -183,9 +183,20 @@ export default async function handler(req, res) {
     }
 
 // --- Non-blocking analytics ---
-// Fire-and-forget so the API response stays fast.
-// Note: this counts every hit (including bots/refreshes).
-if (profileDoc._id) {
+// IMPORTANT: only count a "real" page view when explicitly requested.
+// This prevents inflation from polling (15s refresh) and visibility refreshes.
+const trackView = String(req.query.trackView || "") === "1";
+
+// Optional lightweight bot filter (keeps your counter cleaner; tune later)
+const ua = String(req.headers["user-agent"] || "").toLowerCase();
+const looksLikeBot =
+  ua.includes("bot") ||
+  ua.includes("spider") ||
+  ua.includes("crawler") ||
+  ua.includes("headless") ||
+  ua.includes("lighthouse");
+
+if (trackView && !looksLikeBot && profileDoc._id) {
   Profiles.updateOne(
     { _id: profileDoc._id },
     {

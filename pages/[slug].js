@@ -38,6 +38,45 @@ function isValidEmail(email) {
   return true;
 }
 
+// External link safety: allow http/https; allow bare domains via https://; allow mailto/tel; block dangerous schemes
+function normalizeHref(url) {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  const lower = trimmed.toLowerCase();
+
+  // hard-block dangerous schemes
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:")
+  ) {
+    return "";
+  }
+
+  // allow mailto/tel
+  if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
+    return trimmed;
+  }
+
+  // if it has any other scheme, allow only http/https
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return "";
+  }
+
+  // block relative and protocol-relative urls
+  if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
+
+  // allow bare domains by prepending https://
+  if (trimmed.includes(".") && !/\s/.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return "";
+}
+
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
   const common = {
@@ -130,19 +169,24 @@ function DropCard({ product: p, slug }) {
 
   const buttonText = p.buttonText || "Buy Now";
 
+  // Force slug to be present for buy.js binding. Fallback to pathname if needed.
+  const safeSlug =
+    slug ||
+    (typeof window !== "undefined"
+      ? String(window.location.pathname || "")
+          .split("/")
+          .filter(Boolean)[0] || ""
+      : "");
+
   const buyHref = `/api/products/buy?productId=${encodeURIComponent(
     p.id
-  )}${slug ? `&slug=${encodeURIComponent(slug)}` : ""}`;
+  )}${safeSlug ? `&slug=${encodeURIComponent(safeSlug)}` : ""}`;
 
   // --- inventory / ended logic -------------------------------------------
   const left =
-    p.unitsLeft === null || p.unitsLeft === undefined
-      ? null
-      : Number(p.unitsLeft);
+    p.unitsLeft === null || p.unitsLeft === undefined ? null : Number(p.unitsLeft);
   const total =
-    p.unitsTotal === null || p.unitsTotal === undefined
-      ? null
-      : Number(p.unitsTotal);
+    p.unitsTotal === null || p.unitsTotal === undefined ? null : Number(p.unitsTotal);
 
   const soldOut = left !== null && left <= 0;
 
@@ -195,7 +239,7 @@ function DropCard({ product: p, slug }) {
 
         if (days > 0) {
           mode = "days";
-          d = String(days); // days can be 1, 2, 10, etc.
+          d = String(days);
         }
 
         h = String(hours).padStart(2, "0");
@@ -216,7 +260,7 @@ function DropCard({ product: p, slug }) {
     width: "100%",
     maxWidth: "420px",
     margin: "0 auto 1.5rem",
-    boxSizing: "border-box", // ✅ prevents width+padding overflow
+    boxSizing: "border-box",
     borderRadius: "28px",
     padding: "20px 18px 22px",
     background:
@@ -334,22 +378,22 @@ function DropCard({ product: p, slug }) {
     margin: 0,
   };
 
-const buttonBase = {
-  width: "100%",
-  borderRadius: "999px",
-  padding: "0.8rem 1.1rem",
-  fontSize: "0.98rem",
-  fontWeight: 600,
-  border: "none",
-  cursor: "pointer",
-  textDecoration: "none",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  margin: "0.1rem auto 0",
-  boxSizing: "border-box",
-  transition: "transform 0.08s ease, boxShadow 0.08s ease, opacity 0.12s",
-};
+  const buttonBase = {
+    width: "100%",
+    borderRadius: "999px",
+    padding: "0.8rem 1.1rem",
+    fontSize: "0.98rem",
+    fontWeight: 600,
+    border: "none",
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0.1rem auto 0",
+    boxSizing: "border-box",
+    transition: "transform 0.08s ease, boxShadow 0.08s ease, opacity 0.12s",
+  };
 
   const buttonActive = {
     ...buttonBase,
@@ -440,6 +484,9 @@ export default function PublicSlugPage() {
   const router = useRouter();
   const { slug } = router.query;
 
+  // normalize slug to a single string
+  const slugStr = Array.isArray(slug) ? slug[0] : slug;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [profile, setProfile] = useState(null);
@@ -470,19 +517,25 @@ export default function PublicSlugPage() {
       throw new Error(j?.error || "Failed to load");
     }
 
-        setProfile(j.profile || null);
-       setProducts(Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []);
+    setProfile(j.profile || null);
+
+    const arr = Array.isArray(j.products) ? j.products : [];
+    // match backend behavior: missing published flag counts as published
+    const publishedOnly = arr.filter((p) =>
+      p ? (p.published === undefined ? true : !!p.published) : false
+    );
+    setProducts(publishedOnly);
   }
-  
+
   // initial + periodic refresh
   useEffect(() => {
-    if (!slug) return;
+    if (!slugStr) return;
     let alive = true;
 
     (async () => {
       try {
         setLoading(true);
-        await fetchAll(slug);
+        await fetchAll(slugStr);
         if (!alive) return;
         setError("");
       } catch (e) {
@@ -494,12 +547,12 @@ export default function PublicSlugPage() {
     })();
 
     refreshIntervalRef.current = setInterval(() => {
-      fetchAll(slug).catch(() => {});
+      fetchAll(slugStr).catch(() => {});
     }, 15000);
 
     const onVis = () => {
       if (document.visibilityState === "visible") {
-        fetchAll(slug).catch(() => {});
+        fetchAll(slugStr).catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -508,89 +561,38 @@ export default function PublicSlugPage() {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [slug]);
+  }, [slugStr]);
 
   // track page_view (slug-based)
   useEffect(() => {
-    if (!slug) return;
+    if (!slugStr) return;
     try {
       const payload = {
         type: "page_view",
         ts: Date.now(),
-        ref:
-          typeof window !== "undefined" ? window.location.href : "",
-        publicSlug: slug,
+        ref: typeof window !== "undefined" ? window.location.href : "",
+        publicSlug: slugStr,
       };
       const blob = new Blob([JSON.stringify(payload)], {
         type: "application/json",
       });
       navigator.sendBeacon("/api/track", blob);
     } catch {}
-  }, [slug]);
+  }, [slugStr]);
 
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
-  
+
   // default: email capture ON unless explicitly disabled
-const canCollectEmail =
-  profile?.showForm === true ||
-  (profile?.showForm !== false && profile?.collectEmail !== false);
+  const canCollectEmail =
+    profile?.showForm === true ||
+    (profile?.showForm !== false && profile?.collectEmail !== false);
 
   const links = Array.isArray(profile?.links)
-    ? profile.links.filter(
-        (l) =>
-          l &&
-          typeof l.url === "string" &&
-          l.url.trim().length > 0
-      )
+    ? profile.links.filter((l) => l && typeof l.url === "string" && l.url.trim().length > 0)
     : [];
 
   const socialRaw = profile?.social || {};
-
-  // External link safety: allow http/https; allow bare domains via https://; allow mailto/tel; block dangerous schemes
-const normalizeHref = (url) => {
-  if (!url || typeof url !== "string") return "";
-  const trimmed = url.trim();
-  if (!trimmed) return "";
-
-  const lower = trimmed.toLowerCase();
-
-  // Hard-block dangerous schemes
-  if (
-    lower.startsWith("javascript:") ||
-    lower.startsWith("data:") ||
-    lower.startsWith("vbscript:")
-  ) {
-    return "";
-  }
-
-  // Allow mailto/tel
-  if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
-    return trimmed;
-  }
-
-  // If it has any other scheme, only allow http/https
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
-    if (/^https?:\/\//i.test(trimmed)) return trimmed;
-    return "";
-  }
-
-  // Block relative and protocol-relative URLs
-  if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
-
-  // Allow bare domains by prepending https://
-  if (trimmed.includes(".") && !/\s/.test(trimmed)) {
-    return `https://${trimmed}`;
-  }
-
-  return "";
-};
-
-    // Basic bare-domain heuristic
-    if (!trimmed.includes(".") || /\s/.test(trimmed)) return "";
-
-    return `https://${trimmed}`;
-  };
 
   const social = {
     instagram: normalizeHref(socialRaw.instagram),
@@ -614,7 +616,7 @@ const normalizeHref = (url) => {
   // --- SEO / Social ---
   const firstImage = products?.[0]?.imageUrl || "";
   const site = "https://linkinbio-tau-pink.vercel.app";
-  const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
+  const pageUrl = slugStr ? `${site}/${encodeURIComponent(slugStr)}` : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
   const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
@@ -623,16 +625,12 @@ const normalizeHref = (url) => {
       ? ` • ${left0}/${total0} left`
       : "";
   const seoDesc =
-    (products?.[0]?.title
-      ? `${products[0].title}${leftPart}`
-      : "Limited releases and timed drops.") +
+    (products?.[0]?.title ? `${products[0].title}${leftPart}` : "Limited releases and timed drops.") +
     (bio ? ` — ${bio}` : "");
 
-  const avatarInitial =
-    (title && title.trim().charAt(0).toUpperCase()) || "L";
+  const avatarInitial = (title && title.trim().charAt(0).toUpperCase()) || "L";
 
-  const avatarUrl =
-    profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
+  const avatarUrl = profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
 
   // early states
   if (loading) {
@@ -662,9 +660,7 @@ const normalizeHref = (url) => {
     textAlign: "center",
   };
 
-  const fullWidthSection = {
-    width: "100%",
-  };
+  const fullWidthSection = { width: "100%" };
 
   // vertical rhythm
   const SECTION_GAP = "1.35rem";
@@ -684,11 +680,10 @@ const normalizeHref = (url) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          publicSlug: slug,
+          publicSlug: slugStr,
           email,
           name: fullName,
-          ref:
-            typeof window !== "undefined" ? window.location.href : "",
+          ref: typeof window !== "undefined" ? window.location.href : "",
         }),
       });
       const json = await resp.json().catch(() => ({}));
@@ -717,19 +712,14 @@ const normalizeHref = (url) => {
       <Head>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
-        <meta
-          name="robots"
-          content="index,follow,max-image-preview:large"
-        />
+        <meta name="robots" content="index,follow,max-image-preview:large" />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
-        {firstImage ? (
-          <meta property="og:image" content={firstImage} />
-        ) : null}
+        {firstImage ? <meta property="og:image" content={firstImage} /> : null}
 
         {/* Twitter */}
         <meta
@@ -738,22 +728,14 @@ const normalizeHref = (url) => {
         />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDesc} />
-        {firstImage ? (
-          <meta name="twitter:image" content={firstImage} />
-        ) : null}
+        {firstImage ? <meta name="twitter:image" content={firstImage} /> : null}
         <link rel="canonical" href={pageUrl} />
       </Head>
 
       <div className="min-h-screen bg-neutral-950 text-white">
         <main style={mainStyle}>
-          
           {/* HEADER */}
-          <header
-            style={{
-              width: "100%",
-              marginBottom: SECTION_GAP,
-            }}
-          >
+          <header style={{ width: "100%", marginBottom: SECTION_GAP }}>
             <div
               style={{
                 width: "100%",
@@ -766,11 +748,7 @@ const normalizeHref = (url) => {
               }}
             >
               {/* Avatar */}
-              <div
-                style={{
-                  marginBottom: HEADER_STACK_SPACING,
-                }}
-              >
+              <div style={{ marginBottom: HEADER_STACK_SPACING }}>
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
@@ -833,13 +811,7 @@ const normalizeHref = (url) => {
 
               {/* Social icons */}
               {hasSocialRow && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "0.9rem",
-                  }}
-                >
+                <div style={{ display: "flex", justifyContent: "center", gap: "0.9rem" }}>
                   {social.instagram && (
                     <a
                       href={social.instagram}
@@ -979,52 +951,49 @@ const normalizeHref = (url) => {
 
           {/* PRODUCTS / DROP CARD */}
           {products.length > 0 && (
-            <section
-              style={{
-                ...fullWidthSection,
-                marginBottom: SECTION_GAP,
-              }}
-            >
+            <section style={{ ...fullWidthSection, marginBottom: SECTION_GAP }}>
               {products.map((p) => (
-                <DropCard key={p.id} product={p} slug={slug} />
+                <DropCard key={p.id} product={p} slug={slugStr} />
               ))}
             </section>
           )}
-{/* EMAIL CAPTURE (optional, still full-width) */}
-{canCollectEmail && (
-  <section
-    style={{
-      width: "100%",
-      maxWidth: "420px",
-      margin: `0 auto ${SECTION_GAP}`,
-      padding: "20px 18px 22px",
-      borderRadius: "28px",
-      textAlign: "center",
-      background:
-        "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
-        border: "1px solid rgba(148,163,184,0.4)",
-boxShadow: "0 20px 60px rgba(0,0,0,0.75)",
 
-      boxSizing: "border-box",
-    }}
-  >
-
-<h2
-  style={{
-    width: "100%",
-    maxWidth: "420px",
-    marginTop: "-0.25rem",
-    marginRight: "auto",
-    marginLeft: "auto",
-    marginBottom: "0.95rem",
-    textAlign: "center",
-    fontSize: "1.4rem",
-    fontWeight: 700,
-    lineHeight: 1.2,
-  }}
->
-  {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
-</h2>
+          {/* EMAIL CAPTURE (optional, still full-width) */}
+          {canCollectEmail && (
+            <section
+              style={{
+                width: "100%",
+                maxWidth: "420px",
+                margin: `0 auto ${SECTION_GAP}`,
+                padding: "20px 18px 22px",
+                borderRadius: "28px",
+                textAlign: "center",
+                background:
+                  "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
+                border: "1px solid rgba(148,163,184,0.4)",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.75)",
+                boxSizing: "border-box",
+              }}
+            >
+              <h2
+                style={{
+                  width: "100%",
+                  maxWidth: "420px",
+                  marginTop: "-0.25rem",
+                  marginRight: "auto",
+                  marginLeft: "auto",
+                  marginBottom: "0.95rem",
+                  textAlign: "center",
+                  fontSize: "1.4rem",
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                }}
+              >
+                {(profile?.formHeadline ||
+                  profile?.emailHeadline ||
+                  "Get first dibs on drops"
+                ).trim()}
+              </h2>
 
               {!subscribed ? (
                 <form
@@ -1036,89 +1005,86 @@ boxShadow: "0 20px 60px rgba(0,0,0,0.75)",
                   }}
                 >
                   {profile?.collectName && (
-  <input
-    type="text"
-    autoComplete="name"
-    style={{
-      width: "100%",
-      maxWidth: "420px",
-      margin: "0 auto",
-      borderRadius: "9999px",
-      backgroundColor: "rgba(255,255,255,0.06)",
-      border: "1px solid rgba(255,255,255,0.12)",
-      padding: "0.9rem 1.1rem",
-      fontSize: "1.05rem",
-      color: "white",
-      outline: "none",
-      boxShadow: "none",
-      boxSizing: "border-box",
-    }}
-    placeholder="Full name (optional)"
-    value={fullName}
-    onChange={(e) => setFullName(e.target.value)}
-  />
-)}
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      style={{
+                        width: "100%",
+                        maxWidth: "420px",
+                        margin: "0 auto",
+                        borderRadius: "9999px",
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        padding: "0.9rem 1.1rem",
+                        fontSize: "1.05rem",
+                        color: "white",
+                        outline: "none",
+                        boxShadow: "none",
+                        boxSizing: "border-box",
+                      }}
+                      placeholder="Full name (optional)"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                  )}
 
-<div
-  style={{
-    width: "100%",
-    maxWidth: "420px",
-    margin: "0 auto",
-    display: "flex",
-    alignItems: "stretch",
-    borderRadius: "9999px",
-    backgroundColor: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    overflow: "hidden",
-    boxSizing: "border-box",
-  }}
->
-  <input
-    type="email"
-    inputMode="email"
-    autoComplete="email"
-    style={{
-      flex: 1,
-      minWidth: 0,
-      border: "none",
-      backgroundColor: "transparent",
-      padding: "0.9rem 1.1rem",
-      fontSize: "1.05rem",
-      color: "white",
-      outline: "none",
-      boxShadow: "none",
-    }}
-    placeholder="you@example.com"
-    value={email}
-    onChange={(e) => {
-      setEmail(e.target.value);
-      if (emailErr) setEmailErr("");
-    }}
-    aria-invalid={!!emailErr}
-    aria-describedby={emailErr ? "email-error" : undefined}
-  />
+                  <div
+                    style={{
+                      width: "100%",
+                      maxWidth: "420px",
+                      margin: "0 auto",
+                      display: "flex",
+                      alignItems: "stretch",
+                      borderRadius: "9999px",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      overflow: "hidden",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        border: "none",
+                        backgroundColor: "transparent",
+                        padding: "0.9rem 1.1rem",
+                        fontSize: "1.05rem",
+                        color: "white",
+                        outline: "none",
+                        boxShadow: "none",
+                      }}
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (emailErr) setEmailErr("");
+                      }}
+                      aria-invalid={!!emailErr}
+                      aria-describedby={emailErr ? "email-error" : undefined}
+                    />
 
-  <button
-    type="submit"
-    disabled={submitting}
-    style={{
-      border: "none",
-      padding: "0 1.4rem",
-      fontSize: "1.05rem",
-      fontWeight: 800,
-      color: "white",
-      cursor: "pointer",
-      opacity: submitting ? 0.75 : 1,
-
-      // TEMP: matches BUY NOW look (replace these 2 lines with the exact BUY NOW button styles in this file)
-backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
-boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
-    }}
-  >
-    {submitting ? "Joining…" : "Join"}
-  </button>
-</div>
-
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      style={{
+                        border: "none",
+                        padding: "0 1.4rem",
+                        fontSize: "1.05rem",
+                        fontWeight: 800,
+                        color: "white",
+                        cursor: "pointer",
+                        opacity: submitting ? 0.75 : 1,
+                        backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
+                        boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
+                      }}
+                    >
+                      {submitting ? "Joining…" : "Join"}
+                    </button>
+                  </div>
                 </form>
               ) : (
                 <div
@@ -1134,6 +1100,7 @@ boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
                   You’re in! We’ll let you know about new drops.
                 </div>
               )}
+
               {emailErr ? (
                 <div
                   id="email-error"
@@ -1146,7 +1113,6 @@ boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
                   {emailErr}
                 </div>
               ) : null}
-
             </section>
           )}
 
@@ -1168,10 +1134,13 @@ boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
               >
                 {links.map((l) => {
                   const label = l.label || l.url || "Link";
+                  const safeUrl = normalizeHref(l.url);
+                  if (!safeUrl) return null;
+
                   return (
                     <a
                       key={l.id || l.url}
-                      href={l.url}
+                      href={safeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -1189,14 +1158,7 @@ boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
                       }}
                     >
                       <span>{label}</span>
-                      <span
-                        style={{
-                          fontSize: "0.8rem",
-                          opacity: 0.6,
-                        }}
-                      >
-                        ↗
-                      </span>
+                      <span style={{ fontSize: "0.8rem", opacity: 0.6 }}>↗</span>
                     </a>
                   );
                 })}
@@ -1215,13 +1177,7 @@ boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
             }}
           >
             {/* Launch6 logo CTA */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                marginBottom: "1rem",
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
               <a
                 href="https://launch6.com"
                 target="_blank"
@@ -1246,11 +1202,7 @@ boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
                 <img
                   src="/launch6_white.png"
                   alt="Launch6 logo"
-                  style={{
-                    height: "1.6rem",
-                    width: "auto",
-                    display: "block",
-                  }}
+                  style={{ height: "1.6rem", width: "auto", display: "block" }}
                 />
                 <span>blastoff here 🚀</span>
               </a>
@@ -1265,15 +1217,9 @@ boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
                 gap: "0.9rem",
               }}
             >
-              <button style={{ textDecoration: "underline" }}>
-                Cookie preferences
-              </button>
-              <button style={{ textDecoration: "underline" }}>
-                Report page
-              </button>
-              <button style={{ textDecoration: "underline" }}>
-                Privacy
-              </button>
+              <button style={{ textDecoration: "underline" }}>Cookie preferences</button>
+              <button style={{ textDecoration: "underline" }}>Report page</button>
+              <button style={{ textDecoration: "underline" }}>Privacy</button>
             </div>
           </footer>
         </main>

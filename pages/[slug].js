@@ -212,7 +212,8 @@ function DropCard({ product: p, slug }) {
     borderRadius: "28px",
     padding: "20px 18px 22px",
     background: "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
-    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+    boxShadow:
+      "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
   };
 
   const heroFrame = {
@@ -358,7 +359,6 @@ function DropCard({ product: p, slug }) {
 
   return (
     <article style={outer}>
-      {/* hero */}
       <div style={heroFrame}>
         <div style={heroInner}>
           {imageUrl ? (
@@ -371,7 +371,6 @@ function DropCard({ product: p, slug }) {
         </div>
       </div>
 
-      {/* body */}
       <div style={body}>
         <h2 style={titleStyle}>{title}</h2>
 
@@ -408,7 +407,6 @@ function DropCard({ product: p, slug }) {
           </div>
         )}
 
-        {/* primary button */}
         {isEnded ? (
           <button type="button" style={buttonDisabled} disabled>
             Drop ended
@@ -477,8 +475,9 @@ export default function PublicSlugPage() {
   };
 
   // fetch public profile + products via slug (robust JSON guard)
-  async function fetchAll(slugVal) {
-    const url = `/api/public?slug=${encodeURIComponent(slugVal)}`;
+  async function fetchAll(slugVal, opts = {}) {
+    const trackView = !!opts.trackView;
+    const url = `/api/public?slug=${encodeURIComponent(slugVal)}${trackView ? "&trackView=1" : ""}`;
     const r = await fetch(url, { cache: "no-store" });
 
     const ct = (r.headers.get("content-type") || "").toLowerCase();
@@ -493,21 +492,33 @@ export default function PublicSlugPage() {
     }
 
     setProfile(j.profile || null);
-
-    const list = Array.isArray(j.products) ? j.products : [];
-    // Match backend semantics: missing `published` means published
-    setProducts(list.filter((p) => p && (p.published === undefined ? true : !!p.published)));
+    setProducts(Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []);
   }
 
-  // initial + periodic refresh
+  // initial + periodic refresh (trackView only once per session)
   useEffect(() => {
     if (!slug) return;
     let alive = true;
 
+    const viewKey = `l6_view_tracked_${String(slug)}`;
+    let shouldTrackView = false;
+
+    try {
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        if (!sessionStorage.getItem(viewKey)) {
+          sessionStorage.setItem(viewKey, "1");
+          shouldTrackView = true;
+        }
+      }
+    } catch {
+      // If storage is blocked, degrade gracefully: do not spam counts.
+      shouldTrackView = false;
+    }
+
     (async () => {
       try {
         setLoading(true);
-        await fetchAll(slug);
+        await fetchAll(slug, { trackView: shouldTrackView });
         if (!alive) return;
         setError("");
       } catch (e) {
@@ -518,36 +529,23 @@ export default function PublicSlugPage() {
       }
     })();
 
+    // Poll without tracking (prevents inflated viewCount)
     refreshIntervalRef.current = setInterval(() => {
-      fetchAll(slug).catch(() => {});
+      fetchAll(slug, { trackView: false }).catch(() => {});
     }, 15000);
 
     const onVis = () => {
       if (document.visibilityState === "visible") {
-        fetchAll(slug).catch(() => {});
+        fetchAll(slug, { trackView: false }).catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
+      alive = false;
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [slug]);
-
-  // track page_view (slug-based)
-  useEffect(() => {
-    if (!slug) return;
-    try {
-      const payload = {
-        type: "page_view",
-        ts: Date.now(),
-        ref: typeof window !== "undefined" ? window.location.href : "",
-        publicSlug: slug,
-      };
-      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-      navigator.sendBeacon("/api/track", blob);
-    } catch {}
   }, [slug]);
 
   const title = profile?.displayName || profile?.name || "Artist";
@@ -557,19 +555,16 @@ export default function PublicSlugPage() {
   const canCollectEmail =
     profile?.showForm === true || (profile?.showForm !== false && profile?.collectEmail !== false);
 
-  const linksRaw = Array.isArray(profile?.links) ? profile.links : [];
-  const safeLinks = linksRaw
-    .map((l) => {
-      const rawUrl = l?.url || "";
-      const safeUrl = normalizeHref(rawUrl);
-      if (!safeUrl) return null;
-      return {
-        ...l,
-        url: safeUrl,
-        label: (l?.label || rawUrl || "Link").toString(),
-      };
-    })
-    .filter(Boolean);
+  // Normalize links again client-side (defense-in-depth)
+  const links = Array.isArray(profile?.links)
+    ? profile.links
+        .map((l) => {
+          const url = normalizeHref(l?.url || "");
+          if (!url) return null;
+          return { ...l, url };
+        })
+        .filter(Boolean)
+    : [];
 
   const socialRaw = profile?.social || {};
   const social = {
@@ -600,7 +595,6 @@ export default function PublicSlugPage() {
     (bio ? ` — ${bio}` : "");
 
   const avatarInitial = (title && title.trim().charAt(0).toUpperCase()) || "L";
-
   const avatarUrl = profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
 
   // early states
@@ -631,9 +625,7 @@ export default function PublicSlugPage() {
     textAlign: "center",
   };
 
-  const fullWidthSection = {
-    width: "100%",
-  };
+  const fullWidthSection = { width: "100%" };
 
   // vertical rhythm
   const SECTION_GAP = "1.35rem";
@@ -1065,10 +1057,7 @@ export default function PublicSlugPage() {
               )}
 
               {emailErr ? (
-                <div
-                  id="email-error"
-                  style={{ marginTop: "0.35rem", fontSize: "0.8rem", color: "#fecaca" }}
-                >
+                <div id="email-error" style={{ marginTop: "0.35rem", fontSize: "0.8rem", color: "#fecaca" }}>
                   {emailErr}
                 </div>
               ) : null}
@@ -1076,7 +1065,7 @@ export default function PublicSlugPage() {
           )}
 
           {/* LINKS */}
-          {safeLinks.length > 0 && (
+          {links.length > 0 && (
             <section
               style={{
                 width: "100%",
@@ -1085,7 +1074,7 @@ export default function PublicSlugPage() {
               }}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {safeLinks.map((l) => {
+                {links.map((l) => {
                   const label = l.label || l.url || "Link";
                   return (
                     <a
@@ -1099,7 +1088,8 @@ export default function PublicSlugPage() {
                         justifyContent: "space-between",
                         padding: "0.95rem 1.2rem",
                         borderRadius: "999px",
-                        background: "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
+                        background:
+                          "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
                         border: "1px solid #27272a",
                         textDecoration: "none",
                         color: "#f4f4f5",
@@ -1146,19 +1136,21 @@ export default function PublicSlugPage() {
                   marginTop: "0.5rem",
                 }}
               >
-                <img
-                  src="/launch6_white.png"
-                  alt="Launch6 logo"
-                  style={{ height: "1.6rem", width: "auto", display: "block" }}
-                />
+                <img src="/launch6_white.png" alt="Launch6 logo" style={{ height: "1.6rem", width: "auto" }} />
                 <span>blastoff here 🚀</span>
               </a>
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0.9rem" }}>
-              <button style={{ textDecoration: "underline" }}>Cookie preferences</button>
-              <button style={{ textDecoration: "underline" }}>Report page</button>
-              <button style={{ textDecoration: "underline" }}>Privacy</button>
+              <button type="button" style={{ textDecoration: "underline" }}>
+                Cookie preferences
+              </button>
+              <button type="button" style={{ textDecoration: "underline" }}>
+                Report page
+              </button>
+              <button type="button" style={{ textDecoration: "underline" }}>
+                Privacy
+              </button>
             </div>
           </footer>
         </main>

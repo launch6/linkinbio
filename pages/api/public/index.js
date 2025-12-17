@@ -142,6 +142,7 @@ export default async function handler(req, res) {
           formHeadline: 1,
           formSubtext: 1,
           plan: 1,
+          _id: 1,
           displayName: 1,
           name: 1,
           publicSlug: 1,
@@ -163,7 +164,7 @@ export default async function handler(req, res) {
     if (!profileDoc) {
       return send(res, 404, { ok: false, error: "profile_not_found" });
     }
-    
+
 // --- Non-blocking analytics ---
 // Fire-and-forget so the API response stays fast.
 // Note: this counts every hit (including bots/refreshes).

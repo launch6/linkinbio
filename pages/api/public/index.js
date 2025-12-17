@@ -163,6 +163,19 @@ export default async function handler(req, res) {
     if (!profileDoc) {
       return send(res, 404, { ok: false, error: "profile_not_found" });
     }
+    
+// --- Non-blocking analytics ---
+// Fire-and-forget so the API response stays fast.
+// Note: this counts every hit (including bots/refreshes).
+if (profileDoc._id) {
+  Profiles.updateOne(
+    { _id: profileDoc._id },
+    {
+      $inc: { viewCount: 1 },
+      $set: { lastViewedAt: new Date() },
+    }
+  ).catch((e) => console.error("public:viewCount update failed", e?.message || e));
+}
 
     // 2) Load *published* products from this profile
     const productsRaw = Array.isArray(profileDoc.products) ? profileDoc.products : [];

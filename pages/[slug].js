@@ -433,6 +433,8 @@ export default function PublicSlugPage() {
   // email capture UI state
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [websiteHp, setWebsiteHp] = useState(""); // honeypot (invisible)
+  const formTsRef = useRef(Date.now()); // when the form was shown
   const [emailErr, setEmailErr] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
@@ -498,6 +500,10 @@ export default function PublicSlugPage() {
   // initial + periodic refresh (trackView only once per session)
   useEffect(() => {
     if (!slug) return;
+        try {
+      formTsRef.current = Date.now();
+      setWebsiteHp("");
+    } catch {}
     let alive = true;
 
     const viewKey = `l6_view_tracked_${String(slug)}`;
@@ -643,12 +649,15 @@ export default function PublicSlugPage() {
       const resp = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+          body: JSON.stringify({
           publicSlug: slug,
           email,
           name: fullName,
+          website: websiteHp,     // honeypot
+          formTs: formTsRef.current, // timing hint (ms)
           ref: typeof window !== "undefined" ? window.location.href : "",
         }),
+
       });
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json?.ok) {
@@ -954,92 +963,112 @@ export default function PublicSlugPage() {
               </h2>
 
               {!subscribed ? (
-                <form
-                  onSubmit={handleSubscribe}
-                  style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-                >
-                  {profile?.collectName && (
-                    <input
-                      type="text"
-                      autoComplete="name"
-                      style={{
-                        width: "100%",
-                        maxWidth: "420px",
-                        margin: "0 auto",
-                        borderRadius: "9999px",
-                        backgroundColor: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        padding: "0.9rem 1.1rem",
-                        fontSize: "1.05rem",
-                        color: "white",
-                        outline: "none",
-                        boxShadow: "none",
-                        boxSizing: "border-box",
-                      }}
-                      placeholder="Full name (optional)"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                    />
-                  )}
+               
+               <form
+  onSubmit={handleSubscribe}
+  style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+>
+  {/* Honeypot (invisible). Bots often fill this; humans never see it. */}
+  <input
+    type="text"
+    name="website"
+    value={websiteHp}
+    onChange={(e) => setWebsiteHp(e.target.value)}
+    tabIndex={-1}
+    autoComplete="off"
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      left: "-10000px",
+      top: "auto",
+      width: "1px",
+      height: "1px",
+      overflow: "hidden",
+    }}
+  />
 
-                  <div
-                    style={{
-                      width: "100%",
-                      maxWidth: "420px",
-                      margin: "0 auto",
-                      display: "flex",
-                      alignItems: "stretch",
-                      borderRadius: "9999px",
-                      backgroundColor: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      overflow: "hidden",
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    <input
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        border: "none",
-                        backgroundColor: "transparent",
-                        padding: "0.9rem 1.1rem",
-                        fontSize: "1.05rem",
-                        color: "white",
-                        outline: "none",
-                        boxShadow: "none",
-                      }}
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (emailErr) setEmailErr("");
-                      }}
-                      aria-invalid={!!emailErr}
-                      aria-describedby={emailErr ? "email-error" : undefined}
-                    />
+  {profile?.collectName && (
+    <input
+      type="text"
+      autoComplete="name"
+      style={{
+        width: "100%",
+        maxWidth: "420px",
+        margin: "0 auto",
+        borderRadius: "9999px",
+        backgroundColor: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        padding: "0.9rem 1.1rem",
+        fontSize: "1.05rem",
+        color: "white",
+        outline: "none",
+        boxShadow: "none",
+        boxSizing: "border-box",
+      }}
+      placeholder="Full name (optional)"
+      value={fullName}
+      onChange={(e) => setFullName(e.target.value)}
+    />
+  )}
 
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      style={{
-                        border: "none",
-                        padding: "0 1.4rem",
-                        fontSize: "1.05rem",
-                        fontWeight: 800,
-                        color: "white",
-                        cursor: "pointer",
-                        opacity: submitting ? 0.75 : 1,
-                        backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
-                        boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
-                      }}
-                    >
-                      {submitting ? "Joining…" : "Join"}
-                    </button>
-                  </div>
-                </form>
+  <div
+    style={{
+      width: "100%",
+      maxWidth: "420px",
+      margin: "0 auto",
+      display: "flex",
+      alignItems: "stretch",
+      borderRadius: "9999px",
+      backgroundColor: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      overflow: "hidden",
+      boxSizing: "border-box",
+    }}
+  >
+    <input
+      type="email"
+      inputMode="email"
+      autoComplete="email"
+      style={{
+        flex: 1,
+        minWidth: 0,
+        border: "none",
+        backgroundColor: "transparent",
+        padding: "0.9rem 1.1rem",
+        fontSize: "1.05rem",
+        color: "white",
+        outline: "none",
+        boxShadow: "none",
+      }}
+      placeholder="you@example.com"
+      value={email}
+      onChange={(e) => {
+        setEmail(e.target.value);
+        if (emailErr) setEmailErr("");
+      }}
+      aria-invalid={!!emailErr}
+      aria-describedby={emailErr ? "email-error" : undefined}
+    />
+
+    <button
+      type="submit"
+      disabled={submitting}
+      style={{
+        border: "none",
+        padding: "0 1.4rem",
+        fontSize: "1.05rem",
+        fontWeight: 800,
+        color: "white",
+        cursor: "pointer",
+        opacity: submitting ? 0.75 : 1,
+        backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
+        boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
+      }}
+    >
+      {submitting ? "Joining…" : "Join"}
+    </button>
+  </div>
+</form>
               ) : (
                 <div
                   style={{

@@ -45,6 +45,36 @@ function isRelativePath(s) {
   return typeof s === "string" && s.startsWith("/") && !s.startsWith("//");
 }
 
+function hasAnyScheme(s) {
+  // e.g. "javascript:", "data:", "ftp:", etc.
+  return typeof s === "string" && /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(s);
+}
+
+function isMailto(s) {
+  return typeof s === "string" && s.toLowerCase().startsWith("mailto:");
+}
+
+function isTel(s) {
+  return typeof s === "string" && s.toLowerCase().startsWith("tel:");
+}
+
+function looksLikeDomainOrUrlWithoutScheme(s) {
+  // very lightweight heuristic: contains a dot, no spaces, not starting with "/" or "//"
+  if (typeof s !== "string") return false;
+  if (!s || /\s/.test(s)) return false;
+  if (s.startsWith("/") || s.startsWith("//")) return false;
+  if (!s.includes(".")) return false;
+  return true;
+}
+
+function normalizeToHttpsIfSchemless(s) {
+  if (!s || typeof s !== "string") return "";
+  if (isHttpUrl(s)) return s;
+  if (hasAnyScheme(s)) return ""; // block non-http schemes
+  if (!looksLikeDomainOrUrlWithoutScheme(s)) return "";
+  return `https://${s}`;
+}
+
 function isDataImage(s) {
   if (typeof s !== "string" || !s.startsWith("data:image/")) return false;
   // data:image/<subtype>[;...]
@@ -53,7 +83,7 @@ function isDataImage(s) {
   return ["jpeg", "jpg", "png", "webp", "gif"].includes(String(subtype || "").toLowerCase());
 }
 
-// For image src fields: allow http/https, allow /relative, allow data:image/ (production uses this)
+// For image src fields: allow http/https, allow /relative, allow data:image/ (raster only)
 function sanitizeImageSrc(v) {
   const s = typeof v === "string" ? v.trim() : "";
   if (!s) return "";
@@ -63,12 +93,42 @@ function sanitizeImageSrc(v) {
   return "";
 }
 
-// For clickable href fields (links, priceUrl): allow http/https only (blocks javascript:, data:, relative)
-function sanitizeHref(v) {
+// For checkout + other strict external targets: allow http/https only
+function sanitizeHrefHttpOnly(v) {
   const s = typeof v === "string" ? v.trim() : "";
   if (!s) return "";
   if (isHttpUrl(s)) return s;
+  // optionally allow schemeless domains by normalizing to https
+  const normalized = normalizeToHttpsIfSchemless(s);
+  return normalized || "";
+}
+
+// For creator-controlled "links" (buttons): allow http/https + mailto: + tel:
+function sanitizeHrefLink(v) {
+  const s = typeof v === "string" ? v.trim() : "";
+  if (!s) return "";
+  if (isHttpUrl(s)) return s;
+  if (isMailto(s) || isTel(s)) return s;
+  // support schemeless domains like "example.com" by normalizing to https
+  if (!hasAnyScheme(s)) {
+    const normalized = normalizeToHttpsIfSchemless(s);
+    return normalized || "";
+  }
   return "";
+}
+
+function sanitizeSocialObject(social) {
+  const src = social && typeof social === "object" ? social : {};
+  // Social icons should never accept mailto/tel; keep them http/https (or normalized https)
+  const out = {
+    instagram: sanitizeHrefHttpOnly(src.instagram || ""),
+    facebook: sanitizeHrefHttpOnly(src.facebook || ""),
+    tiktok: sanitizeHrefHttpOnly(src.tiktok || ""),
+    youtube: sanitizeHrefHttpOnly(src.youtube || ""),
+    x: sanitizeHrefHttpOnly(src.x || ""),
+    website: sanitizeHrefHttpOnly(src.website || ""),
+  };
+  return out;
 }
 
 // GET /api/public?slug=<publicSlug or slug>
@@ -99,8 +159,6 @@ export default async function handler(req, res) {
           klaviyoEnabled: 1,
           formHeadline: 1,
           formSubtext: 1,
-          _id: 1,
-          editToken: 1,
           plan: 1,
           displayName: 1,
           name: 1,
@@ -115,7 +173,7 @@ export default async function handler(req, res) {
           social: 1,
           avatarUrl: 1,
           imageUrl: 1,
-          products: 1, // important
+          products: 1,
         },
       }
     );
@@ -135,7 +193,8 @@ export default async function handler(req, res) {
         title: defangText(p.title || "", 200),
         description: defangText(p.description || "", 5000),
         imageUrl: sanitizeImageSrc(p.imageUrl || ""),
-        priceUrl: sanitizeHref(p.priceUrl || ""),
+        // checkout targets: http/https only
+        priceUrl: sanitizeHrefHttpOnly(p.priceUrl || ""),
         priceCents: typeof p.priceCents === "number" ? p.priceCents : null,
         priceDisplay: defangText(p.priceDisplay || "", 80),
         priceText: defangText(p.priceText || "", 80),
@@ -149,11 +208,11 @@ export default async function handler(req, res) {
         published: p.published === undefined ? true : !!p.published,
       }));
 
-    // 3) Normalize links (http/https only)
+    // 3) Normalize links (http/https + mailto/tel + schemeless domain -> https)
     const links = Array.isArray(profileDoc.links)
       ? profileDoc.links
           .map((l) => {
-            const url = sanitizeHref(l?.url || "");
+            const url = sanitizeHrefLink(l?.url || "");
             if (!url) return null;
             return {
               ...l,
@@ -163,6 +222,8 @@ export default async function handler(req, res) {
           })
           .filter(Boolean)
       : [];
+
+    const social = sanitizeSocialObject(profileDoc.social);
 
     return send(res, 200, {
       ok: true,
@@ -187,7 +248,7 @@ export default async function handler(req, res) {
         klaviyoListId: defangText(profileDoc.klaviyoListId || "", 120),
         avatarUrl: sanitizeImageSrc(profileDoc.avatarUrl || profileDoc.imageUrl || ""),
         links,
-        social: profileDoc.social || {},
+        social,
       },
       products,
     });

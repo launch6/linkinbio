@@ -177,7 +177,10 @@ export default async function handler(req, res) {
   const id = cleanId(pickParam(req.query, ["id", "productId"]));
   const editToken = cleanId(pickParam(req.query, ["editToken"]));
   const slug = cleanSlug(pickParam(req.query, ["slug", "publicSlug"]));
-  const debug = pickParam(req.query, ["debug"]).trim() === "1";
+  const debugRequested = pickParam(req.query, ["debug"]).trim() === "1";
+// Never allow debug output in production
+const debug = debugRequested && process.env.NODE_ENV !== "production";
+
 
   try {
     if (!id) {

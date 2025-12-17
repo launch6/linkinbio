@@ -38,45 +38,6 @@ function isValidEmail(email) {
   return true;
 }
 
-// External link safety: allow http/https; allow bare domains via https://; allow mailto/tel; block dangerous schemes
-function normalizeHref(url) {
-  if (!url || typeof url !== "string") return "";
-  const trimmed = url.trim();
-  if (!trimmed) return "";
-
-  const lower = trimmed.toLowerCase();
-
-  // hard-block dangerous schemes
-  if (
-    lower.startsWith("javascript:") ||
-    lower.startsWith("data:") ||
-    lower.startsWith("vbscript:")
-  ) {
-    return "";
-  }
-
-  // allow mailto/tel
-  if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
-    return trimmed;
-  }
-
-  // if it has any other scheme, allow only http/https
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
-    if (/^https?:\/\//i.test(trimmed)) return trimmed;
-    return "";
-  }
-
-  // block relative and protocol-relative urls
-  if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
-
-  // allow bare domains by prepending https://
-  if (trimmed.includes(".") && !/\s/.test(trimmed)) {
-    return `https://${trimmed}`;
-  }
-
-  return "";
-}
-
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
   const common = {
@@ -163,30 +124,17 @@ function DropCard({ product: p, slug }) {
     p.priceDisplay ||
     p.priceFormatted ||
     p.priceText ||
-    (typeof p.priceCents === "number"
-      ? `$${(p.priceCents / 100).toFixed(2)}`
-      : null);
+    (typeof p.priceCents === "number" ? `$${(p.priceCents / 100).toFixed(2)}` : null);
 
   const buttonText = p.buttonText || "Buy Now";
 
-  // Force slug to be present for buy.js binding. Fallback to pathname if needed.
-  const safeSlug =
-    slug ||
-    (typeof window !== "undefined"
-      ? String(window.location.pathname || "")
-          .split("/")
-          .filter(Boolean)[0] || ""
-      : "");
-
-  const buyHref = `/api/products/buy?productId=${encodeURIComponent(
-    p.id
-  )}${safeSlug ? `&slug=${encodeURIComponent(safeSlug)}` : ""}`;
+  const buyHref = `/api/products/buy?productId=${encodeURIComponent(p.id)}${
+    slug ? `&slug=${encodeURIComponent(slug)}` : ""
+  }`;
 
   // --- inventory / ended logic -------------------------------------------
-  const left =
-    p.unitsLeft === null || p.unitsLeft === undefined ? null : Number(p.unitsLeft);
-  const total =
-    p.unitsTotal === null || p.unitsTotal === undefined ? null : Number(p.unitsTotal);
+  const left = p.unitsLeft === null || p.unitsLeft === undefined ? null : Number(p.unitsLeft);
+  const total = p.unitsTotal === null || p.unitsTotal === undefined ? null : Number(p.unitsTotal);
 
   const soldOut = left !== null && left <= 0;
 
@@ -263,17 +211,14 @@ function DropCard({ product: p, slug }) {
     boxSizing: "border-box",
     borderRadius: "28px",
     padding: "20px 18px 22px",
-    background:
-      "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
-    boxShadow:
-      "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+    background: "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
+    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
   };
 
   const heroFrame = {
     borderRadius: "24px",
     padding: "3px",
-    background:
-      "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
+    background: "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
     boxShadow: "0 14px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7)",
   };
 
@@ -456,9 +401,7 @@ function DropCard({ product: p, slug }) {
                   <span style={timerValue}>{s}</span>
                 </div>
                 <p style={timerUnits}>
-                  {mode === "days"
-                    ? "Days · Hours · Minutes · Seconds"
-                    : "Hours · Minutes · Seconds"}
+                  {mode === "days" ? "Days · Hours · Minutes · Seconds" : "Hours · Minutes · Seconds"}
                 </p>
               </>
             )}
@@ -484,9 +427,6 @@ export default function PublicSlugPage() {
   const router = useRouter();
   const { slug } = router.query;
 
-  // normalize slug to a single string
-  const slugStr = Array.isArray(slug) ? slug[0] : slug;
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [profile, setProfile] = useState(null);
@@ -500,6 +440,41 @@ export default function PublicSlugPage() {
   const [subscribed, setSubscribed] = useState(false);
 
   const refreshIntervalRef = useRef(null);
+
+  // External link safety: allow http/https; allow bare domains via https://; allow mailto/tel; block dangerous schemes
+  const normalizeHref = (url) => {
+    if (!url || typeof url !== "string") return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+
+    const lower = trimmed.toLowerCase();
+
+    // Hard-block dangerous schemes
+    if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+      return "";
+    }
+
+    // Allow mailto/tel
+    if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
+      return trimmed;
+    }
+
+    // If it has any other scheme, only allow http/https
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      return "";
+    }
+
+    // Block relative and protocol-relative URLs
+    if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
+
+    // Allow bare domains by prepending https://
+    if (trimmed.includes(".") && !/\s/.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+
+    return "";
+  };
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal) {
@@ -519,23 +494,20 @@ export default function PublicSlugPage() {
 
     setProfile(j.profile || null);
 
-    const arr = Array.isArray(j.products) ? j.products : [];
-    // match backend behavior: missing published flag counts as published
-    const publishedOnly = arr.filter((p) =>
-      p ? (p.published === undefined ? true : !!p.published) : false
-    );
-    setProducts(publishedOnly);
+    const list = Array.isArray(j.products) ? j.products : [];
+    // Match backend semantics: missing `published` means published
+    setProducts(list.filter((p) => p && (p.published === undefined ? true : !!p.published)));
   }
 
   // initial + periodic refresh
   useEffect(() => {
-    if (!slugStr) return;
+    if (!slug) return;
     let alive = true;
 
     (async () => {
       try {
         setLoading(true);
-        await fetchAll(slugStr);
+        await fetchAll(slug);
         if (!alive) return;
         setError("");
       } catch (e) {
@@ -547,12 +519,12 @@ export default function PublicSlugPage() {
     })();
 
     refreshIntervalRef.current = setInterval(() => {
-      fetchAll(slugStr).catch(() => {});
+      fetchAll(slug).catch(() => {});
     }, 15000);
 
     const onVis = () => {
       if (document.visibilityState === "visible") {
-        fetchAll(slugStr).catch(() => {});
+        fetchAll(slug).catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -561,39 +533,45 @@ export default function PublicSlugPage() {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [slugStr]);
+  }, [slug]);
 
   // track page_view (slug-based)
   useEffect(() => {
-    if (!slugStr) return;
+    if (!slug) return;
     try {
       const payload = {
         type: "page_view",
         ts: Date.now(),
         ref: typeof window !== "undefined" ? window.location.href : "",
-        publicSlug: slugStr,
+        publicSlug: slug,
       };
-      const blob = new Blob([JSON.stringify(payload)], {
-        type: "application/json",
-      });
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
       navigator.sendBeacon("/api/track", blob);
     } catch {}
-  }, [slugStr]);
+  }, [slug]);
 
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
 
   // default: email capture ON unless explicitly disabled
   const canCollectEmail =
-    profile?.showForm === true ||
-    (profile?.showForm !== false && profile?.collectEmail !== false);
+    profile?.showForm === true || (profile?.showForm !== false && profile?.collectEmail !== false);
 
-  const links = Array.isArray(profile?.links)
-    ? profile.links.filter((l) => l && typeof l.url === "string" && l.url.trim().length > 0)
-    : [];
+  const linksRaw = Array.isArray(profile?.links) ? profile.links : [];
+  const safeLinks = linksRaw
+    .map((l) => {
+      const rawUrl = l?.url || "";
+      const safeUrl = normalizeHref(rawUrl);
+      if (!safeUrl) return null;
+      return {
+        ...l,
+        url: safeUrl,
+        label: (l?.label || rawUrl || "Link").toString(),
+      };
+    })
+    .filter(Boolean);
 
   const socialRaw = profile?.social || {};
-
   const social = {
     instagram: normalizeHref(socialRaw.instagram),
     facebook: normalizeHref(socialRaw.facebook),
@@ -606,24 +584,17 @@ export default function PublicSlugPage() {
   const websiteHref = social.website;
 
   const hasSocialRow =
-    social.instagram ||
-    social.facebook ||
-    social.tiktok ||
-    social.youtube ||
-    social.x ||
-    websiteHref;
+    social.instagram || social.facebook || social.tiktok || social.youtube || social.x || websiteHref;
 
   // --- SEO / Social ---
   const firstImage = products?.[0]?.imageUrl || "";
   const site = "https://linkinbio-tau-pink.vercel.app";
-  const pageUrl = slugStr ? `${site}/${encodeURIComponent(slugStr)}` : site;
+  const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
   const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
   const leftPart =
-    products?.[0]?.showInventory && left0 != null && total0 != null
-      ? ` • ${left0}/${total0} left`
-      : "";
+    products?.[0]?.showInventory && left0 != null && total0 != null ? ` • ${left0}/${total0} left` : "";
   const seoDesc =
     (products?.[0]?.title ? `${products[0].title}${leftPart}` : "Limited releases and timed drops.") +
     (bio ? ` — ${bio}` : "");
@@ -660,7 +631,9 @@ export default function PublicSlugPage() {
     textAlign: "center",
   };
 
-  const fullWidthSection = { width: "100%" };
+  const fullWidthSection = {
+    width: "100%",
+  };
 
   // vertical rhythm
   const SECTION_GAP = "1.35rem";
@@ -680,7 +653,7 @@ export default function PublicSlugPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          publicSlug: slugStr,
+          publicSlug: slug,
           email,
           name: fullName,
           ref: typeof window !== "undefined" ? window.location.href : "",
@@ -722,10 +695,7 @@ export default function PublicSlugPage() {
         {firstImage ? <meta property="og:image" content={firstImage} /> : null}
 
         {/* Twitter */}
-        <meta
-          name="twitter:card"
-          content={firstImage ? "summary_large_image" : "summary"}
-        />
+        <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDesc} />
         {firstImage ? <meta name="twitter:image" content={firstImage} /> : null}
@@ -953,12 +923,12 @@ export default function PublicSlugPage() {
           {products.length > 0 && (
             <section style={{ ...fullWidthSection, marginBottom: SECTION_GAP }}>
               {products.map((p) => (
-                <DropCard key={p.id} product={p} slug={slugStr} />
+                <DropCard key={p.id} product={p} slug={slug} />
               ))}
             </section>
           )}
 
-          {/* EMAIL CAPTURE (optional, still full-width) */}
+          {/* EMAIL CAPTURE */}
           {canCollectEmail && (
             <section
               style={{
@@ -989,20 +959,13 @@ export default function PublicSlugPage() {
                   lineHeight: 1.2,
                 }}
               >
-                {(profile?.formHeadline ||
-                  profile?.emailHeadline ||
-                  "Get first dibs on drops"
-                ).trim()}
+                {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
               </h2>
 
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem",
-                  }}
+                  style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
                 >
                   {profile?.collectName && (
                     <input
@@ -1104,11 +1067,7 @@ export default function PublicSlugPage() {
               {emailErr ? (
                 <div
                   id="email-error"
-                  style={{
-                    marginTop: "0.35rem",
-                    fontSize: "0.8rem",
-                    color: "#fecaca",
-                  }}
+                  style={{ marginTop: "0.35rem", fontSize: "0.8rem", color: "#fecaca" }}
                 >
                   {emailErr}
                 </div>
@@ -1116,8 +1075,8 @@ export default function PublicSlugPage() {
             </section>
           )}
 
-          {/* LINKS (below drop card OR directly after header if no products) */}
-          {links.length > 0 && (
+          {/* LINKS */}
+          {safeLinks.length > 0 && (
             <section
               style={{
                 width: "100%",
@@ -1125,22 +1084,13 @@ export default function PublicSlugPage() {
                 marginBottom: "2rem",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem",
-                }}
-              >
-                {links.map((l) => {
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {safeLinks.map((l) => {
                   const label = l.label || l.url || "Link";
-                  const safeUrl = normalizeHref(l.url);
-                  if (!safeUrl) return null;
-
                   return (
                     <a
                       key={l.id || l.url}
-                      href={safeUrl}
+                      href={l.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -1149,8 +1099,7 @@ export default function PublicSlugPage() {
                         justifyContent: "space-between",
                         padding: "0.95rem 1.2rem",
                         borderRadius: "999px",
-                        background:
-                          "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
+                        background: "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
                         border: "1px solid #27272a",
                         textDecoration: "none",
                         color: "#f4f4f5",
@@ -1176,7 +1125,6 @@ export default function PublicSlugPage() {
               textAlign: "center",
             }}
           >
-            {/* Launch6 logo CTA */}
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
               <a
                 href="https://launch6.com"
@@ -1189,8 +1137,7 @@ export default function PublicSlugPage() {
                   gap: "0.75rem",
                   padding: "0.95rem 1.2rem",
                   borderRadius: "999px",
-                  background:
-                    "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
+                  background: "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
                   border: "1px solid #27272a",
                   textDecoration: "none",
                   color: "#f4f4f5",
@@ -1208,15 +1155,7 @@ export default function PublicSlugPage() {
               </a>
             </div>
 
-            {/* Legal / utility links */}
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: "0.9rem",
-              }}
-            >
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0.9rem" }}>
               <button style={{ textDecoration: "underline" }}>Cookie preferences</button>
               <button style={{ textDecoration: "underline" }}>Report page</button>
               <button style={{ textDecoration: "underline" }}>Privacy</button>

@@ -471,11 +471,8 @@ export default function PublicSlugPage() {
     }
 
         setProfile(j.profile || null);
-    setProducts(
-      Array.isArray(j.products)
-        ? j.products.filter((p) => p && (p.published === undefined ? true : !!p.published))
-        : []
-    );
+       setProducts(Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []);
+
 
   }
 

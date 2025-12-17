@@ -54,17 +54,44 @@ function toMsOrNull(iso) {
   const ms = Date.parse(String(iso));
   return Number.isFinite(ms) ? ms : null;
 }
+function logBeginCheckout({ db, productId, slug, req }) {
+  try {
+    const utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+    const utm = {};
+    for (const k of utmKeys) {
+      const v = pickParam(req.query, [k]);
+      if (v) utm[k] = v;
+    }
 
+    db.collection("analytics")
+      .insertOne({
+        type: "begin_checkout",
+        ts: new Date(),
+        productId: String(productId || ""),
+        slug: String(slug || ""),
+        referer: String(req.headers?.referer || ""),
+        ua: String(req.headers?.["user-agent"] || ""),
+        utm,
+      })
+      .catch(() => {});
+  } catch {}
+}
 function isPublished(p) {
   // IMPORTANT: match public API behavior: missing flag means "published"
   return p?.published === undefined ? true : !!p.published;
 }
 
-function redirectToReason(res, { editToken, reason }) {
+function redirectToReason(res, { editToken, reason, slug }) {
   const qp = new URLSearchParams();
   if (editToken) qp.set("editToken", editToken);
   if (reason) qp.set("reason", reason);
-  const location = `/public${qp.toString() ? "?" + qp.toString() : ""}`;
+
+  const clean = typeof slug === "string" ? slug.trim() : "";
+  const base = clean ? `/${encodeURIComponent(clean)}` : "/public";
+  const location = `${base}${qp.toString() ? "?" + qp.toString() : ""}`;
+
+  logBeginCheckout({ db, productId: id, slug, req });
+
   res.writeHead(302, { Location: location });
   return res.end();
 }
@@ -131,7 +158,7 @@ export default async function handler(req, res) {
           query: req.query,
         });
       }
-      return redirectToReason(res, { editToken: "", reason: "missing_slug" });
+      return redirectToReason(res, { editToken: "", reason: "missing_slug", slug: "" });
     }
 
     const diag = {
@@ -172,7 +199,7 @@ export default async function handler(req, res) {
         diag.result = "not_found";
         return res.status(200).json(diag);
       }
-      return redirectToReason(res, { editToken, reason: "unpublished" });
+      return redirectToReason(res, { editToken, reason: "unpublished", slug });
     }
 
     const p = found.product;
@@ -212,7 +239,7 @@ export default async function handler(req, res) {
     }
 
     if (block) {
-      return redirectToReason(res, { editToken, reason: block });
+      return redirectToReason(res, { editToken, reason: block, slug });
     }
 
     // Build outgoing URL (tag product id & pass UTMs if any)

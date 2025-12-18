@@ -28,6 +28,11 @@ async function getClient() {
  * }
  */
 export default async function handler(req, res) {
+  // SECURITY: analytics summaries must not be public in production
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).end("Not Found");
+  }
+
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).end("Method Not Allowed");

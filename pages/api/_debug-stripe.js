@@ -1,9 +1,10 @@
+// pages/api/_debug-stripe.js
 export default function handler(req, res) {
-  const s = process.env.STRIPE_WEBHOOK_SECRET || '';
-  const mask = s ? s.slice(0, 6) + '…' : '(missing)';
-  res.status(200).json({
-    env: process.env.VERCEL_ENV || 'unknown',
-    hasSecret: !!s,
-    secretPrefix: mask
-  });
+  // SECURITY: this endpoint must not exist in production
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).end("Not Found");
+  }
+
+  // In non-prod, still do not disclose anything about secrets.
+  return res.status(401).end("Disabled");
 }

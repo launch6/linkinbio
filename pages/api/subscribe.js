@@ -1,5 +1,12 @@
 // pages/api/subscribe.js
 import { MongoClient } from "mongodb";
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "8kb",
+    },
+  },
+};
 
 const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
 

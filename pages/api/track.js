@@ -129,10 +129,25 @@ export default async function handler(req, res) {
 
   noStore(res);
 
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).end("Method Not Allowed");
+ if (req.method !== "POST") {
+  // Do not expose method behavior; avoid becoming an oracle for scanners.
+  return res.status(404).end("Not Found");
+}
+
+// Soft same-origin check (allows browsers; doesn't punish missing Origin)
+const origin = String(req.headers?.origin || "").trim();
+const host = String(req.headers?.host || "").trim().toLowerCase();
+if (origin) {
+  try {
+    const o = new URL(origin);
+    if (String(o.host || "").toLowerCase() !== host) {
+      // Silent success so attackers can't test defenses; do not write to DB.
+      return res.status(204).end();
+    }
+  } catch {
+    return res.status(204).end();
   }
+}
 
   // Same-origin soft check (silent)
   if (!isSameOrigin(req)) {

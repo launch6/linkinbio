@@ -97,7 +97,17 @@ export default async function handler(req, res) {
         description: (p.description || "").trim(),
         imageUrl: (p.imageUrl || "").trim(),
 
-        priceUrl: (p.priceUrl || "").trim(),
+                // Backward-compatible: dashboard may send the Stripe link under other keys or as an object
+        priceUrl: (
+          (typeof p.priceUrl === "string" && p.priceUrl) ||
+          (p.priceUrl && typeof p.priceUrl.url === "string" && p.priceUrl.url) ||
+          (typeof p.checkoutUrl === "string" && p.checkoutUrl) ||
+          (typeof p.paymentLink === "string" && p.paymentLink) ||
+          (typeof p.paymentUrl === "string" && p.paymentUrl) ||
+          (typeof p.stripeUrl === "string" && p.stripeUrl) ||
+          (typeof p.stripePaymentLink === "string" && p.stripePaymentLink) ||
+          ""
+        ).trim(),
         priceCents,
         priceDisplay: (p.priceDisplay || "").trim(),
         priceText: (p.priceText || "").trim(),

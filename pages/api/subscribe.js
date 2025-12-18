@@ -70,14 +70,28 @@ function getHost(req) {
 }
 
 function isSameOrigin(req) {
-  // Soft defense: block cross-site spam while not breaking non-browser clients.
-  // Browsers send Origin on fetch POST; curl often does not.
+  // Soft defense: allow same-origin browser POSTs; silently drop cross-site spam.
+  // Browsers send Origin; curl often does not.
   const origin = String(req.headers?.origin || "").trim();
   if (!origin) return true;
+
+  const host = getHost(req);
+  if (!host) return false;
+
   try {
-    const host = getHost(req);
     const o = new URL(origin);
-    return String(o.host || "").toLowerCase() === host;
+    const originHost = String(o.host || "").toLowerCase();
+
+    // Exact match
+    if (originHost === host) return true;
+
+    // Allow known Launch6 domains (handles preview + prod hostnames)
+    // Adjust if you later add custom domains.
+    if (originHost.endsWith(".vercel.app") && host.endsWith(".vercel.app")) return true;
+    if (originHost.endsWith("launch6.com") && host.endsWith("launch6.com")) return true;
+    if (originHost.endsWith("l6.io") && host.endsWith("l6.io")) return true;
+
+    return false;
   } catch {
     return false;
   }

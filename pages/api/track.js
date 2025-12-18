@@ -122,6 +122,11 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 export default async function handler(req, res) {
+  // SECURITY: this endpoint must not exist in production (prevents event spam + storage abuse)
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).end("Not Found");
+  }
+
   noStore(res);
 
   if (req.method !== "POST") {

@@ -36,6 +36,16 @@ function isValidEmail(email) {
   return true;
 }
 
+function formatPriceFromProduct(p) {
+  const d = String(p?.priceDisplay || "").trim();
+  if (d) return d;
+  const t = String(p?.priceText || "").trim();
+  if (t) return t;
+  const c = typeof p?.priceCents === "number" && Number.isFinite(p.priceCents) ? p.priceCents : null;
+  if (c != null) return `$${(c / 100).toFixed(2)}`;
+  return "";
+}
+
 export default function PublicPage() {
   const [editToken, setEditToken] = useState("");
   const [reason, setReason] = useState("");
@@ -51,9 +61,9 @@ export default function PublicPage() {
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
-  // honeypot (invisible)
+  // invisible honeypot + timing hint
   const [websiteHp, setWebsiteHp] = useState("");
-  const formTsRef = useRef(null);
+  const formStartTsRef = useRef(Date.now());
 
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
@@ -66,9 +76,6 @@ export default function PublicPage() {
     const r = u.searchParams.get("reason") || "";
     setEditToken(t);
     setReason(r);
-
-    // record when form became available (weak signal; no UX impact)
-    formTsRef.current = Date.now();
   }, []);
 
   // fetch profile + products (no-store; APIs already send no-store headers)
@@ -206,6 +213,7 @@ export default function PublicPage() {
   async function handleSubscribe(e) {
     e.preventDefault();
     setEmailErr("");
+
     if (!isValidEmail(email)) {
       setEmailErr("Please enter a valid email (e.g., name@example.com).");
       return;
@@ -213,6 +221,7 @@ export default function PublicPage() {
 
     try {
       setSubmitting(true);
+
       const resp = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -220,10 +229,11 @@ export default function PublicPage() {
           editToken,
           email,
           ref: typeof window !== "undefined" ? window.location.href : "",
-          website: websiteHp, // honeypot (should be blank)
-          formTs: formTsRef.current || null, // weak signal only
+          website: websiteHp,
+          formTs: formStartTsRef.current,
         }),
       });
+
       const json = await resp.json().catch(() => ({}));
 
       if (!resp.ok || !json?.ok) {
@@ -248,9 +258,7 @@ export default function PublicPage() {
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
   const reasonText = humanReason(reason);
-
-  // Enabled by default unless explicitly false (matches API behavior and avoids breaking older profiles)
-  const canCollectEmail = profile?.collectEmail !== false;
+  const canCollectEmail = !!profile?.collectEmail;
 
   if (loading) {
     return (
@@ -293,8 +301,11 @@ export default function PublicPage() {
             <div className="text-lg font-semibold mb-2">Get first dibs on drops</div>
 
             {!subscribed ? (
-              <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 items-stretch">
-                {/* Honeypot (invisible). Bots often fill it; humans never see it. */}
+              <form
+                onSubmit={handleSubscribe}
+                className="flex flex-col sm:flex-row gap-3 items-stretch"
+              >
+                {/* Honeypot (invisible) */}
                 <input
                   type="text"
                   name="website"
@@ -362,12 +373,10 @@ export default function PublicPage() {
             {products.map((p) => {
               const st = productStatus(p);
 
-              // Buy should be allowed when the product has a checkout set and is not ended/sold out
-              const showBuy = !st.ended && !st.soldOut && !!p.priceUrl;
+              // Buy is intentionally disabled while /api/products/buy is being fixed
+              const showBuy = false;
 
-              const buyHref = `/api/products/buy?editToken=${encodeURIComponent(
-                editToken
-              )}&productId=${encodeURIComponent(p.id)}`;
+              const priceLabel = formatPriceFromProduct(p);
 
               return (
                 <article
@@ -407,6 +416,13 @@ export default function PublicPage() {
                       {p.title || "Untitled"}
                     </h2>
 
+                    {/* Price */}
+                    {priceLabel ? (
+                      <div className="text-base font-semibold text-white mb-2">{priceLabel}</div>
+                    ) : (
+                      <div className="text-sm text-neutral-400 mb-2">Price not set</div>
+                    )}
+
                     {/* Status line (secondary) */}
                     {st.label ? (
                       <div
@@ -421,9 +437,8 @@ export default function PublicPage() {
 
                     {showBuy ? (
                       <a
-                        href={buyHref}
+                        href="#"
                         className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        aria-label={`Buy ${p.title || "this product"}`}
                       >
                         Buy
                         <span className="text-xs opacity-70">→</span>
@@ -435,7 +450,7 @@ export default function PublicPage() {
                         role="button"
                         tabIndex={-1}
                       >
-                        {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : "Unavailable"}
+                        {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : "Checkout coming soon"}
                       </div>
                     )}
                   </div>

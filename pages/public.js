@@ -51,6 +51,10 @@ export default function PublicPage() {
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
+  // honeypot (invisible)
+  const [websiteHp, setWebsiteHp] = useState("");
+  const formTsRef = useRef(null);
+
   const timerRef = useRef(null);
   const refreshIntervalRef = useRef(null);
 
@@ -62,26 +66,29 @@ export default function PublicPage() {
     const r = u.searchParams.get("reason") || "";
     setEditToken(t);
     setReason(r);
+
+    // record when form became available (weak signal; no UX impact)
+    formTsRef.current = Date.now();
   }, []);
 
   // fetch profile + products (no-store; APIs already send no-store headers)
-async function fetchAll(token) {
-  const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}`, {
-    cache: "no-store",
-  });
-  const pj = await pr.json();
-  if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
+  async function fetchAll(token) {
+    const pr = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}`, {
+      cache: "no-store",
+    });
+    const pj = await pr.json();
+    if (!pj?.ok) throw new Error(pj?.error || "Failed to load profile");
 
-  const r = await fetch(`/api/products?editToken=${encodeURIComponent(token)}`, {
-    cache: "no-store",
-  });
-  const j = await r.json();
-  if (!j?.ok) throw new Error(j?.error || "Failed to load products");
+    const r = await fetch(`/api/products?editToken=${encodeURIComponent(token)}`, {
+      cache: "no-store",
+    });
+    const j = await r.json();
+    if (!j?.ok) throw new Error(j?.error || "Failed to load products");
 
-  const onlyPublished = (j.products || []).filter((p) => !!p.published);
-  setProfile(pj.profile);
-  setProducts(onlyPublished);
-}
+    const onlyPublished = (j.products || []).filter((p) => !!p.published);
+    setProfile(pj.profile);
+    setProducts(onlyPublished);
+  }
 
   // initial fetch + periodic refresh + on-focus refresh
   useEffect(() => {
@@ -121,21 +128,6 @@ async function fetchAll(token) {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [editToken]);
-
-  // fire a page_view once per load (after we know editToken)
-  useEffect(() => {
-    if (!editToken) return;
-    try {
-      const payload = {
-        type: "page_view",
-        editToken,
-        ts: Date.now(),
-        ref: typeof window !== "undefined" ? window.location.href : "",
-      };
-      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-      navigator.sendBeacon("/api/track", blob);
-    } catch {}
   }, [editToken]);
 
   // countdown ticker
@@ -190,11 +182,16 @@ async function fetchAll(token) {
 
   function humanReason(r) {
     switch ((r || "").toLowerCase()) {
-      case "expired": return "This drop has ended.";
-      case "soldout": return "This item is sold out.";
-      case "unpublished": return "This product isn’t available right now.";
-      case "noprice": return "This product doesn’t have a checkout set yet.";
-      default: return "";
+      case "expired":
+        return "This drop has ended.";
+      case "soldout":
+        return "This item is sold out.";
+      case "unpublished":
+        return "This product isn’t available right now.";
+      case "noprice":
+        return "This product doesn’t have a checkout set yet.";
+      default:
+        return "";
     }
   }
 
@@ -213,6 +210,7 @@ async function fetchAll(token) {
       setEmailErr("Please enter a valid email (e.g., name@example.com).");
       return;
     }
+
     try {
       setSubmitting(true);
       const resp = await fetch("/api/subscribe", {
@@ -222,12 +220,13 @@ async function fetchAll(token) {
           editToken,
           email,
           ref: typeof window !== "undefined" ? window.location.href : "",
+          website: websiteHp, // honeypot (should be blank)
+          formTs: formTsRef.current || null, // weak signal only
         }),
       });
       const json = await resp.json().catch(() => ({}));
 
       if (!resp.ok || !json?.ok) {
-        // Map a couple of common errors to friendly text
         if (json?.error === "email_collection_disabled") {
           setEmailErr("Email signup is unavailable right now.");
         } else if (json?.error === "invalid_email") {
@@ -249,7 +248,9 @@ async function fetchAll(token) {
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
   const reasonText = humanReason(reason);
-  const canCollectEmail = !!profile?.collectEmail;
+
+  // Enabled by default unless explicitly false (matches API behavior and avoids breaking older profiles)
+  const canCollectEmail = profile?.collectEmail !== false;
 
   if (loading) {
     return (
@@ -290,8 +291,28 @@ async function fetchAll(token) {
         {canCollectEmail && (
           <div className="mb-8 rounded-2xl border border-neutral-800 p-5">
             <div className="text-lg font-semibold mb-2">Get first dibs on drops</div>
+
             {!subscribed ? (
               <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 items-stretch">
+                {/* Honeypot (invisible). Bots often fill it; humans never see it. */}
+                <input
+                  type="text"
+                  name="website"
+                  value={websiteHp}
+                  onChange={(e) => setWebsiteHp(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: "-10000px",
+                    top: "auto",
+                    width: "1px",
+                    height: "1px",
+                    overflow: "hidden",
+                  }}
+                />
+
                 <input
                   type="email"
                   inputMode="email"
@@ -306,6 +327,7 @@ async function fetchAll(token) {
                   aria-invalid={!!emailErr}
                   aria-describedby={emailErr ? "email-error" : undefined}
                 />
+
                 <button
                   type="submit"
                   disabled={submitting}
@@ -319,11 +341,13 @@ async function fetchAll(token) {
                 You’re in! We’ll let you know about new drops.
               </div>
             )}
+
             {emailErr ? (
               <div id="email-error" className="mt-2 text-sm text-rose-300">
                 {emailErr}
               </div>
             ) : null}
+
             <div className="mt-2 text-xs text-neutral-500">
               We’ll only email you about releases. Unsubscribe anytime.
             </div>
@@ -337,7 +361,10 @@ async function fetchAll(token) {
           <div className="grid md:grid-cols-2 gap-6">
             {products.map((p) => {
               const st = productStatus(p);
+
+              // Buy should be allowed when the product has a checkout set and is not ended/sold out
               const showBuy = !st.ended && !st.soldOut && !!p.priceUrl;
+
               const buyHref = `/api/products/buy?editToken=${encodeURIComponent(
                 editToken
               )}&productId=${encodeURIComponent(p.id)}`;
@@ -370,7 +397,7 @@ async function fetchAll(token) {
                         }
                         aria-live="polite"
                       >
-                        {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : (st.label || "Live")}
+                        {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : st.label || "Live"}
                       </span>
                     </div>
                   </div>
@@ -397,26 +424,6 @@ async function fetchAll(token) {
                         href={buyHref}
                         className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         aria-label={`Buy ${p.title || "this product"}`}
-                        onClick={() => {
-                          try {
-                            navigator.sendBeacon(
-                              "/api/track",
-                              new Blob(
-                                [
-                                  JSON.stringify({
-                                    type: "buy_click",
-                                    productId: p.id,
-                                    editToken,
-                                    ts: Date.now(),
-                                    ref:
-                                      typeof window !== "undefined" ? window.location.href : "",
-                                  }),
-                                ],
-                                { type: "application/json" }
-                              )
-                            );
-                          } catch {}
-                        }}
                       >
                         Buy
                         <span className="text-xs opacity-70">→</span>

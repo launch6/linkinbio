@@ -837,6 +837,23 @@ useEffect(() => {
   overflow: hidden; /* prevents edge sliver */
   background: transparent;
 }
+  .theme-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: block;
+}
+
+/* slight overlap prevents the thin seam/sliver */
+.theme-half-left {
+  left: 0;
+  width: calc(50% + 1px);
+}
+
+.theme-half-right {
+  right: 0;
+  width: calc(50% + 1px);
+}
 
 .theme-selected .theme-swatch {
   box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.55), 0 10px 26px rgba(0, 0, 0, 0.35);

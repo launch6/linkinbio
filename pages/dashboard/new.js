@@ -1,5 +1,6 @@
 // pages/dashboard/new.js
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 function slugify(input) {
   const base = (input || '').toLowerCase().trim();
@@ -11,6 +12,40 @@ function slugify(input) {
 }
 
 export default function NewProfile() {
+    const router = useRouter();
+  const { token } = router.query;
+
+  const hydratedOnceRef = useRef(false);
+
+  // If we have an editToken, hydrate Step 1 fields from the DB so Back works.
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (!token) return;
+    if (hydratedOnceRef.current) return;
+
+    hydratedOnceRef.current = true;
+
+    (async () => {
+      try {
+        const r = await fetch(
+          `/api/profile/get?editToken=${encodeURIComponent(token)}`,
+          { cache: 'no-store' }
+        );
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j?.ok || !j?.profile) return;
+
+        const prof = j.profile;
+
+        // Only fill if the user hasn't typed already
+        setDisplayName((prev) => prev || String(prof.name || ''));
+        setUsername((prev) => prev || String(prof.slug || ''));
+        setBio((prev) => prev || String(prof.description || ''));
+        setAvatarDataUrl((prev) => prev || String(prof.avatarUrl || ''));
+      } catch (err) {
+        console.error('[new] Failed to hydrate Step 1 from DB', err);
+      }
+    })();
+  }, [router.isReady, token]);
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');

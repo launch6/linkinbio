@@ -12,16 +12,36 @@ function slugify(input) {
 }
 
 export default function NewProfile() {
-    const router = useRouter();
+  const router = useRouter();
   const { token } = router.query;
 
   const hydratedOnceRef = useRef(false);
+  const fileInputRef = useRef(null);
+
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [avatarDataUrl, setAvatarDataUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+
+  const bioMax = 160;
+  const bioCount = bio.length;
+
+  const fontStack =
+    "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
+
+  const getToken = () => {
+    if (!router.isReady) return '';
+    const t = Array.isArray(token) ? token[0] : token;
+    return typeof t === 'string' ? t : '';
+  };
 
   // Hydrate Step 1 from DB so Back works and state persists across reloads.
   useEffect(() => {
     if (!router.isReady) return;
 
-    const t = Array.isArray(token) ? token[0] : token;
+    const t = getToken();
     if (!t) return;
 
     if (hydratedOnceRef.current) return;
@@ -43,40 +63,24 @@ export default function NewProfile() {
 
         const prof = j.profile || {};
 
-        // Be tolerant of field-name differences across older/newer profile shapes.
-        const name =
-          prof.name ?? prof.displayName ?? prof.title ?? '';
-        const slug =
-          prof.slug ?? prof.username ?? prof.handle ?? '';
-        const desc =
-          prof.description ?? prof.bio ?? '';
-        const avatar =
-          prof.avatarUrl ?? prof.avatar ?? prof.image ?? '';
+        // Your backend returns: displayName, name, publicSlug, slug, bio
+        // Be tolerant to older shapes too.
+        const nextDisplayName = String(prof.displayName ?? prof.name ?? '');
+        const nextSlug = String(prof.slug ?? prof.publicSlug ?? '');
+        const nextBio = String(prof.bio ?? prof.description ?? '');
+        const nextAvatar = String(prof.avatarUrl ?? prof.avatar ?? prof.image ?? '');
 
-        // Set directly from DB (Back should reflect saved state).
-        setDisplayName(String(name || ''));
-        setUsername(String(slug || ''));
-        setBio(String(desc || ''));
-        setAvatarDataUrl(String(avatar || ''));
+        // Do not clobber if user already typed before hydrate finishes.
+        setDisplayName((prev) => prev || nextDisplayName);
+        setUsername((prev) => prev || nextSlug);
+        setBio((prev) => prev || nextBio);
+        setAvatarDataUrl((prev) => prev || nextAvatar);
       } catch (err) {
         console.error('[new] Failed to hydrate Step 1 from DB', err);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, token]);
-
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
-  const [avatarDataUrl, setAvatarDataUrl] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [usernameError, setUsernameError] = useState('');
-  const fileInputRef = useRef(null);
-
-  const bioMax = 160;
-  const bioCount = bio.length;
-
-  const fontStack =
-    "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
   const handleAvatarClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
@@ -125,14 +129,20 @@ export default function NewProfile() {
     processImageFile(file);
   };
 
-  const createProfile = async () => {
+  const goToStep2 = (editToken) => {
+    window.location.href = `/dashboard/new-links?token=${encodeURIComponent(editToken)}`;
+  };
+
+  const saveStep1 = async () => {
     if (saving) return;
     setSaving(true);
     setUsernameError('');
 
+    const t = getToken();
+
     const rawName = displayName.trim();
     let slugSource = username.trim();
-    const description = bio.trim();
+    const bioValue = bio.trim();
 
     // Username / slug is REQUIRED
     if (!slugSource) {
@@ -156,23 +166,48 @@ export default function NewProfile() {
     // Name is OPTIONAL – if empty, fall back to slugSource
     const finalName = rawName || slugSource;
 
-    try {
-      const res = await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    // IMPORTANT:
+    // - If token exists, user already has a profile; do NOT create a new one.
+    // - Update existing profile so Step 2 -> Back shows saved values.
+    const isUpdate = !!t;
+    const endpoint = isUpdate ? '/api/profile/update' : '/api/profile';
+
+    const payload = isUpdate
+      ? {
+          editToken: t,
+
+          // send both naming schemes for compatibility
+          name: finalName,
+          displayName: finalName,
+
+          slug,
+          publicSlug: slug,
+
+          bio: bioValue,
+          description: bioValue,
+
+          avatarUrl: avatarDataUrl || '',
+          avatar: avatarDataUrl || '',
+        }
+      : {
+          // create endpoint historically used these keys
           name: finalName,
           slug,
-          description,
+          description: bioValue,
           avatarUrl: avatarDataUrl || '',
-        }),
+        };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        const rawError =
-          data && typeof data.error === 'string' ? data.error : '';
+      if (!res.ok || !data) {
+        const rawError = data && typeof data.error === 'string' ? data.error : '';
 
         if (
           res.status === 409 ||
@@ -180,25 +215,33 @@ export default function NewProfile() {
         ) {
           setUsernameError('That URL is already taken. Try another username.');
         } else {
-          alert(rawError || 'Failed to create profile');
+          alert(rawError || 'Failed to save profile');
         }
 
         setSaving(false);
         return;
       }
 
-      // After: send them to Step 2 with token as a query param
-      window.location.href = `/dashboard/new-links?token=${data.editToken}`;
+      // If create, backend returns editToken. If update, keep the existing one.
+      const nextToken = (data && data.editToken) || t;
+
+      if (!nextToken) {
+        alert('Saved, but missing edit token. Please try again.');
+        setSaving(false);
+        return;
+      }
+
+      goToStep2(nextToken);
     } catch (err) {
       console.error(err);
-      alert('Something went wrong creating your profile.');
+      alert('Something went wrong saving your profile.');
       setSaving(false);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createProfile();
+    saveStep1();
   };
 
   return (
@@ -381,7 +424,7 @@ export default function NewProfile() {
                 className="btn btn-primary"
                 disabled={saving}
               >
-                {saving ? 'Creating…' : 'Continue'}
+                {saving ? 'Saving…' : 'Continue'}
               </button>
             </div>
 

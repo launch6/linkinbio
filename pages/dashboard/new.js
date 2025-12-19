@@ -17,35 +17,53 @@ export default function NewProfile() {
 
   const hydratedOnceRef = useRef(false);
 
-  // If we have an editToken, hydrate Step 1 fields from the DB so Back works.
+  // Hydrate Step 1 from DB so Back works and state persists across reloads.
   useEffect(() => {
     if (!router.isReady) return;
-    if (!token) return;
-    if (hydratedOnceRef.current) return;
 
+    const t = Array.isArray(token) ? token[0] : token;
+    if (!t) return;
+
+    if (hydratedOnceRef.current) return;
     hydratedOnceRef.current = true;
 
     (async () => {
       try {
         const r = await fetch(
-          `/api/profile/get?editToken=${encodeURIComponent(token)}`,
+          `/api/profile/get?editToken=${encodeURIComponent(t)}`,
           { cache: 'no-store' }
         );
+
         const j = await r.json().catch(() => ({}));
-        if (!r.ok || !j?.ok || !j?.profile) return;
 
-        const prof = j.profile;
+        if (!r.ok || !j?.ok || !j?.profile) {
+          console.warn('[new] Step 1 hydrate failed', { status: r.status, body: j });
+          return;
+        }
 
-        // Only fill if the user hasn't typed already
-        setDisplayName((prev) => prev || String(prof.name || ''));
-        setUsername((prev) => prev || String(prof.slug || ''));
-        setBio((prev) => prev || String(prof.description || ''));
-        setAvatarDataUrl((prev) => prev || String(prof.avatarUrl || ''));
+        const prof = j.profile || {};
+
+        // Be tolerant of field-name differences across older/newer profile shapes.
+        const name =
+          prof.name ?? prof.displayName ?? prof.title ?? '';
+        const slug =
+          prof.slug ?? prof.username ?? prof.handle ?? '';
+        const desc =
+          prof.description ?? prof.bio ?? '';
+        const avatar =
+          prof.avatarUrl ?? prof.avatar ?? prof.image ?? '';
+
+        // Set directly from DB (Back should reflect saved state).
+        setDisplayName(String(name || ''));
+        setUsername(String(slug || ''));
+        setBio(String(desc || ''));
+        setAvatarDataUrl(String(avatar || ''));
       } catch (err) {
         console.error('[new] Failed to hydrate Step 1 from DB', err);
       }
     })();
   }, [router.isReady, token]);
+
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');

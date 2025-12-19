@@ -862,8 +862,8 @@ useEffect(() => {
 
 .theme-check {
   position: absolute;
-  right: -4px;
-  top: -6px;
+  right: 4px;
+  top: 4px;
   width: 18px;
   height: 18px;
   border-radius: 999px;
@@ -874,6 +874,8 @@ useEffect(() => {
   justify-content: center;
   font-size: 12px;
   color: #ffffff;
+  z-index: 3;
+  pointer-events: none;
 }
 
 .theme-label {

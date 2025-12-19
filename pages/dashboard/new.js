@@ -13,10 +13,7 @@ function slugify(input) {
 
 export default function NewProfile() {
   const router = useRouter();
-  const { token } = router.query;
-
   const hydratedOnceRef = useRef(false);
-  const fileInputRef = useRef(null);
 
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -24,6 +21,7 @@ export default function NewProfile() {
   const [avatarDataUrl, setAvatarDataUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [usernameError, setUsernameError] = useState('');
+  const fileInputRef = useRef(null);
 
   const bioMax = 160;
   const bioCount = bio.length;
@@ -31,62 +29,49 @@ export default function NewProfile() {
   const fontStack =
     "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
-  const getToken = () => {
-    if (!router.isReady) return '';
-    const t = Array.isArray(token) ? token[0] : token;
-    return typeof t === 'string' ? t : '';
-  };
+  // Normalize token from query (string | string[] | undefined)
+  const tokenRaw = router.query?.token;
+  const editToken = Array.isArray(tokenRaw) ? tokenRaw[0] : tokenRaw;
 
   // Hydrate Step 1 from DB so Back works and state persists across reloads.
   useEffect(() => {
     if (!router.isReady) return;
-
-    const t = getToken();
-    if (!t) return;
-
+    if (!editToken) return;
     if (hydratedOnceRef.current) return;
     hydratedOnceRef.current = true;
 
     (async () => {
       try {
         const r = await fetch(
-          `/api/profile/get?editToken=${encodeURIComponent(t)}`,
+          `/api/profile/get?editToken=${encodeURIComponent(editToken)}`,
           { cache: 'no-store' }
         );
-
         const j = await r.json().catch(() => ({}));
-
-        if (!r.ok || !j?.ok || !j?.profile) {
-          console.warn('[new] Step 1 hydrate failed', { status: r.status, body: j });
-          return;
-        }
+        if (!r.ok || !j?.ok || !j?.profile) return;
 
         const prof = j.profile || {};
 
-        // Your backend returns: displayName, name, publicSlug, slug, bio
-        // Be tolerant to older shapes too.
-        const nextDisplayName = String(prof.displayName ?? prof.name ?? '');
-        const nextSlug = String(prof.slug ?? prof.publicSlug ?? '');
-        const nextBio = String(prof.bio ?? prof.description ?? '');
-        const nextAvatar = String(prof.avatarUrl ?? prof.avatar ?? prof.image ?? '');
+        // Use the real keys your API returns.
+        const name = prof.displayName ?? prof.name ?? '';
+        const slug = prof.publicSlug ?? prof.slug ?? '';
+        const nextBio = prof.bio ?? prof.description ?? '';
+        const avatar = prof.avatarUrl ?? prof.avatar ?? prof.image ?? '';
 
-        // Do not clobber if user already typed before hydrate finishes.
-        setDisplayName((prev) => prev || nextDisplayName);
-        setUsername((prev) => prev || nextSlug);
-        setBio((prev) => prev || nextBio);
-        setAvatarDataUrl((prev) => prev || nextAvatar);
+        // When coming BACK, we want the saved state, so overwrite.
+        setDisplayName(String(name || ''));
+        setUsername(String(slug || ''));
+        setBio(String(nextBio || ''));
+        setAvatarDataUrl(String(avatar || ''));
       } catch (err) {
         console.error('[new] Failed to hydrate Step 1 from DB', err);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady, token]);
+  }, [router.isReady, editToken]);
 
   const handleAvatarClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
-  // Reusable image processor (used by both file input + drag-drop)
   const processImageFile = (file) => {
     if (!file) return;
 
@@ -99,24 +84,18 @@ export default function NewProfile() {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const result = evt.target?.result;
-      if (typeof result === 'string') {
-        setAvatarDataUrl(result);
-      }
+      if (typeof result === 'string') setAvatarDataUrl(result);
     };
     reader.readAsDataURL(file);
   };
 
-  // File input change
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     processImageFile(file);
-
-    // allow re-uploading the same file
     e.target.value = '';
   };
 
-  // Drag-and-drop on the avatar area
   const handleAvatarDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -129,29 +108,23 @@ export default function NewProfile() {
     processImageFile(file);
   };
 
-  const goToStep2 = (editToken) => {
-    window.location.href = `/dashboard/new-links?token=${encodeURIComponent(editToken)}`;
-  };
-
   const saveStep1 = async () => {
     if (saving) return;
     setSaving(true);
     setUsernameError('');
 
-    const t = getToken();
-
     const rawName = displayName.trim();
     let slugSource = username.trim();
-    const bioValue = bio.trim();
+    const nextBio = bio.trim();
 
-    // Username / slug is REQUIRED
+    // Username/slug required
     if (!slugSource) {
       setUsernameError('Choose your username (you can change it later).');
       setSaving(false);
       return;
     }
 
-    // Allow @handle style, but still require something real
+    // Allow @handle style
     if (slugSource.startsWith('@')) {
       slugSource = slugSource.slice(1).trim();
       if (!slugSource) {
@@ -162,38 +135,28 @@ export default function NewProfile() {
     }
 
     const slug = slugify(slugSource);
-
-    // Name is OPTIONAL – if empty, fall back to slugSource
     const finalName = rawName || slugSource;
 
-    // IMPORTANT:
-    // - If token exists, user already has a profile; do NOT create a new one.
-    // - Update existing profile so Step 2 -> Back shows saved values.
-    const isUpdate = !!t;
-    const endpoint = isUpdate ? '/api/profile/update' : '/api/profile';
+    // If we have a token, we UPDATE. If not, we CREATE.
+    const endpoint = editToken ? '/api/profile/update' : '/api/profile';
 
-    const payload = isUpdate
+    const payload = editToken
       ? {
-          editToken: t,
-
-          // send both naming schemes for compatibility
+          editToken,
+          // Send both keys for compatibility across codepaths
           name: finalName,
           displayName: finalName,
-
           slug,
-          publicSlug: slug,
-
-          bio: bioValue,
-          description: bioValue,
-
+          bio: nextBio,
+          description: nextBio,
           avatarUrl: avatarDataUrl || '',
-          avatar: avatarDataUrl || '',
         }
       : {
-          // create endpoint historically used these keys
           name: finalName,
+          displayName: finalName,
           slug,
-          description: bioValue,
+          bio: nextBio,
+          description: nextBio,
           avatarUrl: avatarDataUrl || '',
         };
 
@@ -206,35 +169,39 @@ export default function NewProfile() {
 
       const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || !data) {
-        const rawError = data && typeof data.error === 'string' ? data.error : '';
+      if (!res.ok || !data?.ok) {
+        const rawError = data?.error && typeof data.error === 'string' ? data.error : '';
 
-        if (
-          res.status === 409 ||
-          (rawError && rawError.toLowerCase().includes('slug'))
-        ) {
+        // Slug collisions are the main UX pain point.
+        if (res.status === 409 || (rawError && rawError.toLowerCase().includes('slug'))) {
           setUsernameError('That URL is already taken. Try another username.');
-        } else {
-          alert(rawError || 'Failed to save profile');
+          setSaving(false);
+          return;
         }
 
+        // Profile-not-found when token is stale/invalid.
+        if (rawError === 'profile_not_found') {
+          alert('We could not find your profile. Start over from Step 1.');
+          setSaving(false);
+          return;
+        }
+
+        alert(rawError || 'Failed to save profile');
         setSaving(false);
         return;
       }
 
-      // If create, backend returns editToken. If update, keep the existing one.
-      const nextToken = (data && data.editToken) || t;
-
+      const nextToken = editToken || data.editToken;
       if (!nextToken) {
-        alert('Saved, but missing edit token. Please try again.');
+        alert('Saved, but missing token. Refresh and try again.');
         setSaving(false);
         return;
       }
 
-      goToStep2(nextToken);
+      window.location.href = `/dashboard/new-links?token=${encodeURIComponent(nextToken)}`;
     } catch (err) {
       console.error(err);
-      alert('Something went wrong saving your profile.');
+      alert('Network error saving your profile. Please try again.');
       setSaving(false);
     }
   };
@@ -252,7 +219,6 @@ export default function NewProfile() {
 
       <div className="card">
         <div className="card-inner">
-          {/* Progress bar – STEP 1 of 4 (25%) */}
           <div className="progress-bar-container">
             <div className="progress-bar-fill" />
           </div>
@@ -261,16 +227,11 @@ export default function NewProfile() {
           <h1 className="title">Add profile details</h1>
 
           <div className="subtitle-block">
-            <p className="subtitle-line">
-              Add your profile image, name, and bio.
-            </p>
-            <p className="subtitle-line">
-              Next you’ll add links, socials, and drops.
-            </p>
+            <p className="subtitle-line">Add your profile image, name, and bio.</p>
+            <p className="subtitle-line">Next you’ll add links, socials, and drops.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="form">
-            {/* Avatar upload */}
             <div
               className="avatar-block"
               onDragOver={handleAvatarDragOver}
@@ -346,15 +307,10 @@ export default function NewProfile() {
                 onChange={handleFileChange}
               />
 
-              <p className="helper-text">
-                Drag &amp; drop or tap to upload image
-              </p>
-              <p className="helper-text helper-text-sub">
-                (JPG/PNG, up to 1MB).
-              </p>
+              <p className="helper-text">Drag &amp; drop or tap to upload image</p>
+              <p className="helper-text helper-text-sub">(JPG/PNG, up to 1MB).</p>
             </div>
 
-            {/* Name / Studio Name */}
             <div className="field">
               <div className="field-control content-rail">
                 <input
@@ -369,7 +325,6 @@ export default function NewProfile() {
               </div>
             </div>
 
-            {/* Username (slug source) */}
             <div className="field">
               <div className="field-control content-rail">
                 <div className="slug-row">
@@ -388,13 +343,10 @@ export default function NewProfile() {
                   />
                 </div>
 
-                {usernameError && (
-                  <p className="field-error">{usernameError}</p>
-                )}
+                {usernameError && <p className="field-error">{usernameError}</p>}
               </div>
             </div>
 
-            {/* Short bio */}
             <div className="field">
               <div className="field-control content-rail">
                 <div className="textarea-wrap">
@@ -403,10 +355,7 @@ export default function NewProfile() {
                     aria-label="Short bio"
                     className="textarea-input"
                     value={bio}
-                    onChange={(e) => {
-                      const next = e.target.value.slice(0, bioMax);
-                      setBio(next);
-                    }}
+                    onChange={(e) => setBio(e.target.value.slice(0, bioMax))}
                     placeholder="Fill in your bio or tell collectors about your newest art drop"
                     maxLength={bioMax}
                   />
@@ -417,20 +366,14 @@ export default function NewProfile() {
               </div>
             </div>
 
-            {/* Actions – only Continue, no Skip */}
             <div className="actions-row content-rail">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={saving}
-              >
+              <button type="submit" className="btn btn-primary" disabled={saving}>
                 {saving ? 'Saving…' : 'Continue'}
               </button>
             </div>
 
             <p className="footer-note">
-              After this step you’ll move on to add links, social icons, and
-              drops.
+              After this step you’ll move on to add links, social icons, and drops.
             </p>
           </form>
         </div>
@@ -490,7 +433,6 @@ export default function NewProfile() {
           }
         }
 
-        /* Progress bar – STEP 1 of 4 (25%) */
         .progress-bar-container {
           width: 100%;
           max-width: 260px;
@@ -559,9 +501,7 @@ export default function NewProfile() {
           position: relative;
           border-radius: 999px;
           border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow:
-            0 0 0 1px rgba(0, 0, 0, 0.5) inset,
-            0 0 10px rgba(0, 0, 0, 0.5) inset;
+          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5) inset, 0 0 10px rgba(0, 0, 0, 0.5) inset;
           background: #0d0d15;
           width: 108px;
           height: 108px;
@@ -732,8 +672,7 @@ export default function NewProfile() {
           font-weight: 500;
           padding: 12px 16px;
           cursor: pointer;
-          transition: transform 0.08s ease, box-shadow 0.08s ease,
-            background 0.12s ease;
+          transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
         }
 
         .btn-primary {

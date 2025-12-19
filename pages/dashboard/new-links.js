@@ -263,7 +263,7 @@ export default function NewLinks() {
   // Step navigation helpers
   const goToStep1 = () => {
     // Change this if your Step 1 route differs
-    const step1Path = '/dashboard/new-email';
+    const step1Path = '/dashboard/new';
     if (token) {
       window.location.href = `${step1Path}?token=${encodeURIComponent(token)}`;
     } else {

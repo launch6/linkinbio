@@ -1,5 +1,5 @@
 // pages/dashboard/new-links.js
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 
 const fontStack =
@@ -181,10 +181,75 @@ export default function NewLinks() {
     website: '',
   });
 
-  const [activeSocialKey, setActiveSocialKey] = useState('instagram');
+    const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
   const [linkError, setLinkError] = useState('');
   const draggingIdRef = useRef(null);
+
+  const hydratedOnceRef = useRef(false);
+
+  // Hydrate this step from DB so Back works and state persists across reloads.
+  useEffect(() => {
+    if (!token) return;
+    if (hydratedOnceRef.current) return;
+    hydratedOnceRef.current = true;
+
+    (async () => {
+      try {
+        const r = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}`, {
+          cache: 'no-store',
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j?.ok || !j?.profile) return;
+
+        const prof = j.profile;
+
+        // links: accept a few possible shapes; default to current single row
+        const rawLinks = Array.isArray(prof.links)
+          ? prof.links
+          : Array.isArray(prof.linkButtons)
+          ? prof.linkButtons
+          : Array.isArray(prof.buttons)
+          ? prof.buttons
+          : [];
+
+        const nextLinks =
+          rawLinks.length > 0
+            ? rawLinks.slice(0, 6).map((l, idx) => ({
+                id:
+                  typeof l?.id === 'number'
+                    ? l.id
+                    : typeof l?.id === 'string' && l.id.trim()
+                    ? l.id
+                    : idx + 1,
+                label: String(l?.label || '').slice(0, 80),
+                url: String(l?.url || '').slice(0, 2000),
+              }))
+            : [{ id: 1, label: 'Shop my latest pieces', url: '' }];
+
+        setLinks(nextLinks);
+
+        // social: accept either prof.social or top-level keys
+        const profSocial = prof.social && typeof prof.social === 'object' ? prof.social : {};
+        const nextSocial = {
+          instagram: String(profSocial.instagram || prof.instagram || ''),
+          facebook: String(profSocial.facebook || prof.facebook || ''),
+          tiktok: String(profSocial.tiktok || prof.tiktok || ''),
+          youtube: String(profSocial.youtube || prof.youtube || ''),
+          x: String(profSocial.x || prof.x || ''),
+          website: String(profSocial.website || prof.website || ''),
+        };
+        setSocialUrls(nextSocial);
+
+        // set active icon to first completed social (else instagram)
+        const firstComplete =
+          SOCIAL_CONFIG.find((net) => isSocialComplete(net.key, nextSocial))?.key || 'instagram';
+        setActiveSocialKey(firstComplete);
+      } catch {
+        // silent — never block onboarding UX
+      }
+    })();
+  }, [token]);
 
   // only count completed socials, not bare prefixes
   const usedSocialCount = SOCIAL_CONFIG.reduce(
@@ -212,8 +277,26 @@ export default function NewLinks() {
     });
   };
 
-  // Step navigation helpers
+    // Step navigation helpers
+  const goToStep1 = () => {
+    // If your Step 1 route differs, change it here:
+    const step1Path = '/dashboard/new-profile';
+
+    if (token) {
+      window.location.href = `${step1Path}?token=${encodeURIComponent(token)}`;
+    } else {
+      window.location.href = step1Path;
+    }
+  };
+
   const goToStep3 = () => {
+    if (token) {
+      window.location.href = `/dashboard/new-drop?token=${encodeURIComponent(token)}`;
+    } else {
+      window.location.href = `/dashboard/new-drop`;
+    }
+  };
+
     if (token) {
       window.location.href = `/dashboard/new-drop?token=${token}`;
     } else {
@@ -392,9 +475,16 @@ export default function NewLinks() {
 
       <div className="card">
         <div className="card-inner">
+                    <div className="top-nav-row">
+            <button type="button" className="back-btn" onClick={goToStep1}>
+              ← Back
+            </button>
+          </div>
+
           <div className="progress-bar-container">
             <div className="progress-bar-fill" />
           </div>
+
 
           <p className="step-label">STEP 2 OF 4</p>
           <h1 className="title">Add links &amp; socials</h1>
@@ -615,6 +705,31 @@ export default function NewLinks() {
             padding: 28px 18px 24px;
             border-radius: 24px;
           }
+        }
+        .top-nav-row {
+          width: 100%;
+          display: flex;
+          justify-content: flex-start;
+          margin-bottom: 10px;
+        }
+
+        .back-btn {
+          border: none;
+          background: transparent;
+          color: #c4c7ff;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          padding: 6px 2px;
+          transition: opacity 0.15s ease, transform 0.08s ease;
+        }
+
+        .back-btn:hover {
+          opacity: 0.9;
+        }
+
+        .back-btn:active {
+          transform: translateY(1px);
         }
 
         .progress-bar-container {

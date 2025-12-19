@@ -272,12 +272,12 @@ export default function NewLinks() {
   };
 
   const goToStep3 = () => {
-    if (token) {
-      window.location.href = `/dashboard/new-drop?token=${encodeURIComponent(token)}`;
-    } else {
-      window.location.href = `/dashboard/new-drop`;
-    }
-  };
+  if (token) {
+    window.location.href = `/dashboard/new-drop?token=${encodeURIComponent(token)}`;
+  } else {
+    window.location.href = `/dashboard/new-drop`;
+  }
+};
 
   const handleSocialIconClick = (key) => {
     const complete = isSocialComplete(key, socialUrls);

@@ -118,23 +118,22 @@ const THEME_CONFIG = [
   {
     key: 'launch6',
     label: 'Launch6',
-    // pitch black + vivid purple
-    swatch: 'linear-gradient(90deg, #000000 0 50%, #A855F7 50% 100%)',
+    left: '#000000',
+    right: '#A855F7',
   },
   {
     key: 'pastel',
     label: 'Pastel Dreams',
-    // powder blue + soft pink
-    swatch: 'linear-gradient(90deg, #B9E2F5 0 50%, #FFD1DC 50% 100%)',
+    left: '#B9E2F5',
+    right: '#FFD1DC',
   },
   {
     key: 'modern',
     label: 'Modern Pro',
-    // pure white + electric blue
-    swatch: 'linear-gradient(90deg, #FFFFFF 0 50%, #2563EB 50% 100%)',
+    left: '#FFFFFF',
+    right: '#2563EB',
   },
 ];
-
 
 const getSocialBaseUrl = (key) => {
   switch (key) {
@@ -560,9 +559,12 @@ useEffect(() => {
             onClick={() => setThemeKey(t.key)}
             aria-pressed={selected}
           >
-            <span className="theme-swatch" style={{ background: t.swatch }}>
-              {selected && <span className="theme-check">✓</span>}
-            </span>
+            <span className="theme-swatch" aria-hidden="true">
+  <span className="theme-half theme-half-left" style={{ background: t.left }} />
+  <span className="theme-half theme-half-right" style={{ background: t.right }} />
+  {selected && <span className="theme-check">✓</span>}
+</span>
+
             <span className="theme-label">{t.label}</span>
           </button>
         );
@@ -832,6 +834,8 @@ useEffect(() => {
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
   position: relative;
+  overflow: hidden; /* prevents edge sliver */
+  background: transparent;
 }
 
 .theme-selected .theme-swatch {

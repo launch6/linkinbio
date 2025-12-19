@@ -374,7 +374,7 @@ export default function PublicPage() {
               const st = productStatus(p);
 
               // Buy is intentionally disabled while /api/products/buy is being fixed
-              const showBuy = false;
+              const showBuy = !st.ended && !st.soldOut && !!p.priceUrl;
 
               const priceLabel = formatPriceFromProduct(p);
 
@@ -435,24 +435,26 @@ export default function PublicPage() {
                       </div>
                     ) : null}
 
-                    {showBuy ? (
-                      <a
-                        href="#"
-                        className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      >
-                        Buy
-                        <span className="text-xs opacity-70">→</span>
-                      </a>
-                    ) : (
-                      <div
-                        className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
-                        aria-disabled="true"
-                        role="button"
-                        tabIndex={-1}
-                      >
-                        {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : "Checkout coming soon"}
-                      </div>
-                    )}
+{showBuy ? (
+  <a
+    href={buyHref}
+    className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+    aria-label={`Buy ${p.title || "this product"}`}
+  >
+    {p.buttonText || "Buy Now"}
+    <span className="text-xs opacity-70">→</span>
+  </a>
+) : (
+  <div
+    className="inline-flex items-center rounded-xl border border-neutral-800 px-4 py-2 text-neutral-400"
+    aria-disabled="true"
+    role="button"
+    tabIndex={-1}
+  >
+    {st.soldOut ? "Sold out" : st.ended ? "Drop ended" : "Checkout coming soon"}
+  </div>
+)}
+
                   </div>
                 </article>
               );

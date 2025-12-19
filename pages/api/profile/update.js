@@ -1,6 +1,13 @@
 // pages/api/profile/update.js
 import { MongoClient } from "mongodb";
 
+export const config = {
+  api: {
+    // Step 1 sends avatarUrl as a base64 data URL. This prevents truncation.
+    bodyParser: { sizeLimit: "2mb" },
+  },
+};
+
 const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
 
 // --- DB bootstrap with global cache ---
@@ -35,9 +42,7 @@ function cleanLinks(arr) {
     const url = String(raw.url || "").trim();
     if (!label && !url) continue;
     let id = String(raw.id || "").trim();
-    if (!id) {
-      id = `l_${Math.random().toString(36).slice(2, 10)}`;
-    }
+    if (!id) id = `l_${Math.random().toString(36).slice(2, 10)}`;
     out.push({ id, label, url });
   }
   return out;
@@ -45,28 +50,47 @@ function cleanLinks(arr) {
 
 function cleanSocial(raw) {
   if (!raw || typeof raw !== "object") return null;
-  // 👇 added "facebook" here
   const keys = ["instagram", "facebook", "tiktok", "youtube", "x", "website"];
   const out = {};
   for (const k of keys) {
     const v = raw[k];
     if (typeof v === "string") {
       const trimmed = v.trim();
-      if (trimmed) {
-        out[k] = trimmed.slice(0, 500);
-      }
+      if (trimmed) out[k] = trimmed.slice(0, 500);
     }
   }
   return out;
 }
 
+function cleanAvatarUrl(raw) {
+  if (typeof raw !== "string") return null;
+  const v = raw.trim();
+  if (!v) return ""; // explicit clear
+
+  // Allow only safe raster formats as data URLs (NO SVG).
+  const isData =
+    v.startsWith("data:image/png;base64,") ||
+    v.startsWith("data:image/jpeg;base64,") ||
+    v.startsWith("data:image/jpg;base64,") ||
+    v.startsWith("data:image/webp;base64,");
+
+  if (isData) {
+    // Hard cap to avoid bloating the DB / response size.
+    // With your UI limit (1MB file), this remains below this threshold.
+    if (v.length > 2_000_000) return null;
+    return v;
+  }
+
+  // Optional: allow https URL avatars (keep conservative).
+  if (/^https:\/\/[^ "]+$/i.test(v)) {
+    if (v.length > 2000) return null;
+    return v;
+  }
+
+  return null;
+}
+
 // POST /api/profile/update
-// Body can include:
-// - editToken (required)
-// - displayName, bio, publicSlug
-// - social: { instagram, facebook, tiktok, youtube, x, website }
-// - collectEmail / klaviyoListId  (plan-gated; Free forces false/null)
-// - links: [{ id?, label, url }]  (allowed for all plans)
 export default async function handler(req, res) {
   noStore(res);
 
@@ -108,15 +132,13 @@ export default async function handler(req, res) {
         bio: 1,
         publicSlug: 1,
         social: 1,
+        avatarUrl: 1,
       },
     }
   );
 
   if (!profile) {
-    return send(res, 404, {
-      ok: false,
-      error: "profile_not_found",
-    });
+    return send(res, 404, { ok: false, error: "profile_not_found" });
   }
 
   const plan = String(profile.plan || "free").toLowerCase();
@@ -128,6 +150,7 @@ export default async function handler(req, res) {
   const hasBio = Object.prototype.hasOwnProperty.call(body, "bio");
   const hasPublicSlug = Object.prototype.hasOwnProperty.call(body, "publicSlug");
   const hasSocial = Object.prototype.hasOwnProperty.call(body, "social");
+  const hasAvatarUrl = Object.prototype.hasOwnProperty.call(body, "avatarUrl");
 
   const incomingLinks = Array.isArray(body.links) ? body.links : null;
   const incomingSocialRaw = hasSocial ? body.social : null;
@@ -139,52 +162,41 @@ export default async function handler(req, res) {
   let displayName = profile.displayName || "";
   let bio = profile.bio || "";
   let publicSlug = profile.publicSlug || "";
+  let avatarUrl = profile.avatarUrl || "";
 
   // Plan-gated email capture
   if (isFree) {
     collectEmail = false;
     klaviyoListId = null;
   } else {
-    if (hasCollect) {
-      collectEmail = !!body.collectEmail;
-    }
+    if (hasCollect) collectEmail = !!body.collectEmail;
     if (hasList) {
       const raw = (body.klaviyoListId || "").toString().trim();
       klaviyoListId = raw || null;
     }
   }
 
-  // Display name
   if (hasDisplayName) {
     displayName = ((body.displayName || "").toString().trim()).slice(0, 120);
   }
 
-  // Bio
   if (hasBio) {
     bio = ((body.bio || "").toString().trim()).slice(0, 2000);
   }
 
-  // Public slug
-  let newPublicSlug = publicSlug;
+  // Public slug (uniqueness enforced)
   if (hasPublicSlug) {
     let raw = (body.publicSlug || "").toString().trim();
+    let next = "";
     if (raw) {
-      let slug = raw.toLowerCase();
-      slug = slug.replace(/[^a-z0-9-]/g, "-");
-      slug = slug.replace(/-+/g, "-");
-      slug = slug.replace(/^-|-$/g, "");
-      newPublicSlug = slug || "";
-    } else {
-      newPublicSlug = "";
+      let s = raw.toLowerCase();
+      s = s.replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+      next = s || "";
     }
 
-    // Enforce uniqueness if changed and not empty
-    if (newPublicSlug && newPublicSlug !== (publicSlug || "")) {
+    if (next && next !== (publicSlug || "")) {
       const existing = await Profiles.findOne(
-        {
-          publicSlug: newPublicSlug,
-          editToken: { $ne: editToken },
-        },
+        { publicSlug: next, editToken: { $ne: editToken } },
         { projection: { _id: 1 } }
       );
       if (existing) {
@@ -196,21 +208,29 @@ export default async function handler(req, res) {
       }
     }
 
-    publicSlug = newPublicSlug;
+    publicSlug = next || "";
   }
 
-  // Social (allowed for all plans)
   if (hasSocial) {
     const cleanedSocial = cleanSocial(incomingSocialRaw);
     social = cleanedSocial || {};
   }
 
-  // Links (allowed for all plans)
   if (incomingLinks) {
     const cleanedLinks = cleanLinks(incomingLinks);
-    if (cleanedLinks !== null) {
-      links = cleanedLinks;
+    if (cleanedLinks !== null) links = cleanedLinks;
+  }
+
+  if (hasAvatarUrl) {
+    const cleaned = cleanAvatarUrl(body.avatarUrl);
+    if (cleaned === null) {
+      return send(res, 400, {
+        ok: false,
+        error: "invalid_avatar",
+        message: "Avatar must be a JPG/PNG/WebP image (no SVG).",
+      });
     }
+    avatarUrl = cleaned;
   }
 
   const update = {
@@ -223,13 +243,9 @@ export default async function handler(req, res) {
   if (hasPublicSlug) update.publicSlug = publicSlug || null;
   if (hasSocial) update.social = social;
   if (incomingLinks) update.links = links;
+  if (hasAvatarUrl) update.avatarUrl = avatarUrl;
 
-  await Profiles.updateOne(
-    { editToken },
-    {
-      $set: update,
-    }
-  );
+  await Profiles.updateOne({ editToken }, { $set: update });
 
   return send(res, 200, {
     ok: true,
@@ -241,5 +257,6 @@ export default async function handler(req, res) {
     bio,
     publicSlug,
     social,
+    avatarUrl,
   });
 }

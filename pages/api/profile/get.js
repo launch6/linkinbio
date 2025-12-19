@@ -1,6 +1,13 @@
 // pages/api/profile/get.js
 import { MongoClient } from "mongodb";
 
+export const config = {
+  api: {
+    // Response can include avatarUrl (data URL). Keep default body parser.
+    bodyParser: true,
+  },
+};
+
 const { MONGODB_URI, MONGODB_DB = "linkinbio" } = process.env;
 
 // --- DB bootstrap with global cache ---
@@ -58,6 +65,8 @@ export default async function handler(req, res) {
           slug: 1,
           status: 1,
           bio: 1,
+          description: 1, // legacy support
+          avatarUrl: 1,   // ✅ FIX: return avatar
           collectEmail: 1,
           klaviyoListId: 1,
           links: 1,
@@ -71,12 +80,7 @@ export default async function handler(req, res) {
     }
 
     const links = Array.isArray(doc.links)
-      ? doc.links.filter(
-          (l) =>
-            l &&
-            typeof l.url === "string" &&
-            l.url.trim().length > 0
-        )
+      ? doc.links.filter((l) => l && typeof l.url === "string" && l.url.trim().length > 0)
       : [];
 
     return send(res, 200, {
@@ -89,7 +93,10 @@ export default async function handler(req, res) {
         publicSlug: doc.publicSlug || doc.slug || "",
         slug: doc.slug || "",
         status: doc.status || "active",
-        bio: doc.bio || "",
+        // prefer bio, fall back to legacy description
+        bio: doc.bio || doc.description || "",
+        // ✅ FIX: include avatarUrl
+        avatarUrl: doc.avatarUrl || "",
         collectEmail: !!doc.collectEmail,
         klaviyoListId: doc.klaviyoListId || "",
         links,

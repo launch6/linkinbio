@@ -1,27 +1,27 @@
 // pages/dashboard/new.js
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/router";
 
 function slugify(input) {
-  const base = (input || '').toLowerCase().trim();
-  const core = base
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
+  const base = (input || "").toLowerCase().trim();
+  const core = base.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
   return core || `artist-${Date.now()}`;
 }
 
 export default function NewProfile() {
   const router = useRouter();
-  const hydratedOnceRef = useRef(false);
+  const { token } = router.query;
 
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
-  const [avatarDataUrl, setAvatarDataUrl] = useState('');
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarDataUrl, setAvatarDataUrl] = useState("");
+
   const [saving, setSaving] = useState(false);
-  const [usernameError, setUsernameError] = useState('');
+  const [usernameError, setUsernameError] = useState("");
+
   const fileInputRef = useRef(null);
+  const hydratedOnceRef = useRef(false);
 
   const bioMax = 160;
   const bioCount = bio.length;
@@ -29,44 +29,40 @@ export default function NewProfile() {
   const fontStack =
     "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
 
-  // Normalize token from query (string | string[] | undefined)
-  const tokenRaw = router.query?.token;
-  const editToken = Array.isArray(tokenRaw) ? tokenRaw[0] : tokenRaw;
-
-  // Hydrate Step 1 from DB so Back works and state persists across reloads.
+  // Hydrate Step 1 from DB so Back works (including avatarUrl).
   useEffect(() => {
     if (!router.isReady) return;
-    if (!editToken) return;
+
+    const t = Array.isArray(token) ? token[0] : token;
+    if (!t) return;
+
     if (hydratedOnceRef.current) return;
     hydratedOnceRef.current = true;
 
     (async () => {
       try {
-        const r = await fetch(
-          `/api/profile/get?editToken=${encodeURIComponent(editToken)}`,
-          { cache: 'no-store' }
-        );
+        const r = await fetch(`/api/profile/get?editToken=${encodeURIComponent(t)}`, {
+          cache: "no-store",
+        });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j?.ok || !j?.profile) return;
 
         const prof = j.profile || {};
 
-        // Use the real keys your API returns.
-        const name = prof.displayName ?? prof.name ?? '';
-        const slug = prof.publicSlug ?? prof.slug ?? '';
-        const nextBio = prof.bio ?? prof.description ?? '';
-        const avatar = prof.avatarUrl ?? prof.avatar ?? prof.image ?? '';
+        const name = prof.displayName ?? prof.name ?? "";
+        const slug = prof.publicSlug ?? prof.slug ?? "";
+        const desc = prof.bio ?? prof.description ?? "";
+        const avatar = prof.avatarUrl ?? "";
 
-        // When coming BACK, we want the saved state, so overwrite.
-        setDisplayName(String(name || ''));
-        setUsername(String(slug || ''));
-        setBio(String(nextBio || ''));
-        setAvatarDataUrl(String(avatar || ''));
+        setDisplayName(String(name || ""));
+        setUsername(String(slug || ""));
+        setBio(String(desc || ""));
+        setAvatarDataUrl(String(avatar || ""));
       } catch (err) {
-        console.error('[new] Failed to hydrate Step 1 from DB', err);
+        console.error("[new] Failed to hydrate Step 1 from DB", err);
       }
     })();
-  }, [router.isReady, editToken]);
+  }, [router.isReady, token]);
 
   const handleAvatarClick = () => {
     if (fileInputRef.current) fileInputRef.current.click();
@@ -77,14 +73,20 @@ export default function NewProfile() {
 
     const maxBytes = 1 * 1024 * 1024; // 1MB
     if (file.size > maxBytes) {
-      alert('Image is too large. Please upload a JPG/PNG up to 1MB.');
+      alert("Image is too large. Please upload a JPG/PNG up to 1MB.");
+      return;
+    }
+
+    // Block SVG explicitly even if someone renames it.
+    if (file.type === "image/svg+xml") {
+      alert("SVG is not allowed. Please upload a JPG/PNG.");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
       const result = evt.target?.result;
-      if (typeof result === 'string') setAvatarDataUrl(result);
+      if (typeof result === "string") setAvatarDataUrl(result);
     };
     reader.readAsDataURL(file);
   };
@@ -93,12 +95,12 @@ export default function NewProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
     processImageFile(file);
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const handleAvatarDragOver = (e) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
+    e.dataTransfer.dropEffect = "copy";
   };
 
   const handleAvatarDrop = (e) => {
@@ -108,100 +110,102 @@ export default function NewProfile() {
     processImageFile(file);
   };
 
+  const goToStep2 = (editToken) => {
+    const t = Array.isArray(editToken) ? editToken[0] : editToken;
+    window.location.href = `/dashboard/new-links?token=${encodeURIComponent(String(t))}`;
+  };
+
   const saveStep1 = async () => {
     if (saving) return;
     setSaving(true);
-    setUsernameError('');
+    setUsernameError("");
 
     const rawName = displayName.trim();
     let slugSource = username.trim();
     const nextBio = bio.trim();
 
-    // Username/slug required
     if (!slugSource) {
-      setUsernameError('Choose your username (you can change it later).');
+      setUsernameError("Choose your username (you can change it later).");
       setSaving(false);
       return;
     }
 
-    // Allow @handle style
-    if (slugSource.startsWith('@')) {
+    if (slugSource.startsWith("@")) {
       slugSource = slugSource.slice(1).trim();
       if (!slugSource) {
-        setUsernameError('Choose your username (you can change it later).');
+        setUsernameError("Choose your username (you can change it later).");
         setSaving(false);
         return;
       }
     }
 
-    const slug = slugify(slugSource);
+    const nextSlug = slugify(slugSource);
     const finalName = rawName || slugSource;
 
-    // If we have a token, we UPDATE. If not, we CREATE.
-    const endpoint = editToken ? '/api/profile/update' : '/api/profile';
-
-    const payload = editToken
-      ? {
-          editToken,
-          // Send both keys for compatibility across codepaths
-          name: finalName,
-          displayName: finalName,
-          slug,
-          bio: nextBio,
-          description: nextBio,
-          avatarUrl: avatarDataUrl || '',
-        }
-      : {
-          name: finalName,
-          displayName: finalName,
-          slug,
-          bio: nextBio,
-          description: nextBio,
-          avatarUrl: avatarDataUrl || '',
-        };
+    const t = Array.isArray(token) ? token[0] : token;
 
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      // EDIT MODE: token exists -> update existing profile
+      if (t) {
+        const resp = await fetch("/api/profile/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            editToken: t,
+            displayName: finalName,
+            publicSlug: nextSlug,
+            bio: nextBio,
+            avatarUrl: avatarDataUrl || "",
+          }),
+        });
+
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok || !j?.ok) {
+          const msg =
+            j?.message ||
+            (j?.error === "slug_taken"
+              ? "That URL is already taken. Try another username."
+              : "Failed to save profile.");
+          setUsernameError(msg);
+          setSaving(false);
+          return;
+        }
+
+        goToStep2(t);
+        return;
+      }
+
+      // CREATE MODE: no token -> create new profile
+      const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: finalName,
+          slug: nextSlug,
+          description: nextBio, // legacy field used by /api/profile create
+          avatarUrl: avatarDataUrl || "",
+        }),
       });
 
       const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || !data?.ok) {
-        const rawError = data?.error && typeof data.error === 'string' ? data.error : '';
+      if (!res.ok || !data?.editToken) {
+        const rawError = data && typeof data.error === "string" ? data.error : "";
 
-        // Slug collisions are the main UX pain point.
-        if (res.status === 409 || (rawError && rawError.toLowerCase().includes('slug'))) {
-          setUsernameError('That URL is already taken. Try another username.');
-          setSaving(false);
-          return;
+        if (res.status === 409 || (rawError && rawError.toLowerCase().includes("slug"))) {
+          setUsernameError("That URL is already taken. Try another username.");
+        } else {
+          setUsernameError(rawError || "Failed to create profile");
         }
 
-        // Profile-not-found when token is stale/invalid.
-        if (rawError === 'profile_not_found') {
-          alert('We could not find your profile. Start over from Step 1.');
-          setSaving(false);
-          return;
-        }
-
-        alert(rawError || 'Failed to save profile');
         setSaving(false);
         return;
       }
 
-      const nextToken = editToken || data.editToken;
-      if (!nextToken) {
-        alert('Saved, but missing token. Refresh and try again.');
-        setSaving(false);
-        return;
-      }
-
-      window.location.href = `/dashboard/new-links?token=${encodeURIComponent(nextToken)}`;
+      goToStep2(data.editToken);
     } catch (err) {
       console.error(err);
-      alert('Network error saving your profile. Please try again.');
+      setUsernameError("Network error saving profile.");
       setSaving(false);
     }
   };
@@ -232,11 +236,7 @@ export default function NewProfile() {
           </div>
 
           <form onSubmit={handleSubmit} className="form">
-            <div
-              className="avatar-block"
-              onDragOver={handleAvatarDragOver}
-              onDrop={handleAvatarDrop}
-            >
+            <div className="avatar-block" onDragOver={handleAvatarDragOver} onDrop={handleAvatarDrop}>
               <button
                 type="button"
                 className="avatar-circle"
@@ -246,10 +246,7 @@ export default function NewProfile() {
                 aria-label="Upload profile image"
               >
                 {avatarDataUrl ? (
-                  <span
-                    className="avatar-preview"
-                    style={{ backgroundImage: `url(${avatarDataUrl})` }}
-                  />
+                  <span className="avatar-preview" style={{ backgroundImage: `url(${avatarDataUrl})` }} />
                 ) : (
                   <svg
                     className="avatar-icon"
@@ -302,7 +299,7 @@ export default function NewProfile() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg"
+                accept="image/png,image/jpeg,image/webp"
                 className="hidden-file-input"
                 onChange={handleFileChange}
               />
@@ -337,7 +334,7 @@ export default function NewProfile() {
                     value={username}
                     onChange={(e) => {
                       setUsername(e.target.value);
-                      if (usernameError) setUsernameError('');
+                      if (usernameError) setUsernameError("");
                     }}
                     placeholder="username"
                   />
@@ -368,7 +365,7 @@ export default function NewProfile() {
 
             <div className="actions-row content-rail">
               <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? 'Saving…' : 'Continue'}
+                {saving ? "Saving…" : "Continue"}
               </button>
             </div>
 

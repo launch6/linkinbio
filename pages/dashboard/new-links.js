@@ -114,6 +114,28 @@ const SOCIAL_CONFIG = [
   { key: 'website', label: 'Website' },
 ];
 
+const THEME_CONFIG = [
+  {
+    key: 'launch6',
+    label: 'Launch6',
+    // pitch black + vivid purple
+    swatch: 'linear-gradient(90deg, #000000 0 50%, #A855F7 50% 100%)',
+  },
+  {
+    key: 'pastel',
+    label: 'Pastel Dreams',
+    // powder blue + soft pink
+    swatch: 'linear-gradient(90deg, #B9E2F5 0 50%, #FFD1DC 50% 100%)',
+  },
+  {
+    key: 'modern',
+    label: 'Modern Pro',
+    // pure white + electric blue
+    swatch: 'linear-gradient(90deg, #FFFFFF 0 50%, #2563EB 50% 100%)',
+  },
+];
+
+
 const getSocialBaseUrl = (key) => {
   switch (key) {
     case 'instagram':
@@ -172,6 +194,7 @@ export default function NewLinks() {
   });
 
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
+  const [themeKey, setThemeKey] = useState('launch6');
   const [saving, setSaving] = useState(false);
   const [linkError, setLinkError] = useState('');
   const draggingIdRef = useRef(null);
@@ -179,6 +202,27 @@ export default function NewLinks() {
   const hydratedOnceRef = useRef(false);
 
   // Hydrate Step 2 from DB so Back works and state persists across reloads.
+  
+  // Theme persistence (safe UI-only): keep the selection while onboarding.
+useEffect(() => {
+  const t = token ? String(token) : '';
+  const storageKey = t ? `l6_theme_${t}` : 'l6_theme_default';
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved && THEME_CONFIG.some((x) => x.key === saved)) {
+      setThemeKey(saved);
+    }
+  } catch {}
+}, [token]);
+
+useEffect(() => {
+  const t = token ? String(token) : '';
+  const storageKey = t ? `l6_theme_${t}` : 'l6_theme_default';
+  try {
+    if (themeKey) localStorage.setItem(storageKey, themeKey);
+  } catch {}
+}, [token, themeKey]);
+
   useEffect(() => {
     if (!token) return;
     if (hydratedOnceRef.current) return;
@@ -500,7 +544,36 @@ export default function NewLinks() {
           </section>
 
           {/* LINKS */}
-          <form onSubmit={handleSubmit} className="form">
+          {/* THEME */}
+<section className="theme-section">
+  <p className="section-label">CHOOSE YOUR THEME</p>
+
+  <div className="theme-shell">
+    <div className="theme-row">
+      {THEME_CONFIG.map((t) => {
+        const selected = themeKey === t.key;
+        return (
+          <button
+            key={t.key}
+            type="button"
+            className={['theme-btn', selected ? 'theme-selected' : ''].filter(Boolean).join(' ')}
+            onClick={() => setThemeKey(t.key)}
+            aria-pressed={selected}
+          >
+            <span className="theme-swatch" style={{ background: t.swatch }}>
+              {selected && <span className="theme-check">✓</span>}
+            </span>
+            <span className="theme-label">{t.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+</section>
+
+{/* LINKS */}
+<form onSubmit={handleSubmit} className="form">
+
             <section className="links-section">
               <div className="links-header-row">
                 <p className="section-label">LINK BUTTONS</p>
@@ -721,6 +794,71 @@ export default function NewLinks() {
           width: 100%;
           margin-bottom: 26px;
         }
+          .theme-section {
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.theme-shell {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #2e3247;
+  border-radius: 18px;
+  padding: 14px 12px;
+}
+
+.theme-row {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.theme-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.theme-selected .theme-swatch {
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.55), 0 10px 26px rgba(0, 0, 0, 0.35);
+  transform: scale(1.02);
+}
+
+.theme-check {
+  position: absolute;
+  right: -4px;
+  top: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #ffffff;
+}
+
+.theme-label {
+  font-size: 12px;
+  color: #d0d2ff;
+}
 
         .section-label {
           font-size: 13px;

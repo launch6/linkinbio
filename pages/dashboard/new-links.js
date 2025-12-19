@@ -71,7 +71,6 @@ const SocialIconMap = {
     </svg>
   ),
   x: (
-    // Clean X logo: two crossing strokes
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -115,7 +114,6 @@ const SOCIAL_CONFIG = [
   { key: 'website', label: 'Website' },
 ];
 
-// Base URLs used for prefill + prefix locking
 const getSocialBaseUrl = (key) => {
   switch (key) {
     case 'instagram':
@@ -135,25 +133,19 @@ const getSocialBaseUrl = (key) => {
   }
 };
 
-// Helper: a social is "complete" when it has more than its base prefix
 const isSocialComplete = (key, urls) => {
   const base = getSocialBaseUrl(key);
   const val = urls[key];
   return !!val && val.length > base.length;
 };
 
-// Normalize link URLs for validation (not for saving — backend normalizes too)
 const normalizeLinkUrl = (value) => {
   let url = (value || '').trim();
   if (!url) return '';
-
-  if (!/^https?:\/\//i.test(url)) {
-    url = `https://${url}`;
-  }
+  if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
   return url;
 };
 
-// Basic URL validation: require a hostname with a dot (.com, .org, .art, etc.)
 const isValidLinkUrl = (value) => {
   const normalized = normalizeLinkUrl(value);
   try {
@@ -168,9 +160,7 @@ export default function NewLinks() {
   const router = useRouter();
   const { token } = router.query;
 
-  const [links, setLinks] = useState([
-    { id: 1, label: 'Shop my latest pieces', url: '' },
-  ]);
+  const [links, setLinks] = useState([{ id: 1, label: 'Shop my latest pieces', url: '' }]);
 
   const [socialUrls, setSocialUrls] = useState({
     instagram: '',
@@ -181,14 +171,14 @@ export default function NewLinks() {
     website: '',
   });
 
-    const [activeSocialKey, setActiveSocialKey] = useState('instagram');
+  const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [saving, setSaving] = useState(false);
   const [linkError, setLinkError] = useState('');
   const draggingIdRef = useRef(null);
 
   const hydratedOnceRef = useRef(false);
 
-  // Hydrate this step from DB so Back works and state persists across reloads.
+  // Hydrate Step 2 from DB so Back works and state persists across reloads.
   useEffect(() => {
     if (!token) return;
     if (hydratedOnceRef.current) return;
@@ -196,15 +186,15 @@ export default function NewLinks() {
 
     (async () => {
       try {
-        const r = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}`, {
-          cache: 'no-store',
-        });
+        const r = await fetch(
+          `/api/profile/get?editToken=${encodeURIComponent(token)}`,
+          { cache: 'no-store' }
+        );
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j?.ok || !j?.profile) return;
 
         const prof = j.profile;
 
-        // links: accept a few possible shapes; default to current single row
         const rawLinks = Array.isArray(prof.links)
           ? prof.links
           : Array.isArray(prof.linkButtons)
@@ -216,12 +206,7 @@ export default function NewLinks() {
         const nextLinks =
           rawLinks.length > 0
             ? rawLinks.slice(0, 6).map((l, idx) => ({
-                id:
-                  typeof l?.id === 'number'
-                    ? l.id
-                    : typeof l?.id === 'string' && l.id.trim()
-                    ? l.id
-                    : idx + 1,
+                id: typeof l?.id === 'number' ? l.id : idx + 1,
                 label: String(l?.label || '').slice(0, 80),
                 url: String(l?.url || '').slice(0, 2000),
               }))
@@ -229,8 +214,8 @@ export default function NewLinks() {
 
         setLinks(nextLinks);
 
-        // social: accept either prof.social or top-level keys
-        const profSocial = prof.social && typeof prof.social === 'object' ? prof.social : {};
+        const profSocial =
+          prof.social && typeof prof.social === 'object' ? prof.social : {};
         const nextSocial = {
           instagram: String(profSocial.instagram || prof.instagram || ''),
           facebook: String(profSocial.facebook || prof.facebook || ''),
@@ -241,28 +226,23 @@ export default function NewLinks() {
         };
         setSocialUrls(nextSocial);
 
-        // set active icon to first completed social (else instagram)
         const firstComplete =
-          SOCIAL_CONFIG.find((net) => isSocialComplete(net.key, nextSocial))?.key || 'instagram';
+          SOCIAL_CONFIG.find((net) => isSocialComplete(net.key, nextSocial))?.key ||
+          'instagram';
         setActiveSocialKey(firstComplete);
       } catch {
-        // silent — never block onboarding UX
+        // silent — do not block onboarding UX
       }
     })();
   }, [token]);
 
-  // only count completed socials, not bare prefixes
   const usedSocialCount = SOCIAL_CONFIG.reduce(
     (count, net) => (isSocialComplete(net.key, socialUrls) ? count + 1 : count),
     0
   );
 
   const handleLinkChange = (id, field, value) => {
-    setLinks((prev) =>
-      prev.map((link) =>
-        link.id === id ? { ...link, [field]: value } : link
-      )
-    );
+    setLinks((prev) => prev.map((link) => (link.id === id ? { ...link, [field]: value } : link)));
   };
 
   const handleRemoveLink = (id) => {
@@ -272,16 +252,18 @@ export default function NewLinks() {
   const handleAddRow = () => {
     setLinks((prev) => {
       if (prev.length >= 6) return prev;
-      const nextId = prev.length ? Math.max(...prev.map((l) => l.id)) + 1 : 1;
+      const numericIds = prev
+        .map((l) => (typeof l.id === 'number' ? l.id : parseInt(String(l.id), 10)))
+        .filter((n) => Number.isFinite(n));
+      const nextId = numericIds.length ? Math.max(...numericIds) + 1 : 1;
       return [...prev, { id: nextId, label: '', url: '' }];
     });
   };
 
-    // Step navigation helpers
+  // Step navigation helpers
   const goToStep1 = () => {
-    // If your Step 1 route differs, change it here:
-    const step1Path = '/dashboard/new-profile';
-
+    // Change this if your Step 1 route differs
+    const step1Path = '/dashboard/new-email';
     if (token) {
       window.location.href = `${step1Path}?token=${encodeURIComponent(token)}`;
     } else {
@@ -297,32 +279,15 @@ export default function NewLinks() {
     }
   };
 
-    if (token) {
-      window.location.href = `/dashboard/new-drop?token=${token}`;
-    } else {
-      window.location.href = `/dashboard/new-drop`;
-    }
-  };
-
-  // --- social icons ---
-
   const handleSocialIconClick = (key) => {
     const complete = isSocialComplete(key, socialUrls);
-
-    // respect the 4-icon limit based on completed socials only
-    if (!complete && usedSocialCount >= 4) {
-      return;
-    }
+    if (!complete && usedSocialCount >= 4) return;
 
     setActiveSocialKey(key);
 
-    // prefill base if empty
     if (!socialUrls[key]) {
       const base = getSocialBaseUrl(key);
-      setSocialUrls((prev) => ({
-        ...prev,
-        [key]: base,
-      }));
+      setSocialUrls((prev) => ({ ...prev, [key]: base }));
     }
   };
 
@@ -332,16 +297,11 @@ export default function NewLinks() {
     let value = e.target.value;
     const base = getSocialBaseUrl(activeSocialKey);
 
-    // allow clearing everything via the × button
     if (!value) {
-      setSocialUrls((prev) => ({
-        ...prev,
-        [activeSocialKey]: '',
-      }));
+      setSocialUrls((prev) => ({ ...prev, [activeSocialKey]: '' }));
       return;
     }
 
-    // enforce the prefix: user can only type after the base
     if (value.length < base.length) {
       value = base;
     } else if (!value.startsWith(base)) {
@@ -349,24 +309,16 @@ export default function NewLinks() {
       value = base + tail;
     }
 
-    setSocialUrls((prev) => ({
-      ...prev,
-      [activeSocialKey]: value,
-    }));
+    setSocialUrls((prev) => ({ ...prev, [activeSocialKey]: value }));
   };
 
   const handleClearActiveSocial = () => {
     if (!activeSocialKey) return;
-    setSocialUrls((prev) => ({
-      ...prev,
-      [activeSocialKey]: '',
-    }));
+    setSocialUrls((prev) => ({ ...prev, [activeSocialKey]: '' }));
   };
 
   const activeSocialUrl =
-    activeSocialKey && socialUrls[activeSocialKey]
-      ? socialUrls[activeSocialKey]
-      : '';
+    activeSocialKey && socialUrls[activeSocialKey] ? socialUrls[activeSocialKey] : '';
 
   const activeSocialPlaceholder = !activeSocialKey
     ? 'https://yourwebsite.com'
@@ -374,10 +326,8 @@ export default function NewLinks() {
     ? 'https://'
     : getSocialBaseUrl(activeSocialKey);
 
-  // --- drag + drop for link cards ---
   const handleDragStart = (id) => (event) => {
     draggingIdRef.current = id;
-
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', String(id));
@@ -404,28 +354,19 @@ export default function NewLinks() {
     });
   };
 
-  // --- submit: validate, save to API, then go to Step 3 ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (saving) return;
 
     setLinkError('');
 
-    // Only rows where the URL has something
     const linksWithUrls = links.filter((l) => l.url.trim());
-
-    // 1) Require at least one URL
     if (linksWithUrls.length === 0) {
       setLinkError('Add at least one link URL before continuing.');
       return;
     }
 
-    // 2) Any URL that exists must be valid
-    const invalidLinks = linksWithUrls.filter(
-      (l) => !isValidLinkUrl(l.url)
-    );
-
+    const invalidLinks = linksWithUrls.filter((l) => !isValidLinkUrl(l.url));
     if (invalidLinks.length > 0) {
       setLinkError(
         'One or more links have an invalid URL. Try something like backyardsofkeywest.com or https://example.com.'
@@ -458,7 +399,6 @@ export default function NewLinks() {
         return;
       }
 
-      // All good – move to Step 3
       goToStep3();
     } catch (err) {
       console.error(err);
@@ -475,7 +415,7 @@ export default function NewLinks() {
 
       <div className="card">
         <div className="card-inner">
-                    <div className="top-nav-row">
+          <div className="top-nav-row">
             <button type="button" className="back-btn" onClick={goToStep1}>
               ← Back
             </button>
@@ -485,14 +425,12 @@ export default function NewLinks() {
             <div className="progress-bar-fill" />
           </div>
 
-
           <p className="step-label">STEP 2 OF 4</p>
           <h1 className="title">Add links &amp; socials</h1>
 
           <div className="subtitle-block">
             <p className="subtitle-line">
-              Let&apos;s light up your social icons and stack your content
-              buttons.
+              Let&apos;s light up your social icons and stack your content buttons.
             </p>
           </div>
 
@@ -502,8 +440,6 @@ export default function NewLinks() {
 
             <div className="social-icon-row">
               {SOCIAL_CONFIG.map((net) => {
-                const base = getSocialBaseUrl(net.key);
-                const val = socialUrls[net.key];
                 const complete = isSocialComplete(net.key, socialUrls);
                 const isDisabled = !complete && usedSocialCount >= 4;
 
@@ -568,9 +504,7 @@ export default function NewLinks() {
             <section className="links-section">
               <div className="links-header-row">
                 <p className="section-label">LINK BUTTONS</p>
-                <p className="links-header-helper">
-                  Add key links. Drag to reorder.
-                </p>
+                <p className="links-header-helper">Add key links. Drag to reorder.</p>
               </div>
 
               <div className="links-list">
@@ -597,18 +531,14 @@ export default function NewLinks() {
                         className="link-input link-label-input"
                         placeholder="Shop my latest pieces"
                         value={link.label}
-                        onChange={(e) =>
-                          handleLinkChange(link.id, 'label', e.target.value)
-                        }
+                        onChange={(e) => handleLinkChange(link.id, 'label', e.target.value)}
                       />
                       <input
                         type="text"
                         className="link-input link-url-input"
                         placeholder="https://..."
                         value={link.url}
-                        onChange={(e) =>
-                          handleLinkChange(link.id, 'url', e.target.value)
-                        }
+                        onChange={(e) => handleLinkChange(link.id, 'url', e.target.value)}
                       />
                     </div>
 
@@ -624,16 +554,11 @@ export default function NewLinks() {
                 ))}
               </div>
 
-              <button
-                type="button"
-                className="add-link-button"
-                onClick={handleAddRow}
-              >
+              <button type="button" className="add-link-button" onClick={handleAddRow}>
                 + Add another link
               </button>
-              {linkError && (
-                <p className="field-error">{linkError}</p>
-              )}
+
+              {linkError && <p className="field-error">{linkError}</p>}
             </section>
 
             <div className="actions-row content-rail">
@@ -706,6 +631,7 @@ export default function NewLinks() {
             border-radius: 24px;
           }
         }
+
         .top-nav-row {
           width: 100%;
           display: flex;
@@ -742,7 +668,7 @@ export default function NewLinks() {
         }
 
         .progress-bar-fill {
-          width: 50%; /* 2 of 4 steps */
+          width: 50%;
           height: 100%;
           background: linear-gradient(90deg, #6366ff, #a855f7);
           border-radius: 2px;
@@ -790,8 +716,6 @@ export default function NewLinks() {
           width: 100%;
           max-width: 100%;
         }
-
-        /* SOCIALS */
 
         .social-section {
           width: 100%;
@@ -857,8 +781,7 @@ export default function NewLinks() {
 
         .social-icon-active .social-icon-circle {
           background: linear-gradient(45deg, #a855f7, #6366ff);
-          box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 0.14),
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14),
             0 6px 16px rgba(80, 60, 200, 0.6);
         }
 
@@ -871,8 +794,7 @@ export default function NewLinks() {
         }
 
         .social-icon-editing .social-icon-circle {
-          box-shadow:
-            0 0 0 2px rgba(168, 85, 247, 0.5),
+          box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.5),
             0 6px 16px rgba(80, 60, 200, 0.6);
           transform: scale(1.05);
         }
@@ -892,7 +814,6 @@ export default function NewLinks() {
           padding-left: 4px;
         }
 
-        /* aligned pill with link cards */
         .social-url-pill {
           width: 100%;
           border-radius: 999px;
@@ -949,8 +870,6 @@ export default function NewLinks() {
         .social-url-clear:hover {
           color: #ffffff;
         }
-
-        /* LINKS */
 
         .links-section {
           width: 100%;
@@ -1080,8 +999,7 @@ export default function NewLinks() {
           font-weight: 500;
           padding: 12px 16px;
           cursor: pointer;
-          transition: transform 0.08s ease, box-shadow 0.08s ease,
-            background 0.12s ease;
+          transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
         }
 
         .btn-primary {

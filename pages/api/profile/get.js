@@ -94,6 +94,8 @@ export default async function handler(req, res) {
         publicSlug: doc.publicSlug || doc.slug || "",
         slug: doc.slug || "",
         status: doc.status || "active",
+        theme: doc.theme || "launch6",
+
         // prefer bio, fall back to legacy description
         bio: doc.bio || doc.description || "",
         // ✅ FIX: include avatarUrl

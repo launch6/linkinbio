@@ -1192,27 +1192,35 @@ export default function PublicSlugPage() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
-              <div style={linkPillOuter}>
-                <a
-                  href="https://launch6.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    ...linkPillInner,
-                    justifyContent: "flex-start",
-                    gap: "0.75rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  <img
-                    src="/launch6_white.png"
-                    alt="Launch6 logo"
-                    style={{ height: "1.6rem", width: "auto" }}
-                  />
-                  <span>blastoff here 🚀</span>
-                </a>
-              </div>
-            </div>
+  <a
+    href="https://launch6.com"
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "0.55rem",
+      padding: "0.45rem 0.75rem",      // shorter
+      borderRadius: "999px",
+      textDecoration: "none",
+      color: "rgba(244,244,245,0.92)",
+      fontSize: "0.85rem",
+      fontWeight: 600,
+      background: "transparent",       // remove color container
+      border: `1px solid ${theme.border}`,
+      boxShadow: "none",
+      maxWidth: "100%",
+    }}
+  >
+    <img
+      src="/launch6_white.png"
+      alt="Launch6 logo"
+      style={{ height: "1.15rem", width: "auto", opacity: 0.92 }}
+    />
+    <span style={{ opacity: 0.9 }}>Powered by Launch6</span>
+    <span style={{ opacity: 0.55, fontSize: "0.78rem" }}>↗</span>
+  </a>
+</div>
 
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0.9rem" }}>
               <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: "#a3a3a3" }}>

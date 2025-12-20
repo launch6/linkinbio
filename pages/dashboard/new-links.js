@@ -423,7 +423,8 @@ useEffect(() => {
       const resp = await fetch('/api/profile/links-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({
+  
+        body: JSON.stringify({
   editToken: token || '',
   links,
   social: socialUrls,

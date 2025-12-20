@@ -38,12 +38,136 @@ function isValidEmail(email) {
   return true;
 }
 
-// Theme allowlist + mapping (defense-in-depth; ignore unknown values)
-const THEME_MAP = {
-  launch6: { a: "#6366FF", b: "#A855F7" },
-  pastel: { a: "#B9E2F5", b: "#FFD1DC" },
-  modern: { a: "#2563EB", b: "#60A5FA" },
+/**
+ * Defense-in-depth: normalize external hrefs.
+ * - allow https/http, mailto/tel
+ * - block javascript:, data:, vbscript:
+ * - block relative and protocol-relative
+ * - allow bare domains => https://
+ */
+function normalizeHref(url) {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  const lower = trimmed.toLowerCase();
+
+  if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+    return "";
+  }
+
+  if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
+    return trimmed;
+  }
+
+  // If it has any other scheme, only allow http/https
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    return "";
+  }
+
+  // Block relative and protocol-relative URLs
+  if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
+
+  // Allow bare domains by prepending https://
+  if (trimmed.includes(".") && !/\s/.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return "";
+}
+
+/**
+ * Defense-in-depth for image src:
+ * - allow https/http
+ * - allow data:image/(png|jpeg|jpg|webp|gif) only
+ * - block javascript:, svg data payloads, protocol-relative, relative URLs
+ */
+function normalizeImageSrc(src) {
+  if (!src || typeof src !== "string") return "";
+  const trimmed = src.trim();
+  if (!trimmed) return "";
+
+  const lower = trimmed.toLowerCase();
+
+  if (lower.startsWith("javascript:") || lower.startsWith("vbscript:")) return "";
+  if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
+
+  // allow http/https
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  // allow safe data:image only (no svg)
+  if (lower.startsWith("data:image/")) {
+    // Only allow common raster image types
+    if (
+      lower.startsWith("data:image/png") ||
+      lower.startsWith("data:image/jpeg") ||
+      lower.startsWith("data:image/jpg") ||
+      lower.startsWith("data:image/webp") ||
+      lower.startsWith("data:image/gif")
+    ) {
+      return trimmed;
+    }
+    return "";
+  }
+
+  return "";
+}
+
+/** Theme tokens (allowlist to match server). */
+const THEME_TOKENS = {
+  launch6: {
+    key: "launch6",
+    label: "Launch6",
+    bgTop: "#191b2b",
+    bgMid: "#050509",
+    bgBot: "#020206",
+    inner: "#0b0c15",
+    accentA: "#6366ff",
+    accentB: "#a855f7",
+    muted: "#9ca3af",
+    border: "rgba(255,255,255,0.06)",
+    cardBorder: "rgba(148,163,184,0.40)",
+    pillA: "rgba(99,102,255,0.18)",
+    pillB: "rgba(168,85,247,0.18)",
+  },
+  pastel: {
+    key: "pastel",
+    label: "Pastel Dreams",
+    bgTop: "#0b1220",
+    bgMid: "#070a12",
+    bgBot: "#02030a",
+    inner: "#070b14",
+    accentA: "#B9E2F5",
+    accentB: "#FFD1DC",
+    muted: "#a3a3a3",
+    border: "rgba(255,255,255,0.08)",
+    cardBorder: "rgba(255,255,255,0.18)",
+    pillA: "rgba(185,226,245,0.18)",
+    pillB: "rgba(255,209,220,0.18)",
+  },
+  modern: {
+    key: "modern",
+    label: "Modern Pro",
+    bgTop: "#0b1020",
+    bgMid: "#070912",
+    bgBot: "#02040a",
+    inner: "#070b14",
+    accentA: "#2563EB",
+    accentB: "#FFFFFF",
+    muted: "#a3a3a3",
+    border: "rgba(255,255,255,0.08)",
+    cardBorder: "rgba(255,255,255,0.20)",
+    pillA: "rgba(37,99,235,0.18)",
+    pillB: "rgba(255,255,255,0.10)",
+  },
 };
+
+function getTheme(themeKeyRaw) {
+  const key = typeof themeKeyRaw === "string" ? themeKeyRaw.trim().toLowerCase() : "";
+  if (key === "launch6" || key === "pastel" || key === "modern") return THEME_TOKENS[key];
+  return THEME_TOKENS.launch6;
+}
 
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
@@ -113,7 +237,7 @@ function SocialIcon({ type }) {
   return null;
 }
 
-function DropCard({ product: p, slug }) {
+function DropCard({ product: p, slug, theme }) {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -122,7 +246,7 @@ function DropCard({ product: p, slug }) {
   }, []);
 
   // --- basic fields -------------------------------------------------------
-  const imageUrl = p.imageUrl || null;
+  const imageUrl = normalizeImageSrc(p.imageUrl || "") || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 
@@ -142,7 +266,6 @@ function DropCard({ product: p, slug }) {
   // --- inventory / ended logic -------------------------------------------
   const left = p.unitsLeft === null || p.unitsLeft === undefined ? null : Number(p.unitsLeft);
   const total = p.unitsTotal === null || p.unitsTotal === undefined ? null : Number(p.unitsTotal);
-
   const soldOut = left !== null && left <= 0;
 
   const startsAt = p.dropStartsAt ? new Date(p.dropStartsAt) : null;
@@ -210,7 +333,7 @@ function DropCard({ product: p, slug }) {
     inventoryText = `${left}/${total} available`;
   }
 
-  // --- styles -------------------------------------------------------------
+  // --- themed styles ------------------------------------------------------
   const outer = {
     width: "100%",
     maxWidth: "420px",
@@ -218,20 +341,21 @@ function DropCard({ product: p, slug }) {
     boxSizing: "border-box",
     borderRadius: "28px",
     padding: "20px 18px 22px",
-    background: "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
-    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+    background: `radial-gradient(circle at top, ${theme.bgTop} 0%, ${theme.bgMid} 60%, ${theme.bgBot} 100%)`,
+    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.85)",
+    border: `1px solid ${theme.border}`,
   };
 
   const heroFrame = {
     borderRadius: "24px",
     padding: "3px",
-    background: "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
-    boxShadow: "0 14px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7)",
+    background: `radial-gradient(circle at top, ${theme.accentA} 0%, ${theme.accentB} 42%, ${theme.inner} 100%)`,
+    boxShadow: "0 14px 40px rgba(0, 0, 0, 0.9)",
   };
 
   const heroInner = {
     borderRadius: "20px",
-    background: "#0b0c15",
+    background: theme.inner,
     overflow: "hidden",
     width: "100%",
     position: "relative",
@@ -251,7 +375,7 @@ function DropCard({ product: p, slug }) {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#9ca3af",
+    color: theme.muted,
     fontSize: "1rem",
   };
 
@@ -270,7 +394,7 @@ function DropCard({ product: p, slug }) {
     fontSize: "1.2rem",
     fontWeight: 700,
     margin: "0 0 0.2rem",
-    backgroundImage: "linear-gradient(90deg,#a855f7,#6366ff)",
+    backgroundImage: `linear-gradient(90deg, ${theme.accentB}, ${theme.accentA})`,
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
@@ -278,7 +402,7 @@ function DropCard({ product: p, slug }) {
 
   const inventoryStyle = {
     fontSize: "0.8rem",
-    color: "#9ca3af",
+    color: theme.muted,
     margin: "0 0 0.8rem",
   };
 
@@ -287,12 +411,13 @@ function DropCard({ product: p, slug }) {
     lineHeight: 1.6,
     color: "#e5e7eb",
     margin: "0 0 1rem",
+    whiteSpace: "pre-line",
   };
 
   const timerCard = {
     borderRadius: "18px",
-    border: "1px solid rgba(148,163,184,0.4)",
-    background: "#0b0c17",
+    border: `1px solid ${theme.cardBorder}`,
+    background: theme.inner,
     padding: "10px 14px 12px",
     margin: "0 0 1.05rem",
   };
@@ -301,7 +426,7 @@ function DropCard({ product: p, slug }) {
     fontSize: "0.68rem",
     textTransform: "uppercase",
     letterSpacing: "0.16em",
-    color: "#9ca3af",
+    color: theme.muted,
     margin: "0 0 6px",
   };
 
@@ -320,13 +445,13 @@ function DropCard({ product: p, slug }) {
 
   const timerSeparator = {
     fontSize: "1.25rem",
-    color: "#6366ff",
+    color: theme.accentA,
     transform: "translateY(-1px)",
   };
 
   const timerUnits = {
     fontSize: "0.7rem",
-    color: "#9ca3af",
+    color: theme.muted,
     margin: 0,
   };
 
@@ -335,7 +460,7 @@ function DropCard({ product: p, slug }) {
     borderRadius: "999px",
     padding: "0.8rem 1.1rem",
     fontSize: "0.98rem",
-    fontWeight: 600,
+    fontWeight: 700,
     border: "none",
     cursor: "pointer",
     textDecoration: "none",
@@ -349,9 +474,9 @@ function DropCard({ product: p, slug }) {
 
   const buttonActive = {
     ...buttonBase,
-    backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
+    backgroundImage: `linear-gradient(90deg, ${theme.accentA}, ${theme.accentB})`,
     color: "#fff",
-    boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
+    boxShadow: "0 14px 36px rgba(0,0,0,0.35)",
   };
 
   const buttonDisabled = {
@@ -427,6 +552,49 @@ function DropCard({ product: p, slug }) {
   );
 }
 
+function ThemedSocialButton({ href, label, iconType, theme }) {
+  if (!href) return null;
+
+  const ring = {
+    height: "4.1rem",
+    width: "4.1rem",
+    borderRadius: "999px",
+    padding: "2px",
+    backgroundImage: `linear-gradient(135deg, ${theme.accentA}, ${theme.accentB})`,
+    boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
+  const inner = {
+    height: "100%",
+    width: "100%",
+    borderRadius: "999px",
+    border: `1px solid ${theme.border}`,
+    background: `linear-gradient(135deg, rgba(24,24,27,0.92), rgba(10,10,18,0.92))`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#f9fafb",
+    textDecoration: "none",
+  };
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      style={ring}
+    >
+      <span style={inner}>
+        <SocialIcon type={iconType} />
+      </span>
+    </a>
+  );
+}
+
 export default function PublicSlugPage() {
   const router = useRouter();
   const { slug } = router.query;
@@ -446,41 +614,6 @@ export default function PublicSlugPage() {
   const [subscribed, setSubscribed] = useState(false);
 
   const refreshIntervalRef = useRef(null);
-
-  // External link safety: allow http/https; allow bare domains via https://; allow mailto/tel; block dangerous schemes
-  const normalizeHref = (url) => {
-    if (!url || typeof url !== "string") return "";
-    const trimmed = url.trim();
-    if (!trimmed) return "";
-
-    const lower = trimmed.toLowerCase();
-
-    // Hard-block dangerous schemes
-    if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
-      return "";
-    }
-
-    // Allow mailto/tel
-    if (lower.startsWith("mailto:") || lower.startsWith("tel:")) {
-      return trimmed;
-    }
-
-    // If it has any other scheme, only allow http/https
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
-      if (/^https?:\/\//i.test(trimmed)) return trimmed;
-      return "";
-    }
-
-    // Block relative and protocol-relative URLs
-    if (trimmed.startsWith("/") || trimmed.startsWith("//")) return "";
-
-    // Allow bare domains by prepending https://
-    if (trimmed.includes(".") && !/\s/.test(trimmed)) {
-      return `https://${trimmed}`;
-    }
-
-    return "";
-  };
 
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal, opts = {}) {
@@ -564,35 +697,7 @@ export default function PublicSlugPage() {
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
 
-  // theme (allowlisted mapping only)
-  const themeKeyRaw = typeof profile?.theme === "string" ? profile.theme.trim().toLowerCase() : "";
-  const t = THEME_MAP[themeKeyRaw] || THEME_MAP.launch6;
-
-  const ringHoverProps = (theme) => ({
-    onMouseEnter: (e) => {
-      e.currentTarget.style.borderColor = `${theme.b}AA`;
-      e.currentTarget.style.boxShadow = `0 0 0 1px rgba(255,255,255,0.06), 0 14px 40px rgba(0,0,0,0.65), 0 0 22px ${theme.a}33`;
-      e.currentTarget.style.transform = "translateY(-1px)";
-    },
-    onMouseLeave: (e) => {
-      e.currentTarget.style.borderColor = `${theme.a}55`;
-      e.currentTarget.style.boxShadow = `0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)`;
-      e.currentTarget.style.transform = "translateY(0px)";
-    },
-  });
-
-  const linkHoverProps = (theme) => ({
-    onMouseEnter: (e) => {
-      e.currentTarget.style.borderColor = `${theme.b}AA`;
-      e.currentTarget.style.boxShadow = `0 14px 40px rgba(0,0,0,0.65), 0 0 24px ${theme.a}22`;
-      e.currentTarget.style.transform = "translateY(-1px)";
-    },
-    onMouseLeave: (e) => {
-      e.currentTarget.style.borderColor = `${theme.a}40`;
-      e.currentTarget.style.boxShadow = `0 10px 28px rgba(0,0,0,0.55)`;
-      e.currentTarget.style.transform = "translateY(0px)";
-    },
-  });
+  const theme = getTheme(profile?.theme);
 
   // default: email capture ON unless explicitly disabled
   const canCollectEmail =
@@ -625,9 +730,9 @@ export default function PublicSlugPage() {
     social.instagram || social.facebook || social.tiktok || social.youtube || social.x || websiteHref;
 
   // --- SEO / Social ---
-  const firstImage = products?.[0]?.imageUrl || "";
-  const site = "https://linkinbio-tau-pink.vercel.app";
-  const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
+  const firstImage = normalizeImageSrc(products?.[0]?.imageUrl || "");
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://l6.io";
+  const pageUrl = slug ? `${site.replace(/\/$/, "")}/${encodeURIComponent(slug)}` : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
   const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
@@ -638,7 +743,7 @@ export default function PublicSlugPage() {
     (bio ? ` — ${bio}` : "");
 
   const avatarInitial = (title && title.trim().charAt(0).toUpperCase()) || "L";
-  const avatarUrl = profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
+  const avatarUrl = normalizeImageSrc(profile?.avatarUrl || profile?.imageUrl || profile?.avatar || "");
 
   // early states
   if (loading) {
@@ -673,6 +778,28 @@ export default function PublicSlugPage() {
   // vertical rhythm
   const SECTION_GAP = "1.35rem";
   const HEADER_STACK_SPACING = "0.8rem";
+
+  // themed link pill wrapper
+  const linkPillOuter = {
+    padding: "2px",
+    borderRadius: "999px",
+    backgroundImage: `linear-gradient(135deg, ${theme.accentA}, ${theme.accentB})`,
+    boxShadow: "0 12px 30px rgba(0,0,0,0.28)",
+  };
+
+  const linkPillInner = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0.95rem 1.2rem",
+    borderRadius: "999px",
+    background: `linear-gradient(135deg, ${theme.pillA}, ${theme.pillB}), linear-gradient(135deg, rgba(39,39,42,0.95), rgba(24,24,27,0.95))`,
+    border: `1px solid ${theme.border}`,
+    textDecoration: "none",
+    color: "#f4f4f5",
+    fontSize: "0.98rem",
+    backdropFilter: "blur(6px)",
+  };
 
   // handle slug-based subscribe
   async function handleSubscribe(e) {
@@ -739,7 +866,12 @@ export default function PublicSlugPage() {
         <link rel="canonical" href={pageUrl} />
       </Head>
 
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div
+        className="min-h-screen text-white"
+        style={{
+          background: `radial-gradient(circle at top, ${theme.bgTop} 0%, ${theme.bgMid} 62%, ${theme.bgBot} 100%)`,
+        }}
+      >
         <main style={mainStyle}>
           {/* HEADER */}
           <header style={{ width: "100%", marginBottom: SECTION_GAP }}>
@@ -757,31 +889,43 @@ export default function PublicSlugPage() {
               {/* Avatar */}
               <div style={{ marginBottom: HEADER_STACK_SPACING }}>
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={title || "Avatar"}
+                  <div
                     style={{
-                      height: "7rem",
-                      width: "7rem",
+                      padding: "2px",
                       borderRadius: "999px",
-                      objectFit: "cover",
-                      border: "1px solid #27272a",
-                      display: "block",
+                      backgroundImage: `linear-gradient(135deg, ${theme.accentA}, ${theme.accentB})`,
+                      display: "inline-block",
+                      boxShadow: "0 14px 34px rgba(0,0,0,0.35)",
                     }}
-                  />
+                  >
+                    <img
+                      src={avatarUrl}
+                      alt={title || "Avatar"}
+                      style={{
+                        height: "7rem",
+                        width: "7rem",
+                        borderRadius: "999px",
+                        objectFit: "cover",
+                        border: `1px solid ${theme.border}`,
+                        display: "block",
+                        backgroundColor: theme.inner,
+                      }}
+                    />
+                  </div>
                 ) : (
                   <div
                     style={{
                       height: "6.5rem",
                       width: "6.5rem",
                       borderRadius: "999px",
-                      backgroundColor: "#18181b",
-                      border: "1px solid #27272a",
+                      backgroundColor: theme.inner,
+                      border: `1px solid ${theme.border}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontWeight: 600,
+                      fontWeight: 700,
                       fontSize: "2.2rem",
+                      boxShadow: "0 14px 34px rgba(0,0,0,0.35)",
                     }}
                   >
                     {avatarInitial}
@@ -794,7 +938,7 @@ export default function PublicSlugPage() {
                 style={{
                   fontSize: "1.7rem",
                   lineHeight: 1.2,
-                  fontWeight: 700,
+                  fontWeight: 800,
                   margin: `0 0 ${HEADER_STACK_SPACING}`,
                 }}
               >
@@ -810,6 +954,7 @@ export default function PublicSlugPage() {
                     lineHeight: 1.5,
                     margin: `0 0 ${HEADER_STACK_SPACING}`,
                     whiteSpace: "pre-line",
+                    opacity: 0.92,
                   }}
                 >
                   {bio}
@@ -818,168 +963,13 @@ export default function PublicSlugPage() {
 
               {/* Social icons */}
               {hasSocialRow && (
-                <div style={{ display: "flex", justifyContent: "center", gap: "0.9rem" }}>
-                  {social.instagram && (
-                    <a
-                      href={social.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      referrerPolicy="no-referrer"
-                      aria-label="Instagram"
-                      {...ringHoverProps(t)}
-                      style={{
-                        height: "4rem",
-                        width: "4rem",
-                        borderRadius: "999px",
-                        border: `1px solid ${t.a}55`,
-                        backgroundColor: "rgba(24,24,27,0.9)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#f9fafb",
-                        textDecoration: "none",
-                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
-                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
-                      }}
-                    >
-                      <SocialIcon type="instagram" />
-                    </a>
-                  )}
-
-                  {social.facebook && (
-                    <a
-                      href={social.facebook}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      referrerPolicy="no-referrer"
-                      aria-label="Facebook"
-                      {...ringHoverProps(t)}
-                      style={{
-                        height: "4rem",
-                        width: "4rem",
-                        borderRadius: "999px",
-                        border: `1px solid ${t.a}55`,
-                        backgroundColor: "rgba(24,24,27,0.9)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#f9fafb",
-                        textDecoration: "none",
-                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
-                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
-                      }}
-                    >
-                      <SocialIcon type="facebook" />
-                    </a>
-                  )}
-
-                  {social.tiktok && (
-                    <a
-                      href={social.tiktok}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      referrerPolicy="no-referrer"
-                      aria-label="TikTok"
-                      {...ringHoverProps(t)}
-                      style={{
-                        height: "4rem",
-                        width: "4rem",
-                        borderRadius: "999px",
-                        border: `1px solid ${t.a}55`,
-                        backgroundColor: "rgba(24,24,27,0.9)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#f9fafb",
-                        textDecoration: "none",
-                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
-                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
-                      }}
-                    >
-                      <SocialIcon type="tiktok" />
-                    </a>
-                  )}
-
-                  {social.youtube && (
-                    <a
-                      href={social.youtube}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      referrerPolicy="no-referrer"
-                      aria-label="YouTube"
-                      {...ringHoverProps(t)}
-                      style={{
-                        height: "4rem",
-                        width: "4rem",
-                        borderRadius: "999px",
-                        border: `1px solid ${t.a}55`,
-                        backgroundColor: "rgba(24,24,27,0.9)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#f9fafb",
-                        textDecoration: "none",
-                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
-                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
-                      }}
-                    >
-                      <SocialIcon type="youtube" />
-                    </a>
-                  )}
-
-                  {social.x && (
-                    <a
-                      href={social.x}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      referrerPolicy="no-referrer"
-                      aria-label="X"
-                      {...ringHoverProps(t)}
-                      style={{
-                        height: "4rem",
-                        width: "4rem",
-                        borderRadius: "999px",
-                        border: `1px solid ${t.a}55`,
-                        backgroundColor: "rgba(24,24,27,0.9)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#f9fafb",
-                        textDecoration: "none",
-                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
-                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
-                      }}
-                    >
-                      <SocialIcon type="x" />
-                    </a>
-                  )}
-
-                  {websiteHref && (
-                    <a
-                      href={websiteHref}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      referrerPolicy="no-referrer"
-                      aria-label="Website"
-                      {...ringHoverProps(t)}
-                      style={{
-                        height: "4rem",
-                        width: "4rem",
-                        borderRadius: "999px",
-                        border: `1px solid ${t.a}55`,
-                        backgroundColor: "rgba(24,24,27,0.9)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#f9fafb",
-                        textDecoration: "none",
-                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
-                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
-                      }}
-                    >
-                      <SocialIcon type="website" />
-                    </a>
-                  )}
+                <div style={{ display: "flex", justifyContent: "center", gap: "0.9rem", flexWrap: "wrap" }}>
+                  <ThemedSocialButton href={social.instagram} label="Instagram" iconType="instagram" theme={theme} />
+                  <ThemedSocialButton href={social.facebook} label="Facebook" iconType="facebook" theme={theme} />
+                  <ThemedSocialButton href={social.tiktok} label="TikTok" iconType="tiktok" theme={theme} />
+                  <ThemedSocialButton href={social.youtube} label="YouTube" iconType="youtube" theme={theme} />
+                  <ThemedSocialButton href={social.x} label="X" iconType="x" theme={theme} />
+                  <ThemedSocialButton href={websiteHref} label="Website" iconType="website" theme={theme} />
                 </div>
               )}
             </div>
@@ -989,7 +979,7 @@ export default function PublicSlugPage() {
           {products.length > 0 && (
             <section style={{ ...fullWidthSection, marginBottom: SECTION_GAP }}>
               {products.map((p) => (
-                <DropCard key={p.id} product={p} slug={slug} />
+                <DropCard key={p.id} product={p} slug={slug} theme={theme} />
               ))}
             </section>
           )}
@@ -1004,10 +994,9 @@ export default function PublicSlugPage() {
                 padding: "20px 18px 22px",
                 borderRadius: "28px",
                 textAlign: "center",
-                background:
-                  "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
-                border: "1px solid rgba(148,163,184,0.4)",
-                boxShadow: "0 20px 60px rgba(0,0,0,0.75)",
+                background: `radial-gradient(circle at top, ${theme.bgTop} 0%, ${theme.bgMid} 60%, ${theme.bgBot} 100%)`,
+                border: `1px solid ${theme.cardBorder}`,
+                boxShadow: "0 20px 60px rgba(0,0,0,0.65)",
                 boxSizing: "border-box",
               }}
             >
@@ -1021,7 +1010,7 @@ export default function PublicSlugPage() {
                   marginBottom: "0.95rem",
                   textAlign: "center",
                   fontSize: "1.4rem",
-                  fontWeight: 700,
+                  fontWeight: 800,
                   lineHeight: 1.2,
                 }}
               >
@@ -1031,7 +1020,7 @@ export default function PublicSlugPage() {
               {!subscribed ? (
                 <form
                   onSubmit={handleSubscribe}
-                  style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+                  style={{ display: "flex", flexDirection: "column", gap: "0.75rem", position: "relative" }}
                 >
                   {/* Honeypot (invisible). Bots often fill this; humans never see it. */}
                   <input
@@ -1062,7 +1051,7 @@ export default function PublicSlugPage() {
                         margin: "0 auto",
                         borderRadius: "9999px",
                         backgroundColor: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.12)",
+                        border: `1px solid ${theme.border}`,
                         padding: "0.9rem 1.1rem",
                         fontSize: "1.05rem",
                         color: "white",
@@ -1085,7 +1074,7 @@ export default function PublicSlugPage() {
                       alignItems: "stretch",
                       borderRadius: "9999px",
                       backgroundColor: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
+                      border: `1px solid ${theme.border}`,
                       overflow: "hidden",
                       boxSizing: "border-box",
                     }}
@@ -1122,12 +1111,12 @@ export default function PublicSlugPage() {
                         border: "none",
                         padding: "0 1.4rem",
                         fontSize: "1.05rem",
-                        fontWeight: 800,
+                        fontWeight: 900,
                         color: "white",
-                        cursor: "pointer",
+                        cursor: submitting ? "default" : "pointer",
                         opacity: submitting ? 0.75 : 1,
-                        backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
-                        boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
+                        backgroundImage: `linear-gradient(90deg, ${theme.accentA}, ${theme.accentB})`,
+                        boxShadow: "0 14px 36px rgba(0,0,0,0.35)",
                       }}
                     >
                       {submitting ? "Joining…" : "Join"}
@@ -1137,11 +1126,11 @@ export default function PublicSlugPage() {
               ) : (
                 <div
                   style={{
-                    borderRadius: "0.5rem",
-                    border: "1px solid rgba(16,185,129,0.5)",
-                    backgroundColor: "rgba(6,95,70,0.3)",
-                    padding: "0.5rem 0.75rem",
-                    fontSize: "0.9rem",
+                    borderRadius: "0.75rem",
+                    border: "1px solid rgba(16,185,129,0.45)",
+                    backgroundColor: "rgba(6,95,70,0.25)",
+                    padding: "0.7rem 0.9rem",
+                    fontSize: "0.92rem",
                     color: "#a7f3d0",
                   }}
                 >
@@ -1150,10 +1139,7 @@ export default function PublicSlugPage() {
               )}
 
               {emailErr ? (
-                <div
-                  id="email-error"
-                  style={{ marginTop: "0.35rem", fontSize: "0.8rem", color: "#fecaca" }}
-                >
+                <div id="email-error" style={{ marginTop: "0.55rem", fontSize: "0.85rem", color: "#fecaca" }}>
                   {emailErr}
                 </div>
               ) : null}
@@ -1175,32 +1161,20 @@ export default function PublicSlugPage() {
                   if (!safeHref) return null;
 
                   const label = l.label || l.url || "Link";
+
                   return (
-                    <a
-                      key={l.id || l.url}
-                      href={safeHref}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      referrerPolicy="no-referrer"
-                      {...linkHoverProps(t)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "0.95rem 1.2rem",
-                        borderRadius: "999px",
-                        background: "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
-                        border: `1px solid ${t.a}40`,
-                        boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
-                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
-                        textDecoration: "none",
-                        color: "#f4f4f5",
-                        fontSize: "0.98rem",
-                      }}
-                    >
-                      <span>{label}</span>
-                      <span style={{ fontSize: "0.8rem", opacity: 0.6 }}>↗</span>
-                    </a>
+                    <div key={l.id || l.url} style={linkPillOuter}>
+                      <a
+                        href={safeHref}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        referrerPolicy="no-referrer"
+                        style={linkPillInner}
+                      >
+                        <span>{label}</span>
+                        <span style={{ fontSize: "0.8rem", opacity: 0.65 }}>↗</span>
+                      </a>
+                    </div>
                   );
                 })}
               </div>
@@ -1218,40 +1192,36 @@ export default function PublicSlugPage() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
-              <a
-                href="https://launch6.com"
-                target="_blank"
-                rel="noopener noreferrer nofollow"
-                referrerPolicy="no-referrer"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  gap: "0.75rem",
-                  padding: "0.95rem 1.2rem",
-                  borderRadius: "999px",
-                  background: "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
-                  border: "1px solid #27272a",
-                  textDecoration: "none",
-                  color: "#f4f4f5",
-                  fontSize: "0.98rem",
-                  fontWeight: 500,
-                  marginTop: "0.5rem",
-                }}
-              >
-                <img src="/launch6_white.png" alt="Launch6 logo" style={{ height: "1.6rem", width: "auto" }} />
-                <span>blastoff here 🚀</span>
-              </a>
+              <div style={linkPillOuter}>
+                <a
+                  href="https://launch6.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    ...linkPillInner,
+                    justifyContent: "flex-start",
+                    gap: "0.75rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <img
+                    src="/launch6_white.png"
+                    alt="Launch6 logo"
+                    style={{ height: "1.6rem", width: "auto" }}
+                  />
+                  <span>blastoff here 🚀</span>
+                </a>
+              </div>
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0.9rem" }}>
-              <button type="button" style={{ textDecoration: "underline" }}>
+              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: "#a3a3a3" }}>
                 Cookie preferences
               </button>
-              <button type="button" style={{ textDecoration: "underline" }}>
+              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: "#a3a3a3" }}>
                 Report page
               </button>
-              <button type="button" style={{ textDecoration: "underline" }}>
+              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: "#a3a3a3" }}>
                 Privacy
               </button>
             </div>

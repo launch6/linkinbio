@@ -38,55 +38,12 @@ function isValidEmail(email) {
   return true;
 }
 
-/**
- * Image src allowlist:
- * - allow https/http
- * - allow base64 raster images (png/jpg/jpeg/webp/gif)
- * - block svg data URIs (can carry script payloads)
- */
-function safeImageSrc(src) {
-  if (!src || typeof src !== "string") return null;
-  const s = src.trim();
-  if (!s) return null;
-
-  if (/^https?:\/\//i.test(s)) return s;
-
-  // allow raster data URIs; block svg explicitly
-  if (/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(s)) return s;
-
-  return null;
-}
-
-const THEME_TOKENS = {
-  launch6: {
-    a: "#6366ff",
-    b: "#a855f7",
-    outerBg: "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
-    heroBg: "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
-    panelBg: "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
-    glow: "0 14px 36px rgba(79,70,229,0.65)",
-  },
-  pastel: {
-    a: "#B9E2F5",
-    b: "#FFD1DC",
-    outerBg: "radial-gradient(circle at top, rgba(185,226,245,0.22) 0%, #050509 60%, #020206 100%)",
-    heroBg: "radial-gradient(circle at top, #B9E2F5 0%, #FFD1DC 45%, #101020 100%)",
-    panelBg: "radial-gradient(circle at top, rgba(185,226,245,0.18) 0%, rgba(5,5,9,0.86) 60%, rgba(2,2,6,0.86) 100%)",
-    glow: "0 14px 36px rgba(185,226,245,0.22)",
-  },
-  modern: {
-    a: "#2563EB",
-    b: "#60A5FA",
-    outerBg: "radial-gradient(circle at top, rgba(37,99,235,0.22) 0%, #050509 60%, #020206 100%)",
-    heroBg: "radial-gradient(circle at top, #2563EB 0%, #60A5FA 45%, #101020 100%)",
-    panelBg: "radial-gradient(circle at top, rgba(37,99,235,0.16) 0%, rgba(5,5,9,0.86) 60%, rgba(2,2,6,0.86) 100%)",
-    glow: "0 14px 36px rgba(37,99,235,0.32)",
-  },
+// Theme allowlist + mapping (defense-in-depth; ignore unknown values)
+const THEME_MAP = {
+  launch6: { a: "#6366FF", b: "#A855F7" },
+  pastel: { a: "#B9E2F5", b: "#FFD1DC" },
+  modern: { a: "#2563EB", b: "#60A5FA" },
 };
-
-function getThemeTokens(key) {
-  return THEME_TOKENS[key] || THEME_TOKENS.launch6;
-}
 
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
@@ -156,9 +113,7 @@ function SocialIcon({ type }) {
   return null;
 }
 
-function DropCard({ product: p, slug, themeKey }) {
-  const t = getThemeTokens(themeKey);
-
+function DropCard({ product: p, slug }) {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -167,7 +122,7 @@ function DropCard({ product: p, slug, themeKey }) {
   }, []);
 
   // --- basic fields -------------------------------------------------------
-  const imageUrl = safeImageSrc(p.imageUrl) || null;
+  const imageUrl = p.imageUrl || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 
@@ -263,15 +218,14 @@ function DropCard({ product: p, slug, themeKey }) {
     boxSizing: "border-box",
     borderRadius: "28px",
     padding: "20px 18px 22px",
-    background: t.outerBg,
-    boxShadow:
-      "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+    background: "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
+    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
   };
 
   const heroFrame = {
     borderRadius: "24px",
     padding: "3px",
-    background: t.heroBg,
+    background: "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
     boxShadow: "0 14px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7)",
   };
 
@@ -316,7 +270,7 @@ function DropCard({ product: p, slug, themeKey }) {
     fontSize: "1.2rem",
     fontWeight: 700,
     margin: "0 0 0.2rem",
-    backgroundImage: `linear-gradient(90deg,${t.b},${t.a})`,
+    backgroundImage: "linear-gradient(90deg,#a855f7,#6366ff)",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
@@ -366,7 +320,7 @@ function DropCard({ product: p, slug, themeKey }) {
 
   const timerSeparator = {
     fontSize: "1.25rem",
-    color: t.a,
+    color: "#6366ff",
     transform: "translateY(-1px)",
   };
 
@@ -395,9 +349,9 @@ function DropCard({ product: p, slug, themeKey }) {
 
   const buttonActive = {
     ...buttonBase,
-    backgroundImage: `linear-gradient(90deg,${t.a},${t.b})`,
+    backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
     color: "#fff",
-    boxShadow: t.glow,
+    boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
   };
 
   const buttonDisabled = {
@@ -452,9 +406,7 @@ function DropCard({ product: p, slug, themeKey }) {
                   <span style={timerValue}>{s}</span>
                 </div>
                 <p style={timerUnits}>
-                  {mode === "days"
-                    ? "Days · Hours · Minutes · Seconds"
-                    : "Hours · Minutes · Seconds"}
+                  {mode === "days" ? "Days · Hours · Minutes · Seconds" : "Hours · Minutes · Seconds"}
                 </p>
               </>
             )}
@@ -504,11 +456,7 @@ export default function PublicSlugPage() {
     const lower = trimmed.toLowerCase();
 
     // Hard-block dangerous schemes
-    if (
-      lower.startsWith("javascript:") ||
-      lower.startsWith("data:") ||
-      lower.startsWith("vbscript:")
-    ) {
+    if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
       return "";
     }
 
@@ -537,9 +485,7 @@ export default function PublicSlugPage() {
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal, opts = {}) {
     const trackView = !!opts.trackView;
-    const url = `/api/public?slug=${encodeURIComponent(slugVal)}${
-      trackView ? "&trackView=1" : ""
-    }`;
+    const url = `/api/public?slug=${encodeURIComponent(slugVal)}${trackView ? "&trackView=1" : ""}`;
     const r = await fetch(url, { cache: "no-store" });
 
     const ct = (r.headers.get("content-type") || "").toLowerCase();
@@ -618,8 +564,35 @@ export default function PublicSlugPage() {
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
 
-  const themeKey = (profile?.theme || "launch6").toLowerCase();
-  const t = getThemeTokens(themeKey);
+  // theme (allowlisted mapping only)
+  const themeKeyRaw = typeof profile?.theme === "string" ? profile.theme.trim().toLowerCase() : "";
+  const t = THEME_MAP[themeKeyRaw] || THEME_MAP.launch6;
+
+  const ringHoverProps = (theme) => ({
+    onMouseEnter: (e) => {
+      e.currentTarget.style.borderColor = `${theme.b}AA`;
+      e.currentTarget.style.boxShadow = `0 0 0 1px rgba(255,255,255,0.06), 0 14px 40px rgba(0,0,0,0.65), 0 0 22px ${theme.a}33`;
+      e.currentTarget.style.transform = "translateY(-1px)";
+    },
+    onMouseLeave: (e) => {
+      e.currentTarget.style.borderColor = `${theme.a}55`;
+      e.currentTarget.style.boxShadow = `0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)`;
+      e.currentTarget.style.transform = "translateY(0px)";
+    },
+  });
+
+  const linkHoverProps = (theme) => ({
+    onMouseEnter: (e) => {
+      e.currentTarget.style.borderColor = `${theme.b}AA`;
+      e.currentTarget.style.boxShadow = `0 14px 40px rgba(0,0,0,0.65), 0 0 24px ${theme.a}22`;
+      e.currentTarget.style.transform = "translateY(-1px)";
+    },
+    onMouseLeave: (e) => {
+      e.currentTarget.style.borderColor = `${theme.a}40`;
+      e.currentTarget.style.boxShadow = `0 10px 28px rgba(0,0,0,0.55)`;
+      e.currentTarget.style.transform = "translateY(0px)";
+    },
+  });
 
   // default: email capture ON unless explicitly disabled
   const canCollectEmail =
@@ -652,8 +625,8 @@ export default function PublicSlugPage() {
     social.instagram || social.facebook || social.tiktok || social.youtube || social.x || websiteHref;
 
   // --- SEO / Social ---
-  const firstImage = safeImageSrc(products?.[0]?.imageUrl) || "";
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://l6.io";
+  const firstImage = products?.[0]?.imageUrl || "";
+  const site = "https://linkinbio-tau-pink.vercel.app";
   const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
@@ -665,7 +638,7 @@ export default function PublicSlugPage() {
     (bio ? ` — ${bio}` : "");
 
   const avatarInitial = (title && title.trim().charAt(0).toUpperCase()) || "L";
-  const avatarUrl = safeImageSrc(profile?.avatarUrl || profile?.imageUrl || profile?.avatar) || null;
+  const avatarUrl = profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
 
   // early states
   if (loading) {
@@ -850,129 +823,158 @@ export default function PublicSlugPage() {
                     <a
                       href={social.instagram}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
+                      referrerPolicy="no-referrer"
                       aria-label="Instagram"
+                      {...ringHoverProps(t)}
                       style={{
                         height: "4rem",
                         width: "4rem",
                         borderRadius: "999px",
-                        border: "1px solid #27272a",
+                        border: `1px solid ${t.a}55`,
                         backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         color: "#f9fafb",
                         textDecoration: "none",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
+                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
                       }}
                     >
                       <SocialIcon type="instagram" />
                     </a>
                   )}
+
                   {social.facebook && (
                     <a
                       href={social.facebook}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
+                      referrerPolicy="no-referrer"
                       aria-label="Facebook"
+                      {...ringHoverProps(t)}
                       style={{
                         height: "4rem",
                         width: "4rem",
                         borderRadius: "999px",
-                        border: "1px solid #27272a",
+                        border: `1px solid ${t.a}55`,
                         backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         color: "#f9fafb",
                         textDecoration: "none",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
+                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
                       }}
                     >
                       <SocialIcon type="facebook" />
                     </a>
                   )}
+
                   {social.tiktok && (
                     <a
                       href={social.tiktok}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
+                      referrerPolicy="no-referrer"
                       aria-label="TikTok"
+                      {...ringHoverProps(t)}
                       style={{
                         height: "4rem",
                         width: "4rem",
                         borderRadius: "999px",
-                        border: "1px solid #27272a",
+                        border: `1px solid ${t.a}55`,
                         backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         color: "#f9fafb",
                         textDecoration: "none",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
+                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
                       }}
                     >
                       <SocialIcon type="tiktok" />
                     </a>
                   )}
+
                   {social.youtube && (
                     <a
                       href={social.youtube}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
+                      referrerPolicy="no-referrer"
                       aria-label="YouTube"
+                      {...ringHoverProps(t)}
                       style={{
                         height: "4rem",
                         width: "4rem",
                         borderRadius: "999px",
-                        border: "1px solid #27272a",
+                        border: `1px solid ${t.a}55`,
                         backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         color: "#f9fafb",
                         textDecoration: "none",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
+                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
                       }}
                     >
                       <SocialIcon type="youtube" />
                     </a>
                   )}
+
                   {social.x && (
                     <a
                       href={social.x}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
+                      referrerPolicy="no-referrer"
                       aria-label="X"
+                      {...ringHoverProps(t)}
                       style={{
                         height: "4rem",
                         width: "4rem",
                         borderRadius: "999px",
-                        border: "1px solid #27272a",
+                        border: `1px solid ${t.a}55`,
                         backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         color: "#f9fafb",
                         textDecoration: "none",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
+                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
                       }}
                     >
                       <SocialIcon type="x" />
                     </a>
                   )}
+
                   {websiteHref && (
                     <a
                       href={websiteHref}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="noopener noreferrer nofollow"
+                      referrerPolicy="no-referrer"
                       aria-label="Website"
+                      {...ringHoverProps(t)}
                       style={{
                         height: "4rem",
                         width: "4rem",
                         borderRadius: "999px",
-                        border: "1px solid #27272a",
+                        border: `1px solid ${t.a}55`,
                         backgroundColor: "rgba(24,24,27,0.9)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         color: "#f9fafb",
                         textDecoration: "none",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.55)",
+                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
                       }}
                     >
                       <SocialIcon type="website" />
@@ -987,7 +989,7 @@ export default function PublicSlugPage() {
           {products.length > 0 && (
             <section style={{ ...fullWidthSection, marginBottom: SECTION_GAP }}>
               {products.map((p) => (
-                <DropCard key={p.id} product={p} slug={slug} themeKey={themeKey} />
+                <DropCard key={p.id} product={p} slug={slug} />
               ))}
             </section>
           )}
@@ -1002,7 +1004,8 @@ export default function PublicSlugPage() {
                 padding: "20px 18px 22px",
                 borderRadius: "28px",
                 textAlign: "center",
-                background: t.panelBg,
+                background:
+                  "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
                 border: "1px solid rgba(148,163,184,0.4)",
                 boxShadow: "0 20px 60px rgba(0,0,0,0.75)",
                 boxSizing: "border-box",
@@ -1026,7 +1029,10 @@ export default function PublicSlugPage() {
               </h2>
 
               {!subscribed ? (
-                <form onSubmit={handleSubscribe} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <form
+                  onSubmit={handleSubscribe}
+                  style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+                >
                   {/* Honeypot (invisible). Bots often fill this; humans never see it. */}
                   <input
                     type="text"
@@ -1120,8 +1126,8 @@ export default function PublicSlugPage() {
                         color: "white",
                         cursor: "pointer",
                         opacity: submitting ? 0.75 : 1,
-                        backgroundImage: `linear-gradient(90deg,${t.a},${t.b})`,
-                        boxShadow: t.glow,
+                        backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
+                        boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
                       }}
                     >
                       {submitting ? "Joining…" : "Join"}
@@ -1144,7 +1150,10 @@ export default function PublicSlugPage() {
               )}
 
               {emailErr ? (
-                <div id="email-error" style={{ marginTop: "0.35rem", fontSize: "0.8rem", color: "#fecaca" }}>
+                <div
+                  id="email-error"
+                  style={{ marginTop: "0.35rem", fontSize: "0.8rem", color: "#fecaca" }}
+                >
                   {emailErr}
                 </div>
               ) : null}
@@ -1173,6 +1182,7 @@ export default function PublicSlugPage() {
                       target="_blank"
                       rel="noopener noreferrer nofollow"
                       referrerPolicy="no-referrer"
+                      {...linkHoverProps(t)}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -1180,7 +1190,9 @@ export default function PublicSlugPage() {
                         padding: "0.95rem 1.2rem",
                         borderRadius: "999px",
                         background: "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
-                        border: "1px solid #27272a",
+                        border: `1px solid ${t.a}40`,
+                        boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
+                        transition: "transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease",
                         textDecoration: "none",
                         color: "#f4f4f5",
                         fontSize: "0.98rem",
@@ -1209,7 +1221,8 @@ export default function PublicSlugPage() {
               <a
                 href="https://launch6.com"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer nofollow"
+                referrerPolicy="no-referrer"
                 style={{
                   display: "flex",
                   alignItems: "center",

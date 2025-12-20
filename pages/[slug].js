@@ -1196,29 +1196,31 @@ export default function PublicSlugPage() {
     href="https://launch6.com"
     target="_blank"
     rel="noopener noreferrer"
+    aria-label="Powered by LAUNCH6"
     style={{
       display: "inline-flex",
       alignItems: "center",
       gap: "0.55rem",
-      padding: "0.45rem 0.75rem",      // shorter
+      padding: "0.45rem 0.75rem",
       borderRadius: "999px",
       textDecoration: "none",
       color: "rgba(244,244,245,0.92)",
       fontSize: "0.85rem",
-      fontWeight: 600,
-      background: "transparent",       // remove color container
+      fontWeight: 700,
+      background: "transparent",
       border: `1px solid ${theme.border}`,
       boxShadow: "none",
       maxWidth: "100%",
     }}
   >
+    <span style={{ opacity: 0.92 }}>Powered by</span>
+    <span style={{ letterSpacing: "0.06em", opacity: 0.98 }}>LAUNCH6</span>
     <img
       src="/launch6_white.png"
-      alt="Launch6 logo"
-      style={{ height: "1.15rem", width: "auto", opacity: 0.92 }}
+      alt="LAUNCH6"
+      style={{ height: "1.05rem", width: "auto", opacity: 0.95, marginLeft: "0.15rem" }}
     />
-    <span style={{ opacity: 0.9 }}>Powered by Launch6</span>
-    <span style={{ opacity: 0.55, fontSize: "0.78rem" }}>↗</span>
+    <span style={{ opacity: 0.55, fontSize: "0.78rem", marginLeft: "0.15rem" }}>↗</span>
   </a>
 </div>
 

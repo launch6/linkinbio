@@ -154,27 +154,28 @@ export default async function handler(req, res) {
       { $or: [{ publicSlug: rawSlug }, { slug: rawSlug }] },
       {
         projection: {
-          collectName: 1,
-          klaviyoEnabled: 1,
-          formHeadline: 1,
-          formSubtext: 1,
-          plan: 1,
-          _id: 1,
-          displayName: 1,
-          name: 1,
-          publicSlug: 1,
-          slug: 1,
-          status: 1,
-          bio: 1,
-          description: 1,
-          collectEmail: 1,
-          klaviyoListId: 1,
-          links: 1,
-          social: 1,
-          avatarUrl: 1,
-          imageUrl: 1,
-          products: 1,
-        },
+  collectName: 1,
+  klaviyoEnabled: 1,
+  formHeadline: 1,
+  formSubtext: 1,
+  plan: 1,
+  theme: 1,
+  _id: 1,
+  displayName: 1,
+  name: 1,
+  publicSlug: 1,
+  slug: 1,
+  status: 1,
+  bio: 1,
+  description: 1,
+  collectEmail: 1,
+  klaviyoListId: 1,
+  links: 1,
+  social: 1,
+  avatarUrl: 1,
+  imageUrl: 1,
+  products: 1,
+},
       }
     );
 
@@ -247,6 +248,11 @@ if (trackView && !looksLikeBot && profileDoc._id) {
       : [];
 
     const social = sanitizeSocialObject(profileDoc.social);
+    // Theme allowlist (prevents arbitrary values from reaching the client)
+const allowedThemes = new Set(["launch6", "pastel", "modern"]);
+const rawTheme =
+  typeof profileDoc.theme === "string" ? profileDoc.theme.trim().toLowerCase() : "";
+const safeTheme = allowedThemes.has(rawTheme) ? rawTheme : "launch6";
 
     return send(res, 200, {
       ok: true,
@@ -257,6 +263,7 @@ if (trackView && !looksLikeBot && profileDoc._id) {
         slug: defangText(profileDoc.slug || rawSlug, 80),
         status: defangText(profileDoc.status || "active", 40),
         plan: defangText(profileDoc.plan || "free", 40),
+        theme: safeTheme,
 
         // bring description back for old + new records
         bio: defangText(profileDoc.bio || profileDoc.description || "", 5000),

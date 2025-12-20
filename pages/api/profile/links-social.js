@@ -95,8 +95,8 @@ export default async function handler(req, res) {
 
 // Theme allowlist (prevents arbitrary CSS / junk data)
 const allowedThemes = new Set(['launch6', 'pastel', 'modern']);
-const safeTheme =
-  typeof theme === 'string' ? theme.trim().toLowerCase() : '';
+const safeTheme = typeof theme === 'string' ? theme.trim().toLowerCase() : '';
+const themeUpdate = allowedThemes.has(safeTheme) ? { theme: safeTheme } : {};
 
 const result = await Profiles.updateOne(
   { editToken: token },
@@ -104,11 +104,12 @@ const result = await Profiles.updateOne(
     $set: {
       links: safeLinks,
       social: safeSocial,
-      ...(allowedThemes.has(safeTheme) ? { theme: safeTheme } : {}),
+      ...themeUpdate,
       updatedAt: new Date(),
     },
   }
 );
+
 
     if (!result.matchedCount) {
       return send(res, 404, { ok: false, error: 'profile_not_found' });

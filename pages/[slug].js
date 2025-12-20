@@ -1214,13 +1214,18 @@ export default function PublicSlugPage() {
     }}
   >
     <span style={{ opacity: 0.92 }}>Powered by</span>
-    <span style={{ letterSpacing: "0.06em", opacity: 0.98 }}>LAUNCH6</span>
-    <img
-      src="/launch6_white.png"
-      alt="LAUNCH6"
-      style={{ height: "1.05rem", width: "auto", opacity: 0.95, marginLeft: "0.15rem" }}
-    />
-    <span style={{ opacity: 0.55, fontSize: "0.78rem", marginLeft: "0.15rem" }}>↗</span>
+<img
+  src="/launch6_white.png"
+  alt="Launch6"
+  style={{
+    height: "1.32rem", // 25% larger than 1.05rem
+    width: "auto",
+    opacity: 0.95,
+    transform: "translateY(1px)", // visually centers with text
+  }}
+/>
+<span style={{ opacity: 0.55, fontSize: "0.78rem", marginLeft: "0.15rem" }}>↗</span>
+
   </a>
 </div>
 

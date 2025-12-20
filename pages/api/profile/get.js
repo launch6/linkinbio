@@ -71,6 +71,7 @@ export default async function handler(req, res) {
           klaviyoListId: 1,
           links: 1,
           social: 1,
+          theme: 1,
         },
       }
     );

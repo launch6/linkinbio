@@ -38,6 +38,56 @@ function isValidEmail(email) {
   return true;
 }
 
+/**
+ * Image src allowlist:
+ * - allow https/http
+ * - allow base64 raster images (png/jpg/jpeg/webp/gif)
+ * - block svg data URIs (can carry script payloads)
+ */
+function safeImageSrc(src) {
+  if (!src || typeof src !== "string") return null;
+  const s = src.trim();
+  if (!s) return null;
+
+  if (/^https?:\/\//i.test(s)) return s;
+
+  // allow raster data URIs; block svg explicitly
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(s)) return s;
+
+  return null;
+}
+
+const THEME_TOKENS = {
+  launch6: {
+    a: "#6366ff",
+    b: "#a855f7",
+    outerBg: "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
+    heroBg: "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
+    panelBg: "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
+    glow: "0 14px 36px rgba(79,70,229,0.65)",
+  },
+  pastel: {
+    a: "#B9E2F5",
+    b: "#FFD1DC",
+    outerBg: "radial-gradient(circle at top, rgba(185,226,245,0.22) 0%, #050509 60%, #020206 100%)",
+    heroBg: "radial-gradient(circle at top, #B9E2F5 0%, #FFD1DC 45%, #101020 100%)",
+    panelBg: "radial-gradient(circle at top, rgba(185,226,245,0.18) 0%, rgba(5,5,9,0.86) 60%, rgba(2,2,6,0.86) 100%)",
+    glow: "0 14px 36px rgba(185,226,245,0.22)",
+  },
+  modern: {
+    a: "#2563EB",
+    b: "#60A5FA",
+    outerBg: "radial-gradient(circle at top, rgba(37,99,235,0.22) 0%, #050509 60%, #020206 100%)",
+    heroBg: "radial-gradient(circle at top, #2563EB 0%, #60A5FA 45%, #101020 100%)",
+    panelBg: "radial-gradient(circle at top, rgba(37,99,235,0.16) 0%, rgba(5,5,9,0.86) 60%, rgba(2,2,6,0.86) 100%)",
+    glow: "0 14px 36px rgba(37,99,235,0.32)",
+  },
+};
+
+function getThemeTokens(key) {
+  return THEME_TOKENS[key] || THEME_TOKENS.launch6;
+}
+
 // Small inline SVG icons for socials
 function SocialIcon({ type }) {
   const common = {
@@ -106,7 +156,9 @@ function SocialIcon({ type }) {
   return null;
 }
 
-function DropCard({ product: p, slug }) {
+function DropCard({ product: p, slug, themeKey }) {
+  const t = getThemeTokens(themeKey);
+
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -115,7 +167,7 @@ function DropCard({ product: p, slug }) {
   }, []);
 
   // --- basic fields -------------------------------------------------------
-  const imageUrl = p.imageUrl || null;
+  const imageUrl = safeImageSrc(p.imageUrl) || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 
@@ -211,7 +263,7 @@ function DropCard({ product: p, slug }) {
     boxSizing: "border-box",
     borderRadius: "28px",
     padding: "20px 18px 22px",
-    background: "radial-gradient(circle at top, #191b2b 0%, #050509 60%, #020206 100%)",
+    background: t.outerBg,
     boxShadow:
       "0 20px 60px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04)",
   };
@@ -219,7 +271,7 @@ function DropCard({ product: p, slug }) {
   const heroFrame = {
     borderRadius: "24px",
     padding: "3px",
-    background: "radial-gradient(circle at top, #6366ff 0%, #a855f7 40%, #101020 100%)",
+    background: t.heroBg,
     boxShadow: "0 14px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7)",
   };
 
@@ -264,7 +316,7 @@ function DropCard({ product: p, slug }) {
     fontSize: "1.2rem",
     fontWeight: 700,
     margin: "0 0 0.2rem",
-    backgroundImage: "linear-gradient(90deg,#a855f7,#6366ff)",
+    backgroundImage: `linear-gradient(90deg,${t.b},${t.a})`,
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
@@ -314,7 +366,7 @@ function DropCard({ product: p, slug }) {
 
   const timerSeparator = {
     fontSize: "1.25rem",
-    color: "#6366ff",
+    color: t.a,
     transform: "translateY(-1px)",
   };
 
@@ -343,9 +395,9 @@ function DropCard({ product: p, slug }) {
 
   const buttonActive = {
     ...buttonBase,
-    backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
+    backgroundImage: `linear-gradient(90deg,${t.a},${t.b})`,
     color: "#fff",
-    boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
+    boxShadow: t.glow,
   };
 
   const buttonDisabled = {
@@ -400,7 +452,9 @@ function DropCard({ product: p, slug }) {
                   <span style={timerValue}>{s}</span>
                 </div>
                 <p style={timerUnits}>
-                  {mode === "days" ? "Days · Hours · Minutes · Seconds" : "Hours · Minutes · Seconds"}
+                  {mode === "days"
+                    ? "Days · Hours · Minutes · Seconds"
+                    : "Hours · Minutes · Seconds"}
                 </p>
               </>
             )}
@@ -450,7 +504,11 @@ export default function PublicSlugPage() {
     const lower = trimmed.toLowerCase();
 
     // Hard-block dangerous schemes
-    if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+    if (
+      lower.startsWith("javascript:") ||
+      lower.startsWith("data:") ||
+      lower.startsWith("vbscript:")
+    ) {
       return "";
     }
 
@@ -479,7 +537,9 @@ export default function PublicSlugPage() {
   // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal, opts = {}) {
     const trackView = !!opts.trackView;
-    const url = `/api/public?slug=${encodeURIComponent(slugVal)}${trackView ? "&trackView=1" : ""}`;
+    const url = `/api/public?slug=${encodeURIComponent(slugVal)}${
+      trackView ? "&trackView=1" : ""
+    }`;
     const r = await fetch(url, { cache: "no-store" });
 
     const ct = (r.headers.get("content-type") || "").toLowerCase();
@@ -500,10 +560,12 @@ export default function PublicSlugPage() {
   // initial + periodic refresh (trackView only once per session)
   useEffect(() => {
     if (!slug) return;
-        try {
+
+    try {
       formTsRef.current = Date.now();
       setWebsiteHp("");
     } catch {}
+
     let alive = true;
 
     const viewKey = `l6_view_tracked_${String(slug)}`;
@@ -556,6 +618,9 @@ export default function PublicSlugPage() {
   const title = profile?.displayName || profile?.name || "Artist";
   const bio = profile?.bio || profile?.description || "";
 
+  const themeKey = (profile?.theme || "launch6").toLowerCase();
+  const t = getThemeTokens(themeKey);
+
   // default: email capture ON unless explicitly disabled
   const canCollectEmail =
     profile?.showForm === true || (profile?.showForm !== false && profile?.collectEmail !== false);
@@ -587,8 +652,8 @@ export default function PublicSlugPage() {
     social.instagram || social.facebook || social.tiktok || social.youtube || social.x || websiteHref;
 
   // --- SEO / Social ---
-  const firstImage = products?.[0]?.imageUrl || "";
-  const site = "https://linkinbio-tau-pink.vercel.app";
+  const firstImage = safeImageSrc(products?.[0]?.imageUrl) || "";
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://l6.io";
   const pageUrl = slug ? `${site}/${encodeURIComponent(slug)}` : site;
   const seoTitle = title ? `${title} — Drops` : "Drops";
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
@@ -600,7 +665,7 @@ export default function PublicSlugPage() {
     (bio ? ` — ${bio}` : "");
 
   const avatarInitial = (title && title.trim().charAt(0).toUpperCase()) || "L";
-  const avatarUrl = profile?.avatarUrl || profile?.imageUrl || profile?.avatar || null;
+  const avatarUrl = safeImageSrc(profile?.avatarUrl || profile?.imageUrl || profile?.avatar) || null;
 
   // early states
   if (loading) {
@@ -649,15 +714,14 @@ export default function PublicSlugPage() {
       const resp = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        body: JSON.stringify({
           publicSlug: slug,
           email,
           name: fullName,
-          website: websiteHp,     // honeypot
+          website: websiteHp, // honeypot
           formTs: formTsRef.current, // timing hint (ms)
           ref: typeof window !== "undefined" ? window.location.href : "",
         }),
-
       });
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json?.ok) {
@@ -923,7 +987,7 @@ export default function PublicSlugPage() {
           {products.length > 0 && (
             <section style={{ ...fullWidthSection, marginBottom: SECTION_GAP }}>
               {products.map((p) => (
-                <DropCard key={p.id} product={p} slug={slug} />
+                <DropCard key={p.id} product={p} slug={slug} themeKey={themeKey} />
               ))}
             </section>
           )}
@@ -938,8 +1002,7 @@ export default function PublicSlugPage() {
                 padding: "20px 18px 22px",
                 borderRadius: "28px",
                 textAlign: "center",
-                background:
-                  "radial-gradient(circle at top, rgba(25,27,43,0.85) 0%, rgba(5,5,9,0.85) 60%, rgba(2,2,6,0.85) 100%)",
+                background: t.panelBg,
                 border: "1px solid rgba(148,163,184,0.4)",
                 boxShadow: "0 20px 60px rgba(0,0,0,0.75)",
                 boxSizing: "border-box",
@@ -963,112 +1026,108 @@ export default function PublicSlugPage() {
               </h2>
 
               {!subscribed ? (
-               
-               <form
-  onSubmit={handleSubscribe}
-  style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
->
-  {/* Honeypot (invisible). Bots often fill this; humans never see it. */}
-  <input
-    type="text"
-    name="website"
-    value={websiteHp}
-    onChange={(e) => setWebsiteHp(e.target.value)}
-    tabIndex={-1}
-    autoComplete="off"
-    aria-hidden="true"
-    style={{
-      position: "absolute",
-      left: "-10000px",
-      top: "auto",
-      width: "1px",
-      height: "1px",
-      overflow: "hidden",
-    }}
-  />
+                <form onSubmit={handleSubscribe} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {/* Honeypot (invisible). Bots often fill this; humans never see it. */}
+                  <input
+                    type="text"
+                    name="website"
+                    value={websiteHp}
+                    onChange={(e) => setWebsiteHp(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      left: "-10000px",
+                      top: "auto",
+                      width: "1px",
+                      height: "1px",
+                      overflow: "hidden",
+                    }}
+                  />
 
-  {profile?.collectName && (
-    <input
-      type="text"
-      autoComplete="name"
-      style={{
-        width: "100%",
-        maxWidth: "420px",
-        margin: "0 auto",
-        borderRadius: "9999px",
-        backgroundColor: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.12)",
-        padding: "0.9rem 1.1rem",
-        fontSize: "1.05rem",
-        color: "white",
-        outline: "none",
-        boxShadow: "none",
-        boxSizing: "border-box",
-      }}
-      placeholder="Full name (optional)"
-      value={fullName}
-      onChange={(e) => setFullName(e.target.value)}
-    />
-  )}
+                  {profile?.collectName && (
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      style={{
+                        width: "100%",
+                        maxWidth: "420px",
+                        margin: "0 auto",
+                        borderRadius: "9999px",
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        padding: "0.9rem 1.1rem",
+                        fontSize: "1.05rem",
+                        color: "white",
+                        outline: "none",
+                        boxShadow: "none",
+                        boxSizing: "border-box",
+                      }}
+                      placeholder="Full name (optional)"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                  )}
 
-  <div
-    style={{
-      width: "100%",
-      maxWidth: "420px",
-      margin: "0 auto",
-      display: "flex",
-      alignItems: "stretch",
-      borderRadius: "9999px",
-      backgroundColor: "rgba(255,255,255,0.06)",
-      border: "1px solid rgba(255,255,255,0.12)",
-      overflow: "hidden",
-      boxSizing: "border-box",
-    }}
-  >
-    <input
-      type="email"
-      inputMode="email"
-      autoComplete="email"
-      style={{
-        flex: 1,
-        minWidth: 0,
-        border: "none",
-        backgroundColor: "transparent",
-        padding: "0.9rem 1.1rem",
-        fontSize: "1.05rem",
-        color: "white",
-        outline: "none",
-        boxShadow: "none",
-      }}
-      placeholder="you@example.com"
-      value={email}
-      onChange={(e) => {
-        setEmail(e.target.value);
-        if (emailErr) setEmailErr("");
-      }}
-      aria-invalid={!!emailErr}
-      aria-describedby={emailErr ? "email-error" : undefined}
-    />
+                  <div
+                    style={{
+                      width: "100%",
+                      maxWidth: "420px",
+                      margin: "0 auto",
+                      display: "flex",
+                      alignItems: "stretch",
+                      borderRadius: "9999px",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      overflow: "hidden",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        border: "none",
+                        backgroundColor: "transparent",
+                        padding: "0.9rem 1.1rem",
+                        fontSize: "1.05rem",
+                        color: "white",
+                        outline: "none",
+                        boxShadow: "none",
+                      }}
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (emailErr) setEmailErr("");
+                      }}
+                      aria-invalid={!!emailErr}
+                      aria-describedby={emailErr ? "email-error" : undefined}
+                    />
 
-    <button
-      type="submit"
-      disabled={submitting}
-      style={{
-        border: "none",
-        padding: "0 1.4rem",
-        fontSize: "1.05rem",
-        fontWeight: 800,
-        color: "white",
-        cursor: "pointer",
-        opacity: submitting ? 0.75 : 1,
-        backgroundImage: "linear-gradient(90deg,#6366ff,#a855f7)",
-        boxShadow: "0 14px 36px rgba(79,70,229,0.65)",
-      }}
-    >
-      {submitting ? "Joining…" : "Join"}
-    </button>
-  </div>
-</form>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      style={{
+                        border: "none",
+                        padding: "0 1.4rem",
+                        fontSize: "1.05rem",
+                        fontWeight: 800,
+                        color: "white",
+                        cursor: "pointer",
+                        opacity: submitting ? 0.75 : 1,
+                        backgroundImage: `linear-gradient(90deg,${t.a},${t.b})`,
+                        boxShadow: t.glow,
+                      }}
+                    >
+                      {submitting ? "Joining…" : "Join"}
+                    </button>
+                  </div>
+                </form>
               ) : (
                 <div
                   style={{
@@ -1120,8 +1179,7 @@ export default function PublicSlugPage() {
                         justifyContent: "space-between",
                         padding: "0.95rem 1.2rem",
                         borderRadius: "999px",
-                        background:
-                          "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
+                        background: "linear-gradient(135deg, rgba(39,39,42,0.98), rgba(24,24,27,0.98))",
                         border: "1px solid #27272a",
                         textDecoration: "none",
                         color: "#f4f4f5",

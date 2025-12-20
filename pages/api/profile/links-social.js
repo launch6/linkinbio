@@ -93,20 +93,22 @@ export default async function handler(req, res) {
     const db = client.db(MONGODB_DB);
     const Profiles = db.collection('profiles');
 
-    const result = await Profiles.updateOne(
-      { editToken: token },
-      {
 // Theme allowlist (prevents arbitrary CSS / junk data)
 const allowedThemes = new Set(['launch6', 'pastel', 'modern']);
-const safeTheme = typeof theme === 'string' ? theme.trim().toLowerCase() : '';
+const safeTheme =
+  typeof theme === 'string' ? theme.trim().toLowerCase() : '';
 
-$set: {
-  links: safeLinks,
-  social: safeSocial,
-  ...(allowedThemes.has(safeTheme) ? { theme: safeTheme } : {}),
-},
-      }
-    );
+const result = await Profiles.updateOne(
+  { editToken: token },
+  {
+    $set: {
+      links: safeLinks,
+      social: safeSocial,
+      ...(allowedThemes.has(safeTheme) ? { theme: safeTheme } : {}),
+      updatedAt: new Date(),
+    },
+  }
+);
 
     if (!result.matchedCount) {
       return send(res, 404, { ok: false, error: 'profile_not_found' });

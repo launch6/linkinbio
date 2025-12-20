@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     return res.status(405).end('Method Not Allowed');
   }
 
-  const { editToken, links, social } = req.body || {};
+  const { editToken, links, social, theme } = req.body || {};
 
   const token = String(editToken || '').trim();
   if (!token) {
@@ -96,10 +96,15 @@ export default async function handler(req, res) {
     const result = await Profiles.updateOne(
       { editToken: token },
       {
-        $set: {
-          links: safeLinks,
-          social: safeSocial,
-        },
+// Theme allowlist (prevents arbitrary CSS / junk data)
+const allowedThemes = new Set(['launch6', 'pastel', 'modern']);
+const safeTheme = typeof theme === 'string' ? theme.trim().toLowerCase() : '';
+
+$set: {
+  links: safeLinks,
+  social: safeSocial,
+  ...(allowedThemes.has(safeTheme) ? { theme: safeTheme } : {}),
+},
       }
     );
 

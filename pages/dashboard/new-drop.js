@@ -229,6 +229,13 @@ export default function NewDrop() {
 
   // --- Navigation helper ---------------------------------------------------
 
+  const goToStep2 = () => {
+    const base = '/dashboard/new-links';
+    const t = resolvedToken || (typeof token === 'string' ? token : '');
+    const target = t ? `${base}?token=${encodeURIComponent(t)}` : base;
+    window.location.href = target;
+  };
+
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
     const t = resolvedToken || (typeof token === 'string' ? token : '');
@@ -700,10 +707,19 @@ if (!resp.ok || !json?.ok) {
               )}
             </section>
 
-            <div className="actions-row">
+                        <div className="actions-row">
+              <button
+                type="button"
+                className="btn btn-secondary btn-flex"
+                onClick={goToStep2}
+                disabled={saving}
+              >
+                ← Back
+              </button>
+
               <button
                 type="submit"
-                className="btn btn-primary btn-full-width"
+                className="btn btn-primary btn-flex"
                 disabled={saving || !stripeConnected}
               >
                 {saving ? 'Saving…' : 'Next: Email setup & Complete →'}
@@ -1104,8 +1120,36 @@ if (!resp.ok || !json?.ok) {
           margin-bottom: 4px;
         }
 
-        .actions-row {
+                .actions-row {
           margin-top: 12px;
+          display: flex;
+          gap: 12px;
+        }
+
+        .btn-flex {
+          flex: 1;
+        }
+
+        .btn-secondary {
+          background: rgba(255, 255, 255, 0.06);
+          color: #ffffff;
+          border: 1px solid #34384f;
+          box-shadow: none;
+        }
+
+        .btn-secondary:disabled {
+          opacity: 0.7;
+          cursor: default;
+        }
+
+        .btn-secondary:not(:disabled):active {
+          transform: translateY(1px);
+        }
+
+        @media (max-width: 600px) {
+          .actions-row {
+            flex-direction: column;
+          }
         }
 
         .btn {

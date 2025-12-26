@@ -707,24 +707,25 @@ if (!resp.ok || !json?.ok) {
               )}
             </section>
 
-                        <div className="actions-row">
-              <button
-                type="button"
-                className="btn btn-secondary btn-flex"
-                onClick={goToStep2}
-                disabled={saving}
-              >
-                ← Back
-              </button>
+               <div className="actions-row">
+  <button
+    type="button"
+    className="btn btn-secondary btn-flex"
+    onClick={goToStep2}
+    disabled={saving}
+  >
+    ← Back
+  </button>
 
-              <button
-                type="submit"
-                className="btn btn-primary btn-flex"
-                disabled={saving || !stripeConnected}
-              >
-                {saving ? 'Saving…' : 'Next: Email setup & Complete →'}
-              </button>
-            </div>
+  <button
+    type="submit"
+    className="btn btn-primary btn-flex"
+    disabled={saving || !stripeConnected}
+  >
+    {saving ? 'Saving…' : 'Next: Email setup & Complete →'}
+  </button>
+</div>
+
           </form>
         </div>
       </div>

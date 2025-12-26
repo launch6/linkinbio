@@ -8,6 +8,12 @@ const fontStack =
 export default function NewEmailStep() {
   const router = useRouter();
   const { token } = router.query;
+    const goToStep3 = () => {
+    const base = '/dashboard/new-drop';
+    const t = typeof token === 'string' && token.trim().length > 0 ? token.trim() : '';
+    const target = t ? `${base}?token=${encodeURIComponent(t)}` : base;
+    window.location.href = target;
+  };
     const [formHeadline, setFormHeadline] = useState("Get first dibs on drops");
   const [formSubtext, setFormSubtext] = useState(
     "We’ll only email you about releases. Unsubscribe anytime."
@@ -333,15 +339,24 @@ export default function NewEmailStep() {
             )}
 
             {/* Actions – single primary CTA */}
-            <div className="actions-row actions-single">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={launching}
-              >
-                {launching ? 'Launching…' : 'Launch your project 🚀'}
-              </button>
-            </div>
+            <div className="actions-row">
+  <button
+    type="button"
+    className="btn btn-secondary btn-flex"
+    onClick={goToStep3}
+    disabled={launching}
+  >
+    ← Back
+  </button>
+
+  <button
+    type="submit"
+    className="btn btn-primary btn-flex"
+    disabled={launching}
+  >
+    {launching ? 'Launching…' : 'Launch your project 🚀'}
+  </button>
+</div>
 
             <p className="footer-note">
               Don’t worry, you can always update this from your Dashboard.
@@ -701,16 +716,34 @@ export default function NewEmailStep() {
         }
 
         .actions-row {
-          display: flex;
-          justify-content: center;
-          gap: 10px;
-          margin-top: 6px;
-        }
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.btn-flex {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
 
-        .actions-single .btn-primary {
-          width: 100%;
-        }
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: none;
+}
 
+.btn-secondary:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.btn-secondary:not(:disabled):active {
+  transform: translateY(1px);
+}
         .btn {
           border-radius: 999px;
           border: none;

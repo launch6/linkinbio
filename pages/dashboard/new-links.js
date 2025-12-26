@@ -455,10 +455,12 @@ body: JSON.stringify({
 
   return (
     <main className="onboarding-root">
-      <div className="logo-row">
+            <div className="logo-row">
         <img src="/launch6_white.png" alt="Launch6" className="logo" />
       </div>
 
+      <div className="card">
+        <div className="card-inner">
           <div className="progress-bar-container">
             <div className="progress-bar-fill" />
           </div>
@@ -711,12 +713,18 @@ body: JSON.stringify({
           }
         }
 
-                  .actions-row {
-            width: 100%;
-            display: flex;
-            gap: 14px;
-            margin-top: 18px;
+                .actions-row {
+          width: 100%;
+          display: flex;
+          gap: 14px;
+          margin-top: 18px;
+        }
+
+        @media (max-width: 600px) {
+          .actions-row {
+            flex-direction: column;
           }
+        }
 
           .btn-flex {
             flex: 1;

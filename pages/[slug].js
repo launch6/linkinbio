@@ -114,59 +114,71 @@ function normalizeImageSrc(src) {
   return "";
 }
 
-/** Theme tokens (allowlist to match server). */
+/**
+ * THEME TOKENS (hardcoded allowlist)
+ * Security: DB only stores the key; UI maps key -> fixed palette.
+ *
+ * Matches your palette image:
+ * 1) Launch6 (Dark Mode & High-Contrast)
+ *    bg: #000000  accent: #A855F7  surface: #1F1F1F  text: #FFFFFF
+ * 2) Soft Pastel Dreams (Airy & Calming)
+ *    bg: #F9FAFB  accent: #B9E2F5  secondary: #FFD1DC  text: #4B5563
+ * 3) Modern Professional (Trustworthy & Corporate)
+ *    bg: #FFFFFF  accent: #2563EB  secondary: #64748B  text: #1E293B
+ */
 const THEME_TOKENS = {
   launch6: {
     key: "launch6",
-    label: "Launch6",
-    bgTop: "#191b2b",
-    bgMid: "#050509",
-    bgBot: "#020206",
-    inner: "#0b0c15",
-    accentA: "#6366ff",
-    accentB: "#a855f7",
-    muted: "#9ca3af",
-    border: "rgba(255,255,255,0.06)",
-    cardBorder: "rgba(148,163,184,0.40)",
-    pillA: "rgba(99,102,255,0.18)",
-    pillB: "rgba(168,85,247,0.18)",
+    bg: "#000000",
+    accent: "#A855F7",
+    secondary: "#A855F7", // keep exact (no invented tint) for strict palette match
+    surface: "#1F1F1F",
+    text: "#FFFFFF",
+    textMuted: "rgba(255,255,255,0.78)",
+    border: "rgba(255,255,255,0.14)",
+    shadow: "rgba(0,0,0,0.80)",
   },
   pastel: {
     key: "pastel",
-    label: "Pastel Dreams",
-    bgTop: "#0b1220",
-    bgMid: "#070a12",
-    bgBot: "#02030a",
-    inner: "#070b14",
-    accentA: "#B9E2F5",
-    accentB: "#FFD1DC",
-    muted: "#a3a3a3",
-    border: "rgba(255,255,255,0.08)",
-    cardBorder: "rgba(255,255,255,0.18)",
-    pillA: "rgba(185,226,245,0.18)",
-    pillB: "rgba(255,209,220,0.18)",
+    bg: "#F9FAFB",
+    accent: "#B9E2F5",
+    secondary: "#FFD1DC",
+    surface: "#FFFFFF",
+    text: "#4B5563",
+    textMuted: "rgba(75,85,99,0.78)",
+    border: "rgba(75,85,99,0.18)",
+    shadow: "rgba(15,23,42,0.10)",
   },
   modern: {
     key: "modern",
-    label: "Modern Pro",
-    bgTop: "#0b1020",
-    bgMid: "#070912",
-    bgBot: "#02040a",
-    inner: "#070b14",
-    accentA: "#2563EB",
-    accentB: "#FFFFFF",
-    muted: "#a3a3a3",
-    border: "rgba(255,255,255,0.08)",
-    cardBorder: "rgba(255,255,255,0.20)",
-    pillA: "rgba(37,99,235,0.18)",
-    pillB: "rgba(255,255,255,0.10)",
+    bg: "#FFFFFF",
+    accent: "#2563EB",
+    secondary: "#64748B",
+    surface: "#FFFFFF",
+    text: "#1E293B",
+    textMuted: "rgba(30,41,59,0.70)",
+    border: "rgba(30,41,59,0.18)",
+    shadow: "rgba(15,23,42,0.10)",
   },
 };
 
-function getTheme(themeKeyRaw) {
-  const key = typeof themeKeyRaw === "string" ? themeKeyRaw.trim().toLowerCase() : "";
-  if (key === "launch6" || key === "pastel" || key === "modern") return THEME_TOKENS[key];
-  return THEME_TOKENS.launch6;
+function pickTheme(themeKey) {
+  const key = typeof themeKey === "string" ? themeKey.trim().toLowerCase() : "";
+  return THEME_TOKENS[key] || THEME_TOKENS.launch6;
+}
+
+// Safe gradient ring: fixed tokens only (no user input)
+function gradientRingStyle(theme) {
+  const ring = theme.key === "launch6"
+    ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
+    : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`;
+
+  return {
+    border: "1px solid transparent",
+    backgroundImage: `linear-gradient(${theme.surface}, ${theme.surface}), ${ring}`,
+    backgroundOrigin: "border-box",
+    backgroundClip: "padding-box, border-box",
+  };
 }
 
 // Small inline SVG icons for socials

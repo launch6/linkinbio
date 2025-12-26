@@ -459,14 +459,6 @@ body: JSON.stringify({
         <img src="/launch6_white.png" alt="Launch6" className="logo" />
       </div>
 
-      <div className="card">
-        <div className="card-inner">
-          <div className="top-nav-row">
-            <button type="button" className="back-btn" onClick={goToStep1}>
-              ← Back
-            </button>
-          </div>
-
           <div className="progress-bar-container">
             <div className="progress-bar-fill" />
           </div>
@@ -639,15 +631,24 @@ body: JSON.stringify({
               {linkError && <p className="field-error">{linkError}</p>}
             </section>
 
-            <div className="actions-row content-rail">
-              <button
-                type="submit"
-                className="btn btn-primary btn-full-width"
-                disabled={saving}
-              >
-                {saving ? 'Saving…' : 'Continue'}
-              </button>
-            </div>
+                          <div className="actions-row content-rail">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-flex"
+                  onClick={goToStep1}
+                  disabled={saving}
+                >
+                  ← Back
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-flex"
+                  disabled={saving}
+                >
+                  {saving ? 'Saving…' : 'Continue'}
+                </button>
+              </div>
 
             <p className="footer-note">
               You can always edit links and socials later from your dashboard.
@@ -710,31 +711,40 @@ body: JSON.stringify({
           }
         }
 
-        .top-nav-row {
-          width: 100%;
-          display: flex;
-          justify-content: flex-start;
-          margin-bottom: 10px;
-        }
+                  .actions-row {
+            width: 100%;
+            display: flex;
+            gap: 14px;
+            margin-top: 18px;
+          }
 
-        .back-btn {
-          border: none;
-          background: transparent;
-          color: #c4c7ff;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          padding: 6px 2px;
-          transition: opacity 0.15s ease, transform 0.08s ease;
-        }
+          .btn-flex {
+            flex: 1;
+          }
 
-        .back-btn:hover {
-          opacity: 0.9;
-        }
+          .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+          }
 
-        .back-btn:active {
-          transform: translateY(1px);
-        }
+          .btn-secondary:disabled {
+            opacity: 0.7;
+            cursor: default;
+            box-shadow: none;
+          }
+
+          .btn-secondary:not(:disabled):active {
+            transform: translateY(1px);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+          }
+
+          @media (max-width: 600px) {
+            .actions-row {
+              flex-direction: column;
+            }
+          }
 
         .progress-bar-container {
           width: 100%;

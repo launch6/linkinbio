@@ -52,7 +52,11 @@ function normalizeHref(url) {
 
   const lower = trimmed.toLowerCase();
 
-  if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:")
+  ) {
     return "";
   }
 
@@ -98,7 +102,6 @@ function normalizeImageSrc(src) {
 
   // allow safe data:image only (no svg)
   if (lower.startsWith("data:image/")) {
-    // Only allow common raster image types
     if (
       lower.startsWith("data:image/png") ||
       lower.startsWith("data:image/jpeg") ||
@@ -114,52 +117,62 @@ function normalizeImageSrc(src) {
   return "";
 }
 
-/** Theme tokens (allowlist to match server). */
+/**
+ * Theme tokens (allowlist). Keys align with /api/public allowlist: launch6 | pastel | modern
+ * Palette match (your image):
+ * 1) Launch6: bg #000000, accent #A855F7, surface #1F1F1F, text #FFFFFF
+ * 2) Pastel:  bg #F9FAFB, accent #B9E2F5, secondary #FFD1DC, text #4B5563
+ * 3) Modern:  bg #FFFFFF, accent #2563EB, secondary #64748B, text #1E293B
+ */
 const THEME_TOKENS = {
   launch6: {
     key: "launch6",
     label: "Launch6",
-    bgTop: "#191b2b",
-    bgMid: "#050509",
-    bgBot: "#020206",
-    inner: "#0b0c15",
-    accentA: "#6366ff",
-    accentB: "#a855f7",
-    muted: "#9ca3af",
-    border: "rgba(255,255,255,0.06)",
-    cardBorder: "rgba(148,163,184,0.40)",
-    pillA: "rgba(99,102,255,0.18)",
-    pillB: "rgba(168,85,247,0.18)",
+    bg: "#000000",
+    surface: "#1F1F1F",
+    accent: "#A855F7",
+    secondary: "#A855F7",
+    text: "#FFFFFF",
+    textMuted: "rgba(255,255,255,0.78)",
+    border: "rgba(255,255,255,0.14)",
+    shadow: "rgba(0,0,0,0.80)",
+    inputBg: "rgba(255,255,255,0.06)",
+    pillTintA: "rgba(168,85,247,0.16)",
+    pillTintB: "rgba(168,85,247,0.10)",
+    footerLogoFilter: "none",
   },
   pastel: {
     key: "pastel",
     label: "Pastel Dreams",
-    bgTop: "#0b1220",
-    bgMid: "#070a12",
-    bgBot: "#02030a",
-    inner: "#070b14",
-    accentA: "#B9E2F5",
-    accentB: "#FFD1DC",
-    muted: "#a3a3a3",
-    border: "rgba(255,255,255,0.08)",
-    cardBorder: "rgba(255,255,255,0.18)",
-    pillA: "rgba(185,226,245,0.18)",
-    pillB: "rgba(255,209,220,0.18)",
+    bg: "#F9FAFB",
+    surface: "#FFFFFF",
+    accent: "#B9E2F5",
+    secondary: "#FFD1DC",
+    text: "#4B5563",
+    textMuted: "rgba(75,85,99,0.78)",
+    border: "rgba(75,85,99,0.18)",
+    shadow: "rgba(15,23,42,0.10)",
+    inputBg: "rgba(75,85,99,0.06)",
+    pillTintA: "rgba(185,226,245,0.55)",
+    pillTintB: "rgba(255,209,220,0.45)",
+    // invert white logo so it stays visible on light backgrounds
+    footerLogoFilter: "invert(1)",
   },
   modern: {
     key: "modern",
     label: "Modern Pro",
-    bgTop: "#0b1020",
-    bgMid: "#070912",
-    bgBot: "#02040a",
-    inner: "#070b14",
-    accentA: "#2563EB",
-    accentB: "#FFFFFF",
-    muted: "#a3a3a3",
-    border: "rgba(255,255,255,0.08)",
-    cardBorder: "rgba(255,255,255,0.20)",
-    pillA: "rgba(37,99,235,0.18)",
-    pillB: "rgba(255,255,255,0.10)",
+    bg: "#FFFFFF",
+    surface: "#FFFFFF",
+    accent: "#2563EB",
+    secondary: "#64748B",
+    text: "#1E293B",
+    textMuted: "rgba(30,41,59,0.70)",
+    border: "rgba(30,41,59,0.18)",
+    shadow: "rgba(15,23,42,0.10)",
+    inputBg: "rgba(30,41,59,0.06)",
+    pillTintA: "rgba(37,99,235,0.18)",
+    pillTintB: "rgba(100,116,139,0.14)",
+    footerLogoFilter: "invert(1)",
   },
 };
 
@@ -167,6 +180,20 @@ function getTheme(themeKeyRaw) {
   const key = typeof themeKeyRaw === "string" ? themeKeyRaw.trim().toLowerCase() : "";
   if (key === "launch6" || key === "pastel" || key === "modern") return THEME_TOKENS[key];
   return THEME_TOKENS.launch6;
+}
+
+function ringStyle(theme) {
+  const ring =
+    theme.key === "launch6"
+      ? `linear-gradient(135deg, ${theme.accent}, ${theme.accent})`
+      : `linear-gradient(135deg, ${theme.accent}, ${theme.secondary})`;
+
+  return {
+    border: "1px solid transparent",
+    backgroundImage: `linear-gradient(${theme.surface}, ${theme.surface}), ${ring}`,
+    backgroundOrigin: "border-box",
+    backgroundClip: "padding-box, border-box",
+  };
 }
 
 // Small inline SVG icons for socials
@@ -237,6 +264,43 @@ function SocialIcon({ type }) {
   return null;
 }
 
+function ThemedSocialButton({ href, label, iconType, theme }) {
+  if (!href) return null;
+
+  const outer = {
+    height: "4.1rem",
+    width: "4.1rem",
+    borderRadius: "999px",
+    padding: "2px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: `0 10px 28px ${theme.shadow}`,
+    ...ringStyle(theme),
+  };
+
+  const inner = {
+    height: "100%",
+    width: "100%",
+    borderRadius: "999px",
+    border: `1px solid ${theme.border}`,
+    background: theme.surface,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: theme.text,
+    textDecoration: "none",
+  };
+
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} style={outer}>
+      <span style={inner}>
+        <SocialIcon type={iconType} />
+      </span>
+    </a>
+  );
+}
+
 function DropCard({ product: p, slug, theme }) {
   const [now, setNow] = useState(() => new Date());
 
@@ -245,12 +309,10 @@ function DropCard({ product: p, slug, theme }) {
     return () => clearInterval(id);
   }, []);
 
-  // --- basic fields -------------------------------------------------------
   const imageUrl = normalizeImageSrc(p.imageUrl || "") || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
 
-  // price display: try a few common fields
   let priceDisplay =
     p.priceDisplay ||
     p.priceFormatted ||
@@ -263,7 +325,6 @@ function DropCard({ product: p, slug, theme }) {
     slug ? `&slug=${encodeURIComponent(slug)}` : ""
   }`;
 
-  // --- inventory / ended logic -------------------------------------------
   const left = p.unitsLeft === null || p.unitsLeft === undefined ? null : Number(p.unitsLeft);
   const total = p.unitsTotal === null || p.unitsTotal === undefined ? null : Number(p.unitsTotal);
   const soldOut = left !== null && left <= 0;
@@ -271,19 +332,15 @@ function DropCard({ product: p, slug, theme }) {
   const startsAt = p.dropStartsAt ? new Date(p.dropStartsAt) : null;
   const endsAt = p.dropEndsAt ? new Date(p.dropEndsAt) : null;
 
-  let phase = "open"; // "upcoming" | "open" | "ended"
-  if (startsAt && now < startsAt) {
-    phase = "upcoming";
-  } else if (endsAt && now >= endsAt) {
-    phase = "ended";
-  }
+  let phase = "open";
+  if (startsAt && now < startsAt) phase = "upcoming";
+  else if (endsAt && now >= endsAt) phase = "ended";
 
   const isEnded = soldOut || phase === "ended";
 
-  // --- countdown (Days : Hours : Minutes : Seconds) -----------------------
   let showTimer = false;
   let timerTitle = "";
-  let mode = "hours"; // "hours" = H:M:S, "days" = D:H:M:S
+  let mode = "hours";
   let d = "0";
   let h = "00";
   let m = "00";
@@ -327,13 +384,11 @@ function DropCard({ product: p, slug, theme }) {
     }
   }
 
-  // inventory text (optional, under price)
   let inventoryText = "";
   if (p.showInventory && left !== null && total !== null) {
     inventoryText = `${left}/${total} available`;
   }
 
-  // --- themed styles ------------------------------------------------------
   const outer = {
     width: "100%",
     maxWidth: "420px",
@@ -341,92 +396,86 @@ function DropCard({ product: p, slug, theme }) {
     boxSizing: "border-box",
     borderRadius: "28px",
     padding: "20px 18px 22px",
-    background: `radial-gradient(circle at top, ${theme.bgTop} 0%, ${theme.bgMid} 60%, ${theme.bgBot} 100%)`,
-    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.85)",
+    background: theme.surface,
     border: `1px solid ${theme.border}`,
+    boxShadow: `0 20px 60px ${theme.shadow}`,
+    ...ringStyle(theme),
   };
 
   const heroFrame = {
     borderRadius: "24px",
     padding: "3px",
-    background: `radial-gradient(circle at top, ${theme.accentA} 0%, ${theme.accentB} 42%, ${theme.inner} 100%)`,
-    boxShadow: "0 14px 40px rgba(0, 0, 0, 0.9)",
+    backgroundImage:
+      theme.key === "launch6"
+        ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
+        : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
+    boxShadow: `0 14px 40px ${theme.shadow}`,
   };
 
   const heroInner = {
     borderRadius: "20px",
-    background: theme.inner,
+    background: theme.surface,
     overflow: "hidden",
     width: "100%",
     position: "relative",
     lineHeight: 0,
+    border: `1px solid ${theme.border}`,
   };
 
-  const heroImg = {
-    width: "100%",
-    height: "auto",
-    display: "block",
-  };
+  const heroImg = { width: "100%", height: "auto", display: "block" };
 
   const heroPlaceholder = {
     width: "100%",
-    height: "100%",
     minHeight: "200px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: theme.muted,
+    color: theme.textMuted,
     fontSize: "1rem",
+    background: theme.surface,
   };
 
-  const body = {
-    padding: "18px 10px 0",
-    textAlign: "center",
-  };
+  const body = { padding: "18px 10px 0", textAlign: "center", color: theme.text };
 
-  const titleStyle = {
-    fontSize: "1.4rem",
-    fontWeight: 700,
-    margin: "0 0 0.25rem",
-  };
+  const titleStyle = { fontSize: "1.4rem", fontWeight: 800, margin: "0 0 0.25rem" };
 
   const priceStyle = {
     fontSize: "1.2rem",
-    fontWeight: 700,
+    fontWeight: 900,
     margin: "0 0 0.2rem",
-    backgroundImage: `linear-gradient(90deg, ${theme.accentB}, ${theme.accentA})`,
+    backgroundImage:
+      theme.key === "launch6"
+        ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
+        : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
   };
 
-  const inventoryStyle = {
-    fontSize: "0.8rem",
-    color: theme.muted,
-    margin: "0 0 0.8rem",
-  };
+  const inventoryStyle = { fontSize: "0.82rem", color: theme.textMuted, margin: "0 0 0.8rem" };
 
   const descStyle = {
-    fontSize: "0.9rem",
+    fontSize: "0.92rem",
     lineHeight: 1.6,
-    color: "#e5e7eb",
+    color: theme.textMuted,
     margin: "0 0 1rem",
     whiteSpace: "pre-line",
   };
 
   const timerCard = {
     borderRadius: "18px",
-    border: `1px solid ${theme.cardBorder}`,
-    background: theme.inner,
     padding: "10px 14px 12px",
     margin: "0 0 1.05rem",
+    border: `1px solid ${theme.border}`,
+    background: theme.surface,
+    ...ringStyle(theme),
   };
 
   const timerLabel = {
     fontSize: "0.68rem",
     textTransform: "uppercase",
     letterSpacing: "0.16em",
-    color: theme.muted,
+    color: theme.textMuted,
     margin: "0 0 6px",
   };
 
@@ -436,31 +485,25 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     gap: "8px",
     marginBottom: "2px",
+    color: theme.text,
   };
 
-  const timerValue = {
-    fontSize: "1.35rem",
-    fontWeight: 600,
-  };
+  const timerValue = { fontSize: "1.35rem", fontWeight: 800 };
 
   const timerSeparator = {
     fontSize: "1.25rem",
-    color: theme.accentA,
+    color: theme.accent,
     transform: "translateY(-1px)",
   };
 
-  const timerUnits = {
-    fontSize: "0.7rem",
-    color: theme.muted,
-    margin: 0,
-  };
+  const timerUnits = { fontSize: "0.7rem", color: theme.textMuted, margin: 0 };
 
   const buttonBase = {
     width: "100%",
     borderRadius: "999px",
-    padding: "0.8rem 1.1rem",
-    fontSize: "0.98rem",
-    fontWeight: 700,
+    padding: "0.85rem 1.1rem",
+    fontSize: "1rem",
+    fontWeight: 900,
     border: "none",
     cursor: "pointer",
     textDecoration: "none",
@@ -474,18 +517,21 @@ function DropCard({ product: p, slug, theme }) {
 
   const buttonActive = {
     ...buttonBase,
-    backgroundImage: `linear-gradient(90deg, ${theme.accentA}, ${theme.accentB})`,
-    color: "#fff",
-    boxShadow: "0 14px 36px rgba(0,0,0,0.35)",
+    backgroundImage:
+      theme.key === "launch6"
+        ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
+        : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
+    color: theme.key === "launch6" ? "#ffffff" : "#0b1020",
+    boxShadow: `0 14px 36px ${theme.shadow}`,
   };
 
   const buttonDisabled = {
     ...buttonBase,
-    backgroundImage: "linear-gradient(90deg,#374151,#1f2937)",
-    color: "#9ca3af",
+    backgroundImage: "linear-gradient(90deg, rgba(148,163,184,0.55), rgba(100,116,139,0.55))",
+    color: "rgba(30,41,59,0.65)",
     boxShadow: "none",
     cursor: "default",
-    opacity: 0.7,
+    opacity: 0.75,
   };
 
   return (
@@ -552,49 +598,6 @@ function DropCard({ product: p, slug, theme }) {
   );
 }
 
-function ThemedSocialButton({ href, label, iconType, theme }) {
-  if (!href) return null;
-
-  const ring = {
-    height: "4.1rem",
-    width: "4.1rem",
-    borderRadius: "999px",
-    padding: "2px",
-    backgroundImage: `linear-gradient(135deg, ${theme.accentA}, ${theme.accentB})`,
-    boxShadow: "0 10px 28px rgba(0,0,0,0.35)",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const inner = {
-    height: "100%",
-    width: "100%",
-    borderRadius: "999px",
-    border: `1px solid ${theme.border}`,
-    background: `linear-gradient(135deg, rgba(24,24,27,0.92), rgba(10,10,18,0.92))`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#f9fafb",
-    textDecoration: "none",
-  };
-
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={label}
-      style={ring}
-    >
-      <span style={inner}>
-        <SocialIcon type={iconType} />
-      </span>
-    </a>
-  );
-}
-
 export default function PublicSlugPage() {
   const router = useRouter();
   const { slug } = router.query;
@@ -615,7 +618,6 @@ export default function PublicSlugPage() {
 
   const refreshIntervalRef = useRef(null);
 
-  // fetch public profile + products via slug (robust JSON guard)
   async function fetchAll(slugVal, opts = {}) {
     const trackView = !!opts.trackView;
     const url = `/api/public?slug=${encodeURIComponent(slugVal)}${trackView ? "&trackView=1" : ""}`;
@@ -636,7 +638,6 @@ export default function PublicSlugPage() {
     setProducts(Array.isArray(j.products) ? j.products.filter((p) => !!p.published) : []);
   }
 
-  // initial + periodic refresh (trackView only once per session)
   useEffect(() => {
     if (!slug) return;
 
@@ -675,7 +676,6 @@ export default function PublicSlugPage() {
       }
     })();
 
-    // Poll without tracking (prevents inflated viewCount)
     refreshIntervalRef.current = setInterval(() => {
       fetchAll(slug, { trackView: false }).catch(() => {});
     }, 15000);
@@ -699,11 +699,9 @@ export default function PublicSlugPage() {
 
   const theme = getTheme(profile?.theme);
 
-  // default: email capture ON unless explicitly disabled
   const canCollectEmail =
     profile?.showForm === true || (profile?.showForm !== false && profile?.collectEmail !== false);
 
-  // Normalize links again client-side (defense-in-depth)
   const links = Array.isArray(profile?.links)
     ? profile.links
         .map((l) => {
@@ -729,10 +727,11 @@ export default function PublicSlugPage() {
   const hasSocialRow =
     social.instagram || social.facebook || social.tiktok || social.youtube || social.x || websiteHref;
 
-  // --- SEO / Social ---
   const firstImage = normalizeImageSrc(products?.[0]?.imageUrl || "");
+
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://l6.io";
   const pageUrl = slug ? `${site.replace(/\/$/, "")}/${encodeURIComponent(slug)}` : site;
+
   const seoTitle = title ? `${title} — Drops` : "Drops";
   const left0 = toNumberOrNull(products?.[0]?.unitsLeft);
   const total0 = toNumberOrNull(products?.[0]?.unitsTotal);
@@ -745,46 +744,45 @@ export default function PublicSlugPage() {
   const avatarInitial = (title && title.trim().charAt(0).toUpperCase()) || "L";
   const avatarUrl = normalizeImageSrc(profile?.avatarUrl || profile?.imageUrl || profile?.avatar || "");
 
-  // early states
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
-        <div className="opacity-80">Loading…</div>
+      <div style={{ minHeight: "100vh", background: theme.bg, color: theme.text, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ opacity: 0.8 }}>Loading…</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
-        <div className="max-w-xl w-full rounded-xl border border-red-600/40 bg-red-900/20 p-4">
-          <div className="font-semibold mb-1">Can’t load page</div>
-          <div className="text-sm opacity-80">{error}</div>
+      <div style={{ minHeight: "100vh", background: theme.bg, color: theme.text, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+        <div style={{ maxWidth: "720px", width: "100%", borderRadius: "16px", border: `1px solid ${theme.border}`, background: theme.surface, padding: "16px" }}>
+          <div style={{ fontWeight: 900, marginBottom: "6px" }}>Can’t load page</div>
+          <div style={{ fontSize: "14px", color: theme.textMuted }}>{error}</div>
         </div>
       </div>
     );
   }
 
-  // Layout: single column, Linktree-style
   const mainStyle = {
     maxWidth: "500px",
     margin: "0 auto",
     padding: "2.3rem 1.5rem 2.5rem",
     textAlign: "center",
+    color: theme.text,
   };
 
   const fullWidthSection = { width: "100%" };
-
-  // vertical rhythm
   const SECTION_GAP = "1.35rem";
   const HEADER_STACK_SPACING = "0.8rem";
 
-  // themed link pill wrapper
   const linkPillOuter = {
     padding: "2px",
     borderRadius: "999px",
-    backgroundImage: `linear-gradient(135deg, ${theme.accentA}, ${theme.accentB})`,
-    boxShadow: "0 12px 30px rgba(0,0,0,0.28)",
+    boxShadow: `0 12px 30px ${theme.shadow}`,
+    backgroundImage:
+      theme.key === "launch6"
+        ? `linear-gradient(135deg, ${theme.accent}, ${theme.accent})`
+        : `linear-gradient(135deg, ${theme.accent}, ${theme.secondary})`,
   };
 
   const linkPillInner = {
@@ -793,15 +791,15 @@ export default function PublicSlugPage() {
     justifyContent: "space-between",
     padding: "0.95rem 1.2rem",
     borderRadius: "999px",
-    background: `linear-gradient(135deg, ${theme.pillA}, ${theme.pillB}), linear-gradient(135deg, rgba(39,39,42,0.95), rgba(24,24,27,0.95))`,
+    background: `linear-gradient(135deg, ${theme.pillTintA}, ${theme.pillTintB}), ${theme.surface}`,
     border: `1px solid ${theme.border}`,
     textDecoration: "none",
-    color: "#f4f4f5",
+    color: theme.text,
     fontSize: "0.98rem",
+    fontWeight: 800,
     backdropFilter: "blur(6px)",
   };
 
-  // handle slug-based subscribe
   async function handleSubscribe(e) {
     e.preventDefault();
     setEmailErr("");
@@ -818,22 +816,17 @@ export default function PublicSlugPage() {
           publicSlug: slug,
           email,
           name: fullName,
-          website: websiteHp, // honeypot
-          formTs: formTsRef.current, // timing hint (ms)
+          website: websiteHp,
+          formTs: formTsRef.current,
           ref: typeof window !== "undefined" ? window.location.href : "",
         }),
       });
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json?.ok) {
-        if (json?.error === "email_collection_disabled") {
-          setEmailErr("Email signup is unavailable right now.");
-        } else if (json?.error === "invalid_email") {
-          setEmailErr("Please enter a valid email.");
-        } else if (json?.error === "profile_not_found") {
-          setEmailErr("Creator not found.");
-        } else {
-          setEmailErr("Subscribe failed. Please try again.");
-        }
+        if (json?.error === "email_collection_disabled") setEmailErr("Email signup is unavailable right now.");
+        else if (json?.error === "invalid_email") setEmailErr("Please enter a valid email.");
+        else if (json?.error === "profile_not_found") setEmailErr("Creator not found.");
+        else setEmailErr("Subscribe failed. Please try again.");
         return;
       }
       setSubscribed(true);
@@ -851,14 +844,12 @@ export default function PublicSlugPage() {
         <meta name="description" content={seoDesc} />
         <meta name="robots" content="index,follow,max-image-preview:large" />
 
-        {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
         {firstImage ? <meta property="og:image" content={firstImage} /> : null}
 
-        {/* Twitter */}
         <meta name="twitter:card" content={firstImage ? "summary_large_image" : "summary"} />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDesc} />
@@ -866,12 +857,7 @@ export default function PublicSlugPage() {
         <link rel="canonical" href={pageUrl} />
       </Head>
 
-      <div
-        className="min-h-screen text-white"
-        style={{
-          background: `radial-gradient(circle at top, ${theme.bgTop} 0%, ${theme.bgMid} 62%, ${theme.bgBot} 100%)`,
-        }}
-      >
+      <div style={{ minHeight: "100vh", background: theme.bg, color: theme.text }}>
         <main style={mainStyle}>
           {/* HEADER */}
           <header style={{ width: "100%", marginBottom: SECTION_GAP }}>
@@ -889,15 +875,7 @@ export default function PublicSlugPage() {
               {/* Avatar */}
               <div style={{ marginBottom: HEADER_STACK_SPACING }}>
                 {avatarUrl ? (
-                  <div
-                    style={{
-                      padding: "2px",
-                      borderRadius: "999px",
-                      backgroundImage: `linear-gradient(135deg, ${theme.accentA}, ${theme.accentB})`,
-                      display: "inline-block",
-                      boxShadow: "0 14px 34px rgba(0,0,0,0.35)",
-                    }}
-                  >
+                  <div style={{ padding: "2px", borderRadius: "999px", ...ringStyle(theme), display: "inline-block", boxShadow: `0 14px 34px ${theme.shadow}` }}>
                     <img
                       src={avatarUrl}
                       alt={title || "Avatar"}
@@ -908,7 +886,7 @@ export default function PublicSlugPage() {
                         objectFit: "cover",
                         border: `1px solid ${theme.border}`,
                         display: "block",
-                        backgroundColor: theme.inner,
+                        backgroundColor: theme.surface,
                       }}
                     />
                   </div>
@@ -918,14 +896,15 @@ export default function PublicSlugPage() {
                       height: "6.5rem",
                       width: "6.5rem",
                       borderRadius: "999px",
-                      backgroundColor: theme.inner,
+                      backgroundColor: theme.surface,
                       border: `1px solid ${theme.border}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontWeight: 700,
+                      fontWeight: 900,
                       fontSize: "2.2rem",
-                      boxShadow: "0 14px 34px rgba(0,0,0,0.35)",
+                      boxShadow: `0 14px 34px ${theme.shadow}`,
+                      ...ringStyle(theme),
                     }}
                   >
                     {avatarInitial}
@@ -933,28 +912,18 @@ export default function PublicSlugPage() {
                 )}
               </div>
 
-              {/* Handle / name */}
-              <h1
-                style={{
-                  fontSize: "1.7rem",
-                  lineHeight: 1.2,
-                  fontWeight: 800,
-                  margin: `0 0 ${HEADER_STACK_SPACING}`,
-                }}
-              >
+              <h1 style={{ fontSize: "1.7rem", lineHeight: 1.2, fontWeight: 900, margin: `0 0 ${HEADER_STACK_SPACING}` }}>
                 {title || "Artist"}
               </h1>
 
-              {/* Description */}
               {bio ? (
                 <p
                   style={{
-                    color: "#e5e7eb",
+                    color: theme.textMuted,
                     fontSize: "1rem",
                     lineHeight: 1.5,
                     margin: `0 0 ${HEADER_STACK_SPACING}`,
                     whiteSpace: "pre-line",
-                    opacity: 0.92,
                   }}
                 >
                   {bio}
@@ -975,7 +944,7 @@ export default function PublicSlugPage() {
             </div>
           </header>
 
-          {/* PRODUCTS / DROP CARD */}
+          {/* PRODUCTS */}
           {products.length > 0 && (
             <section style={{ ...fullWidthSection, marginBottom: SECTION_GAP }}>
               {products.map((p) => (
@@ -994,35 +963,18 @@ export default function PublicSlugPage() {
                 padding: "20px 18px 22px",
                 borderRadius: "28px",
                 textAlign: "center",
-                background: `radial-gradient(circle at top, ${theme.bgTop} 0%, ${theme.bgMid} 60%, ${theme.bgBot} 100%)`,
-                border: `1px solid ${theme.cardBorder}`,
-                boxShadow: "0 20px 60px rgba(0,0,0,0.65)",
                 boxSizing: "border-box",
+                boxShadow: `0 20px 60px ${theme.shadow}`,
+                ...ringStyle(theme),
               }}
             >
-              <h2
-                style={{
-                  width: "100%",
-                  maxWidth: "420px",
-                  marginTop: "-0.25rem",
-                  marginRight: "auto",
-                  marginLeft: "auto",
-                  marginBottom: "0.95rem",
-                  textAlign: "center",
-                  fontSize: "1.4rem",
-                  fontWeight: 800,
-                  lineHeight: 1.2,
-                }}
-              >
+              <h2 style={{ margin: "0 0 0.95rem", fontSize: "1.4rem", fontWeight: 900, lineHeight: 1.2 }}>
                 {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
               </h2>
 
               {!subscribed ? (
-                <form
-                  onSubmit={handleSubscribe}
-                  style={{ display: "flex", flexDirection: "column", gap: "0.75rem", position: "relative" }}
-                >
-                  {/* Honeypot (invisible). Bots often fill this; humans never see it. */}
+                <form onSubmit={handleSubscribe} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", position: "relative" }}>
+                  {/* Honeypot */}
                   <input
                     type="text"
                     name="website"
@@ -1050,13 +1002,12 @@ export default function PublicSlugPage() {
                         maxWidth: "420px",
                         margin: "0 auto",
                         borderRadius: "9999px",
-                        backgroundColor: "rgba(255,255,255,0.06)",
+                        backgroundColor: theme.inputBg,
                         border: `1px solid ${theme.border}`,
                         padding: "0.9rem 1.1rem",
                         fontSize: "1.05rem",
-                        color: "white",
+                        color: theme.text,
                         outline: "none",
-                        boxShadow: "none",
                         boxSizing: "border-box",
                       }}
                       placeholder="Full name (optional)"
@@ -1073,7 +1024,7 @@ export default function PublicSlugPage() {
                       display: "flex",
                       alignItems: "stretch",
                       borderRadius: "9999px",
-                      backgroundColor: "rgba(255,255,255,0.06)",
+                      backgroundColor: theme.inputBg,
                       border: `1px solid ${theme.border}`,
                       overflow: "hidden",
                       boxSizing: "border-box",
@@ -1090,9 +1041,8 @@ export default function PublicSlugPage() {
                         backgroundColor: "transparent",
                         padding: "0.9rem 1.1rem",
                         fontSize: "1.05rem",
-                        color: "white",
+                        color: theme.text,
                         outline: "none",
-                        boxShadow: "none",
                       }}
                       placeholder="you@example.com"
                       value={email}
@@ -1112,11 +1062,13 @@ export default function PublicSlugPage() {
                         padding: "0 1.4rem",
                         fontSize: "1.05rem",
                         fontWeight: 900,
-                        color: "white",
                         cursor: submitting ? "default" : "pointer",
                         opacity: submitting ? 0.75 : 1,
-                        backgroundImage: `linear-gradient(90deg, ${theme.accentA}, ${theme.accentB})`,
-                        boxShadow: "0 14px 36px rgba(0,0,0,0.35)",
+                        backgroundImage:
+                          theme.key === "launch6"
+                            ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
+                            : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
+                        color: theme.key === "launch6" ? "#ffffff" : "#0b1020",
                       }}
                     >
                       {submitting ? "Joining…" : "Join"}
@@ -1124,22 +1076,13 @@ export default function PublicSlugPage() {
                   </div>
                 </form>
               ) : (
-                <div
-                  style={{
-                    borderRadius: "0.75rem",
-                    border: "1px solid rgba(16,185,129,0.45)",
-                    backgroundColor: "rgba(6,95,70,0.25)",
-                    padding: "0.7rem 0.9rem",
-                    fontSize: "0.92rem",
-                    color: "#a7f3d0",
-                  }}
-                >
+                <div style={{ borderRadius: "12px", border: `1px solid ${theme.border}`, background: theme.surface, padding: "10px 12px", fontSize: "0.92rem", color: theme.text }}>
                   You’re in! We’ll let you know about new drops.
                 </div>
               )}
 
               {emailErr ? (
-                <div id="email-error" style={{ marginTop: "0.55rem", fontSize: "0.85rem", color: "#fecaca" }}>
+                <div id="email-error" style={{ marginTop: "0.55rem", fontSize: "0.85rem", color: "#ef4444" }}>
                   {emailErr}
                 </div>
               ) : null}
@@ -1148,31 +1091,17 @@ export default function PublicSlugPage() {
 
           {/* LINKS */}
           {links.length > 0 && (
-            <section
-              style={{
-                width: "100%",
-                marginTop: products.length === 0 ? SECTION_GAP : 0,
-                marginBottom: "2rem",
-              }}
-            >
+            <section style={{ width: "100%", marginTop: products.length === 0 ? SECTION_GAP : 0, marginBottom: "2rem" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {links.map((l) => {
                   const safeHref = normalizeHref(l.url);
                   if (!safeHref) return null;
-
                   const label = l.label || l.url || "Link";
-
                   return (
                     <div key={l.id || l.url} style={linkPillOuter}>
-                      <a
-                        href={safeHref}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        referrerPolicy="no-referrer"
-                        style={linkPillInner}
-                      >
+                      <a href={safeHref} target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer" style={linkPillInner}>
                         <span>{label}</span>
-                        <span style={{ fontSize: "0.8rem", opacity: 0.65 }}>↗</span>
+                        <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>↗</span>
                       </a>
                     </div>
                   );
@@ -1182,61 +1111,51 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer
-            style={{
-              fontSize: "0.9rem",
-              color: "#a3a3a3",
-              paddingBottom: "2.25rem",
-              width: "100%",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
-  <a
-    href="https://launch6.com"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Powered by LAUNCH6"
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "0.55rem",
-      padding: "0.45rem 0.75rem",
-      borderRadius: "999px",
-      textDecoration: "none",
-      color: "rgba(244,244,245,0.92)",
-      fontSize: "0.85rem",
-      fontWeight: 700,
-      background: "transparent",
-      border: `1px solid ${theme.border}`,
-      boxShadow: "none",
-      maxWidth: "100%",
-    }}
-  >
-    <span style={{ opacity: 0.92 }}>Powered by</span>
-<img
-  src="/launch6_white.png"
-  alt="Launch6"
-  style={{
-    height: "1.32rem", // 25% larger than 1.05rem
-    width: "auto",
-    opacity: 0.95,
-    transform: "translateY(1px)", // visually centers with text
-  }}
-/>
-<span style={{ opacity: 0.55, fontSize: "0.78rem", marginLeft: "0.15rem" }}>↗</span>
-
-  </a>
-</div>
+          <footer style={{ fontSize: "0.9rem", color: theme.textMuted, paddingBottom: "2.25rem", width: "100%", textAlign: "center" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.05rem" }}>
+              <a
+                href="https://launch6.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Powered by Launch6"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.55rem",
+                  padding: "0.28rem 0.55rem",
+                  borderRadius: "999px",
+                  textDecoration: "none",
+                  color: theme.textMuted,
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                  background: theme.key === "launch6" ? "transparent" : "rgba(15,23,42,0.04)",
+                  border: `1px solid ${theme.border}`,
+                }}
+              >
+                <span>Powered by</span>
+                <img
+                  src="/launch6_white.png"
+                  alt="Launch6"
+                  style={{
+                    height: "1.65rem", // ~25% larger than the previous 1.32rem
+                    width: "auto",
+                    opacity: 0.95,
+                    transform: "translateY(1px)",
+                    filter: theme.footerLogoFilter,
+                  }}
+                />
+                <span style={{ opacity: 0.55, fontSize: "0.78rem", marginLeft: "0.05rem" }}>↗</span>
+              </a>
+            </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0.9rem" }}>
-              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: "#a3a3a3" }}>
+              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer" }}>
                 Cookie preferences
               </button>
-              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: "#a3a3a3" }}>
+              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer" }}>
                 Report page
               </button>
-              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: "#a3a3a3" }}>
+              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer" }}>
                 Privacy
               </button>
             </div>

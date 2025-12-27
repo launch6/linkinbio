@@ -119,15 +119,14 @@ function normalizeImageSrc(src) {
 
 /**
  * Theme tokens (allowlist). Keys: launch6 | pastel | modern
- * Launch6 + Modern unchanged.
- * Pastel updated to Coat Defense palette.
+ * NOTE: Pastel is redesigned per your spec.
  */
 const THEME_TOKENS = {
   modern: {
     key: "modern",
     label: "Modern Pro",
 
-    // outside background + inside card
+    // page background + card background
     bg: "#f0eeef",
     surface: "#faf6f7",
 
@@ -142,16 +141,27 @@ const THEME_TOKENS = {
     inputBorder: "rgba(36,44,63,0.14)",
 
     // accents
-    accent: "#4271ca", // timer digits, price, etc
-    socialRing: "#4271ca",
+    accent: "#4271ca", // timer digits, price, timer border
+    socialRing: "#4271ca", // social ring
+    avatarRing: "#4271ca", // avatar ring
 
-    // buttons + link pills
+    // buttons
     buttonFill: "#4271ca",
     buttonText: "#faf6f7",
 
-    // icons in social buttons
-    icon: "#242c3f",
+    // links
+    linkFill: "#4271ca",
+    linkText: "#faf6f7",
+    linkBorder: "#4271ca",
 
+    // inventory
+    inventoryColor: undefined, // falls back to accent
+
+    // pastel-only product container (unused here)
+    productSurface: undefined,
+    productBorder: undefined,
+
+    icon: "#242c3f",
     footerLogoFilter: "invert(1)",
   },
 
@@ -162,26 +172,31 @@ const THEME_TOKENS = {
     bg: "#000000",
     surface: "#2f2f2f",
 
-    // text everywhere is white (price stays accent)
     text: "#ffffff",
     textMuted: "rgba(255,255,255,0.78)",
 
     border: "rgba(255,255,255,0.14)",
     shadow: "rgba(0,0,0,0.80)",
     inputBg: "rgba(255,255,255,0.08)",
-    // no “outline” around the email inputs on Launch6
     inputBorder: "transparent",
 
-    // accents (only where it matters)
     accent: "#9e5aef",
     socialRing: "#9e5aef",
+    avatarRing: "#9e5aef",
 
     buttonFill: "#9e5aef",
     buttonText: "#ffffff",
 
-    // social icons should be white
-    icon: "#ffffff",
+    linkFill: "#9e5aef",
+    linkText: "#ffffff",
+    linkBorder: "#9e5aef",
 
+    inventoryColor: undefined, // falls back to accent
+
+    productSurface: undefined,
+    productBorder: undefined,
+
+    icon: "#ffffff",
     footerLogoFilter: "none",
   },
 
@@ -189,42 +204,47 @@ const THEME_TOKENS = {
     key: "pastel",
     label: "Pastel Dreams",
 
-    // Coat Defense palette you provided
-    mint: "#e1ede1",
-    coral: "#ef8d76",
-    peach: "#f7d8cf",
-    cream: "#fdf8f5",
-    teal: "#b2dddc",
+    // Outside container (card) + overall page bg
+    // Your spec:
+    // outside container = fdf4ee
+    // inner product container = fdf9f5
+    bg: "#e1ede1",        // soft mint page background (premium framing)
+    surface: "#fdf4ee",   // OUTSIDE container (card)
 
-    // outside background + inside card
-    bg: "#e1ede1",      // mint outside
-    surface: "#fdf8f5", // cream card
+    // text
+    text: "#3b3f45",
+    textMuted: "rgba(59,63,69,0.76)",
 
-    // typography (premium: darker, crisper)
-    text: "#243041",
-    textMuted: "rgba(36,48,65,0.72)",
+    border: "rgba(59,63,69,0.14)",
+    shadow: "rgba(15,23,42,0.18)",
 
-    // subtle chrome
-    border: "rgba(36,48,65,0.12)",
-    shadow: "rgba(15,23,42,0.20)",
+    // inputs sit on the outside container
+    inputBg: "rgba(253,249,245,0.75)",
+    inputBorder: "rgba(241,151,132,0.35)",
 
-    // inputs feel airy against cream
-    inputBg: "rgba(255,255,255,0.72)",
-    inputBorder: "rgba(36,48,65,0.12)",
+    // Your spec:
+    // buy/join/inventory/social ring = f19784
+    // timer digits + timer border + link buttons + price + avatar ring = 71afab
+    buttonFill: "#f19784",
+    buttonText: "#ffffff",
 
-    // social ring is coral
-    socialRing: "#ef8d76",
+    accent: "#71afab",
+    socialRing: "#f19784",
+    avatarRing: "#71afab",
 
-    // keep accent for price/inventory if needed
-    accent: "#ef8d76",
+    // Links: match the reference look (teal buttons)
+    linkFill: "#71afab",
+    linkText: "#ffffff",
+    linkBorder: "#71afab",
 
-    // buttons + link pills: peach with dark text (premium)
-    buttonFill: "#f7d8cf",
-    buttonText: "#243041",
+    // Inventory text: coral
+    inventoryColor: "#f19784",
 
-    // icons
-    icon: "#243041",
+    // Pastel-only product container
+    productSurface: "#fdf9f5",
+    productBorder: "rgba(113,175,171,0.28)",
 
+    icon: "#3b3f45",
     footerLogoFilter: "invert(1)",
   },
 };
@@ -235,9 +255,9 @@ function getTheme(themeKeyRaw) {
   return THEME_TOKENS.launch6;
 }
 
-// Ring only for social icons (no rings around containers)
-function socialRingStyle(theme) {
-  const ring = `linear-gradient(135deg, ${theme.socialRing}, ${theme.socialRing})`;
+// Generic ring style (used for social + avatar with different ring colors)
+function ringStyle(theme, ringColor) {
+  const ring = `linear-gradient(135deg, ${ringColor}, ${ringColor})`;
   return {
     border: "1px solid transparent",
     backgroundImage: `linear-gradient(${theme.surface}, ${theme.surface}), ${ring}`,
@@ -327,14 +347,14 @@ function ThemedSocialButton({ href, label, iconType, theme }) {
     justifyContent: "center",
     textDecoration: "none",
     boxShadow: `0 10px 28px ${theme.shadow}`,
-    ...socialRingStyle(theme),
+    ...ringStyle(theme, theme.socialRing),
   };
 
   const inner = {
     height: "100%",
     width: "100%",
     borderRadius: "999px",
-    background: theme.key === "pastel" ? "#ffffff" : theme.surface, // Pastel gets crisp white inner
+    background: theme.surface,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -357,8 +377,6 @@ function DropCard({ product: p, slug, theme }) {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  const isPastel = theme.key === "pastel";
 
   const imageUrl = normalizeImageSrc(p.imageUrl || "") || null;
   const title = p.title || "Untitled drop";
@@ -439,6 +457,8 @@ function DropCard({ product: p, slug, theme }) {
     inventoryText = `Only ${left} left!`;
   }
 
+  const isPastel = theme.key === "pastel";
+
   const card = {
     width: "100%",
     maxWidth: "420px",
@@ -447,32 +467,22 @@ function DropCard({ product: p, slug, theme }) {
     textAlign: "center",
   };
 
-  // Pastel-only: white container holding image + details + timer + button
-  const pastelWrap = {
-    background: "#ffffff",
+  // Pastel-only: wrap image + content in the “white” product container
+  const pastelProductWrap = {
+    background: theme.productSurface || theme.surface,
+    border: `1px solid ${theme.productBorder || theme.border}`,
     borderRadius: "26px",
-    padding: "14px 14px 16px",
-    border: `1px solid ${theme.border}`,
-    boxShadow: `0 26px 80px ${theme.shadow}`,
+    padding: "14px",
+    boxShadow: `0 22px 64px ${theme.shadow}`,
   };
 
-  const heroFrameBase = {
+  const heroFrame = {
     borderRadius: "22px",
     overflow: "hidden",
-    background: theme.surface,
+    background: isPastel ? (theme.productSurface || theme.surface) : theme.surface,
     border: `1px solid ${theme.border}`,
-    boxShadow: `0 18px 48px ${theme.shadow}`,
+    boxShadow: isPastel ? "none" : `0 18px 48px ${theme.shadow}`,
   };
-
-  // Pastel-only: avoid double shadow (wrap has the shadow)
-  const heroFrame = isPastel
-    ? {
-        ...heroFrameBase,
-        background: "#ffffff",
-        boxShadow: "none",
-        border: `1px solid rgba(36,48,65,0.10)`,
-      }
-    : heroFrameBase;
 
   const heroInner = {
     borderRadius: "22px",
@@ -497,23 +507,21 @@ function DropCard({ product: p, slug, theme }) {
   const titleStyle = {
     fontSize: "1.35rem",
     fontWeight: 900,
-    margin: isPastel ? "0.9rem 0 0.25rem" : "0.95rem 0 0.25rem",
+    margin: isPastel ? "0.95rem 0 0.25rem" : "0.95rem 0 0.25rem",
     color: theme.text,
   };
 
-  // Pastel: price in coral (premium + readable)
   const priceStyle = {
     fontSize: "1.35rem",
     fontWeight: 900,
     margin: "0 0 0.1rem",
-    color: isPastel && theme.coral ? theme.coral : theme.accent,
+    color: theme.accent, // teal in pastel
   };
 
-  // Pastel: scarcity in coral (same)
   const inventoryStyle = {
     fontSize: "0.95rem",
     fontWeight: 900,
-    color: isPastel && theme.coral ? theme.coral : theme.accent,
+    color: theme.inventoryColor || theme.accent, // coral in pastel
     margin: "0 0 0.75rem",
   };
 
@@ -526,17 +534,14 @@ function DropCard({ product: p, slug, theme }) {
     padding: "0 0.5rem",
   };
 
-  // Pastel: timer uses teal stroke/digits (structure color)
-  const timerStroke = isPastel && theme.teal ? theme.teal : theme.accent;
-
   const timerCard = {
     borderRadius: "18px",
     padding: "10px 14px 12px",
     margin: "0 auto 1.05rem",
     maxWidth: "360px",
-    border: `2px solid ${timerStroke}`,
-    background: isPastel && theme.cream ? theme.cream : theme.surface,
-    boxShadow: isPastel ? "0 10px 28px rgba(15,23,42,0.10)" : `0 10px 26px ${theme.shadow}`,
+    border: `2px solid ${theme.accent}`, // teal in pastel
+    background: isPastel ? (theme.productSurface || theme.surface) : theme.surface,
+    boxShadow: `0 10px 26px ${theme.shadow}`,
   };
 
   const timerLabel = {
@@ -553,11 +558,11 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     gap: "8px",
     marginBottom: "2px",
-    color: timerStroke,
+    color: theme.accent,
   };
 
   const timerValue = { fontSize: "1.35rem", fontWeight: 900 };
-  const timerSeparator = { fontSize: "1.25rem", color: timerStroke, transform: "translateY(-1px)" };
+  const timerSeparator = { fontSize: "1.25rem", color: theme.accent, transform: "translateY(-1px)" };
   const timerUnits = { fontSize: "0.7rem", color: theme.textMuted, margin: 0 };
 
   const button = {
@@ -574,7 +579,7 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     margin: "0.2rem auto 0",
     boxSizing: "border-box",
-    background: theme.buttonFill,
+    background: theme.buttonFill, // coral in pastel
     color: theme.buttonText,
     boxShadow: `0 16px 44px ${theme.shadow}`,
   };
@@ -588,7 +593,7 @@ function DropCard({ product: p, slug, theme }) {
     opacity: 0.8,
   };
 
-  const dropContent = (
+  const contentBlock = (
     <>
       <div style={heroFrame}>
         <div style={heroInner}>
@@ -651,7 +656,7 @@ function DropCard({ product: p, slug, theme }) {
 
   return (
     <article style={card}>
-      {isPastel ? <div style={pastelWrap}>{dropContent}</div> : dropContent}
+      {isPastel ? <div style={pastelProductWrap}>{contentBlock}</div> : contentBlock}
     </article>
   );
 }
@@ -849,8 +854,9 @@ export default function PublicSlugPage() {
     justifyContent: "space-between",
     padding: "0.95rem 1.2rem",
     borderRadius: "16px",
-    background: theme.buttonFill,
-    color: theme.buttonText,
+    background: theme.linkFill,
+    color: theme.linkText,
+    border: `1px solid ${theme.linkBorder || theme.linkFill}`,
     textDecoration: "none",
     fontSize: "0.98rem",
     fontWeight: 900,
@@ -890,7 +896,7 @@ export default function PublicSlugPage() {
     fontWeight: 900,
     cursor: submitting ? "default" : "pointer",
     opacity: submitting ? 0.78 : 1,
-    background: theme.buttonFill,
+    background: theme.buttonFill, // coral in pastel
     color: theme.buttonText,
   };
 
@@ -981,7 +987,7 @@ export default function PublicSlugPage() {
                         style={{
                           padding: "2px",
                           borderRadius: "999px",
-                          ...socialRingStyle(theme),
+                          ...ringStyle(theme, theme.avatarRing || theme.socialRing),
                           display: "inline-block",
                           boxShadow: `0 18px 48px ${theme.shadow}`,
                         }}
@@ -1012,7 +1018,7 @@ export default function PublicSlugPage() {
                           fontWeight: 900,
                           fontSize: "2.2rem",
                           boxShadow: `0 18px 48px ${theme.shadow}`,
-                          ...socialRingStyle(theme),
+                          ...ringStyle(theme, theme.avatarRing || theme.socialRing),
                           color: theme.text,
                         }}
                       >
@@ -1200,7 +1206,7 @@ export default function PublicSlugPage() {
                           className="l6-link"
                         >
                           <span>{label}</span>
-                          <span style={{ fontSize: "0.85rem", opacity: 0.85 }}>↗</span>
+                          <span style={{ fontSize: "0.85rem", opacity: 0.92 }}>↗</span>
                         </a>
                       );
                     })}
@@ -1272,7 +1278,7 @@ export default function PublicSlugPage() {
           .l6-card {
             min-height: 100vh;
             width: 100%;
-            background: ${theme.surface};
+            background: ${theme.surface}; /* Pastel outside container = #fdf4ee */
             border-radius: 0;
             margin: 0;
             box-shadow: none;

@@ -119,7 +119,8 @@ function normalizeImageSrc(src) {
 
 /**
  * Theme tokens (allowlist). Keys: launch6 | pastel | modern
- * All 3 themes share the exact same UI; only these values change.
+ * Launch6 + Modern unchanged.
+ * Pastel updated to Coat Defense palette.
  */
 const THEME_TOKENS = {
   modern: {
@@ -141,7 +142,7 @@ const THEME_TOKENS = {
     inputBorder: "rgba(36,44,63,0.14)",
 
     // accents
-    accent: "#4271ca", // timer digits, price, social ring
+    accent: "#4271ca", // timer digits, price, etc
     socialRing: "#4271ca",
 
     // buttons + link pills
@@ -168,11 +169,11 @@ const THEME_TOKENS = {
     border: "rgba(255,255,255,0.14)",
     shadow: "rgba(0,0,0,0.80)",
     inputBg: "rgba(255,255,255,0.08)",
-    // you asked: no “outline” around the email inputs on Launch6
+    // no “outline” around the email inputs on Launch6
     inputBorder: "transparent",
 
     // accents (only where it matters)
-    accent: "#9e5aef", // timer digits + price + social ring
+    accent: "#9e5aef",
     socialRing: "#9e5aef",
 
     buttonFill: "#9e5aef",
@@ -188,29 +189,41 @@ const THEME_TOKENS = {
     key: "pastel",
     label: "Pastel Dreams",
 
-    bg: "#ffffff",
-    // your request: inner container becomes blue
-    surface: "#bfdff0",
+    // Coat Defense palette you provided
+    mint: "#e1ede1",
+    coral: "#ef8d76",
+    peach: "#f7d8cf",
+    cream: "#fdf8f5",
+    teal: "#b2dddc",
 
-    text: "#515862",
-    textMuted: "rgba(81,88,98,0.78)",
+    // outside background + inside card
+    bg: "#e1ede1",      // mint outside
+    surface: "#fdf8f5", // cream card
 
-    border: "rgba(81,88,98,0.14)",
-    shadow: "rgba(15,23,42,0.24)",
-    inputBg: "rgba(255,255,255,0.52)",
-    inputBorder: "rgba(81,88,98,0.14)",
+    // typography (premium: darker, crisper)
+    text: "#243041",
+    textMuted: "rgba(36,48,65,0.72)",
 
-    // social ring outline should be pink
-    socialRing: "#f7d0d9",
+    // subtle chrome
+    border: "rgba(36,48,65,0.12)",
+    shadow: "rgba(15,23,42,0.20)",
 
-    // timer + price need a deeper blue so it stays readable on the blue card
-    accent: "#2f6fd2",
+    // inputs feel airy against cream
+    inputBg: "rgba(255,255,255,0.72)",
+    inputBorder: "rgba(36,48,65,0.12)",
 
-    // buttons + link pills stay pink
-    buttonFill: "#f7d0d9",
+    // social ring is coral
+    socialRing: "#ef8d76",
+
+    // keep accent for price/inventory if needed
+    accent: "#ef8d76",
+
+    // buttons + link pills: peach with dark text (premium)
+    buttonFill: "#f7d8cf",
     buttonText: "#243041",
 
-    icon: "#515862",
+    // icons
+    icon: "#243041",
 
     footerLogoFilter: "invert(1)",
   },
@@ -321,11 +334,11 @@ function ThemedSocialButton({ href, label, iconType, theme }) {
     height: "100%",
     width: "100%",
     borderRadius: "999px",
-    background: theme.surface,
+    background: theme.key === "pastel" ? "#ffffff" : theme.surface, // Pastel gets crisp white inner
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: theme.icon, // icons become white on Launch6
+    color: theme.icon,
   };
 
   return (
@@ -339,6 +352,7 @@ function ThemedSocialButton({ href, label, iconType, theme }) {
 
 function DropCard({ product: p, slug, theme }) {
   const [now, setNow] = useState(() => new Date());
+
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
@@ -433,23 +447,32 @@ function DropCard({ product: p, slug, theme }) {
     textAlign: "center",
   };
 
-  // Pastel-only: everything for the drop sits inside a WHITE container (image + copy + timer + button).
-  const pastelDropContainer = {
+  // Pastel-only: white container holding image + details + timer + button
+  const pastelWrap = {
     background: "#ffffff",
     borderRadius: "26px",
-    padding: "14px 14px 18px",
-    boxShadow: `0 22px 60px ${theme.shadow}`,
-    border: "1px solid rgba(15,23,42,0.08)",
+    padding: "14px 14px 16px",
+    border: `1px solid ${theme.border}`,
+    boxShadow: `0 26px 80px ${theme.shadow}`,
   };
 
-  // In Pastel, we avoid double shadows by keeping inner elements simpler.
-  const heroFrame = {
+  const heroFrameBase = {
     borderRadius: "22px",
     overflow: "hidden",
-    background: isPastel ? "#ffffff" : theme.surface,
-    border: isPastel ? "1px solid rgba(15,23,42,0.08)" : `1px solid ${theme.border}`,
-    boxShadow: isPastel ? "none" : `0 18px 48px ${theme.shadow}`,
+    background: theme.surface,
+    border: `1px solid ${theme.border}`,
+    boxShadow: `0 18px 48px ${theme.shadow}`,
   };
+
+  // Pastel-only: avoid double shadow (wrap has the shadow)
+  const heroFrame = isPastel
+    ? {
+        ...heroFrameBase,
+        background: "#ffffff",
+        boxShadow: "none",
+        border: `1px solid rgba(36,48,65,0.10)`,
+      }
+    : heroFrameBase;
 
   const heroInner = {
     borderRadius: "22px",
@@ -468,27 +491,29 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     color: theme.textMuted,
     fontSize: "1rem",
-    background: isPastel ? "#ffffff" : theme.surface,
+    background: theme.surface,
   };
 
   const titleStyle = {
     fontSize: "1.35rem",
     fontWeight: 900,
-    margin: isPastel ? "0.95rem 0 0.25rem" : "0.95rem 0 0.25rem",
+    margin: isPastel ? "0.9rem 0 0.25rem" : "0.95rem 0 0.25rem",
     color: theme.text,
   };
 
+  // Pastel: price in coral (premium + readable)
   const priceStyle = {
     fontSize: "1.35rem",
     fontWeight: 900,
     margin: "0 0 0.1rem",
-    color: theme.accent,
+    color: isPastel && theme.coral ? theme.coral : theme.accent,
   };
 
+  // Pastel: scarcity in coral (same)
   const inventoryStyle = {
     fontSize: "0.95rem",
     fontWeight: 900,
-    color: theme.accent,
+    color: isPastel && theme.coral ? theme.coral : theme.accent,
     margin: "0 0 0.75rem",
   };
 
@@ -501,14 +526,17 @@ function DropCard({ product: p, slug, theme }) {
     padding: "0 0.5rem",
   };
 
+  // Pastel: timer uses teal stroke/digits (structure color)
+  const timerStroke = isPastel && theme.teal ? theme.teal : theme.accent;
+
   const timerCard = {
     borderRadius: "18px",
     padding: "10px 14px 12px",
     margin: "0 auto 1.05rem",
     maxWidth: "360px",
-    border: `2px solid ${theme.accent}`,
-    background: isPastel ? "#ffffff" : theme.surface,
-    boxShadow: `0 10px 26px ${theme.shadow}`,
+    border: `2px solid ${timerStroke}`,
+    background: isPastel && theme.cream ? theme.cream : theme.surface,
+    boxShadow: isPastel ? "0 10px 28px rgba(15,23,42,0.10)" : `0 10px 26px ${theme.shadow}`,
   };
 
   const timerLabel = {
@@ -525,11 +553,11 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     gap: "8px",
     marginBottom: "2px",
-    color: theme.accent,
+    color: timerStroke,
   };
 
   const timerValue = { fontSize: "1.35rem", fontWeight: 900 };
-  const timerSeparator = { fontSize: "1.25rem", color: theme.accent, transform: "translateY(-1px)" };
+  const timerSeparator = { fontSize: "1.25rem", color: timerStroke, transform: "translateY(-1px)" };
   const timerUnits = { fontSize: "0.7rem", color: theme.textMuted, margin: 0 };
 
   const button = {
@@ -560,7 +588,7 @@ function DropCard({ product: p, slug, theme }) {
     opacity: 0.8,
   };
 
-  const dropBody = (
+  const dropContent = (
     <>
       <div style={heroFrame}>
         <div style={heroInner}>
@@ -623,7 +651,7 @@ function DropCard({ product: p, slug, theme }) {
 
   return (
     <article style={card}>
-      {isPastel ? <div style={pastelDropContainer}>{dropBody}</div> : dropBody}
+      {isPastel ? <div style={pastelWrap}>{dropContent}</div> : dropContent}
     </article>
   );
 }
@@ -821,7 +849,7 @@ export default function PublicSlugPage() {
     justifyContent: "space-between",
     padding: "0.95rem 1.2rem",
     borderRadius: "16px",
-    background: theme.buttonFill, // solid fill -> no end shading
+    background: theme.buttonFill,
     color: theme.buttonText,
     textDecoration: "none",
     fontSize: "0.98rem",
@@ -838,7 +866,6 @@ export default function PublicSlugPage() {
     backgroundColor: theme.inputBg,
     overflow: "hidden",
     boxSizing: "border-box",
-    // “outline” control:
     boxShadow:
       theme.inputBorder === "transparent"
         ? "none"

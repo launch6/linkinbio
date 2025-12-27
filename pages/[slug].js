@@ -1022,18 +1022,31 @@ export default function PublicSlugPage() {
                 </section>
               )}
 
-              {/* EMAIL CAPTURE */}
-              {canCollectEmail && (
-                <section style={{ width: "100%", margin: `0 auto ${SECTION_GAP}`, textAlign: "center" }}>
-                  <h2
-                    style={{
-                      margin: "0 0 0.95rem",
-                      fontSize: "1.25rem",
-                      fontWeight: 900,
-                      lineHeight: 1.2,
-                      color: theme.text,
-                    }}
-                  >
+{/* EMAIL CAPTURE */}
+{canCollectEmail && (
+  <section
+    style={{
+      width: "100%",
+      margin: `0 auto ${SECTION_GAP}`,
+      display: "flex",
+      justifyContent: "center",
+      boxSizing: "border-box",
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: "420px",
+        borderRadius: "22px",
+        padding: "18px 18px 16px",
+        background: theme.surface,
+        border: `1px solid ${theme.border}`,
+        boxShadow: `0 18px 56px ${theme.shadow}`,
+        textAlign: "center",
+        boxSizing: "border-box",
+      }}
+    >
+
                     {(profile?.formHeadline || profile?.emailHeadline || "Get first dibs on drops").trim()}
                   </h2>
 
@@ -1128,10 +1141,10 @@ export default function PublicSlugPage() {
                     <div id="email-error" style={{ marginTop: "0.55rem", fontSize: "0.85rem", color: "#ef4444" }}>
                       {emailErr}
                     </div>
-                  ) : null}
-                </section>
-              )}
-
+  ) : null}
+    </div>
+  </section>
+)}
               {/* LINKS */}
               {links.length > 0 && (
                 <section style={{ width: "100%", marginTop: products.length === 0 ? SECTION_GAP : 0, marginBottom: "2rem" }}>

@@ -468,13 +468,13 @@ function DropCard({ product: p, slug, theme }) {
   };
 
   // Pastel-only: wrap image + content in the “white” product container
-  const pastelProductWrap = {
-    background: theme.productSurface || theme.surface,
-    border: `1px solid ${theme.productBorder || theme.border}`,
-    borderRadius: "26px",
-    padding: "14px",
-    boxShadow: `0 22px 64px ${theme.shadow}`,
-  };
+const pastelProductWrap = {
+  background: theme.productSurface || theme.surface,
+  border: `1px solid ${theme.productBorder || theme.border}`,
+  borderRadius: "26px",
+  padding: "14px",
+  boxShadow: `0 28px 70px rgba(15,23,42,0.14)`,
+};
 
   const heroFrame = {
     borderRadius: "22px",
@@ -565,24 +565,28 @@ function DropCard({ product: p, slug, theme }) {
   const timerSeparator = { fontSize: "1.25rem", color: theme.accent, transform: "translateY(-1px)" };
   const timerUnits = { fontSize: "0.7rem", color: theme.textMuted, margin: 0 };
 
-  const button = {
-    width: "100%",
-    borderRadius: "999px",
-    padding: "0.92rem 1.1rem",
-    fontSize: "0.98rem",
-    fontWeight: 900,
-    border: "none",
-    cursor: "pointer",
-    textDecoration: "none",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "0.2rem auto 0",
-    boxSizing: "border-box",
-    background: theme.buttonFill, // coral in pastel
-    color: theme.buttonText,
-    boxShadow: `0 16px 44px ${theme.shadow}`,
-  };
+const button = {
+  width: "100%",
+  borderRadius: "999px",
+  padding: "0.92rem 1.1rem",
+  fontSize: "0.98rem",
+  fontWeight: 900,
+  border: "none",
+  cursor: "pointer",
+  textDecoration: "none",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  margin: "0.2rem auto 0",
+  boxSizing: "border-box",
+  background: theme.key === "pastel"
+    ? `linear-gradient(180deg, rgba(255,255,255,0.18), rgba(0,0,0,0.00)), ${theme.buttonFill}`
+    : theme.buttonFill,
+  color: theme.buttonText,
+  boxShadow: theme.key === "pastel"
+    ? `0 18px 48px rgba(15,23,42,0.16)`
+    : `0 16px 44px ${theme.shadow}`,
+};
 
   const buttonDisabled = {
     ...button,

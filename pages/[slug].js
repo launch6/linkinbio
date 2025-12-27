@@ -345,6 +345,8 @@ function DropCard({ product: p, slug, theme }) {
     return () => clearInterval(id);
   }, []);
 
+  const isPastel = theme.key === "pastel";
+
   const imageUrl = normalizeImageSrc(p.imageUrl || "") || null;
   const title = p.title || "Untitled drop";
   const description = p.description || "";
@@ -432,16 +434,25 @@ function DropCard({ product: p, slug, theme }) {
     textAlign: "center",
   };
 
-  const heroFrame = {
+  // Pastel-only: the entire drop block is one white container (image + text + timer + buy)
+  const pastelWhiteWrap = {
+    background: "#ffffff",
     borderRadius: "22px",
-    overflow: "hidden",
-    background: theme.surface,
-    border: `1px solid ${theme.border}`, // neutral border only
+    padding: "14px 14px 16px",
     boxShadow: `0 18px 48px ${theme.shadow}`,
+    border: `1px solid ${theme.border}`,
+  };
+
+  const heroFrame = {
+    borderRadius: "18px",
+    overflow: "hidden",
+    background: "#ffffff",
+    border: `1px solid ${theme.border}`,
+    boxShadow: isPastel ? "none" : `0 18px 48px ${theme.shadow}`,
   };
 
   const heroInner = {
-    borderRadius: "22px",
+    borderRadius: "18px",
     overflow: "hidden",
     width: "100%",
     lineHeight: 0,
@@ -457,7 +468,7 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     color: theme.textMuted,
     fontSize: "1rem",
-    background: theme.surface,
+    background: "#ffffff",
   };
 
   const titleStyle = { fontSize: "1.35rem", fontWeight: 900, margin: "0.95rem 0 0.25rem", color: theme.text };
@@ -491,7 +502,7 @@ function DropCard({ product: p, slug, theme }) {
     margin: "0 auto 1.05rem",
     maxWidth: "360px",
     border: `2px solid ${theme.accent}`,
-    background: theme.surface,
+    background: isPastel ? "#ffffff" : theme.surface, // pastel-only: keep timer inside the white card
     boxShadow: `0 10px 26px ${theme.shadow}`,
   };
 
@@ -544,8 +555,8 @@ function DropCard({ product: p, slug, theme }) {
     opacity: 0.8,
   };
 
-  return (
-    <article style={card}>
+  const DropInner = () => (
+    <>
       <div style={heroFrame}>
         <div style={heroInner}>
           {imageUrl ? (
@@ -601,6 +612,18 @@ function DropCard({ product: p, slug, theme }) {
         <a href={buyHref} style={button} className="l6-btn">
           {buttonText}
         </a>
+      )}
+    </>
+  );
+
+  return (
+    <article style={card}>
+      {isPastel ? (
+        <div style={pastelWhiteWrap}>
+          <DropInner />
+        </div>
+      ) : (
+        <DropInner />
       )}
     </article>
   );

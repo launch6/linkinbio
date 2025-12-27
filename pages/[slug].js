@@ -996,19 +996,20 @@ export default function PublicSlugPage() {
                 {title || "Artist"}
               </h1>
 
-              {bio ? (
-                <p
-                  style={{
-                    color: theme.textMuted,
-                    fontSize: "1rem",
-                    lineHeight: 1.5,
-                    margin: `0 0 ${HEADER_STACK_SPACING}`,
-                    whiteSpace: "pre-line",
-                  }}
-                >
-                  {bio}
-                </p>
-              ) : null}
+             {bio ? (
+  <p
+    style={{
+      color: theme.textMuted,
+      fontSize: "1rem",
+      lineHeight: 1.6,
+      maxWidth: "38ch",
+      margin: `0 auto ${HEADER_STACK_SPACING}`,
+      whiteSpace: "pre-line",
+    }}
+  >
+    {bio}
+  </p>
+) : null}
 
               {/* Social icons */}
               {hasSocialRow && (

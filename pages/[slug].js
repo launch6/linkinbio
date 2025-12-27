@@ -339,7 +339,6 @@ function ThemedSocialButton({ href, label, iconType, theme }) {
 
 function DropCard({ product: p, slug, theme }) {
   const [now, setNow] = useState(() => new Date());
-
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
@@ -434,25 +433,26 @@ function DropCard({ product: p, slug, theme }) {
     textAlign: "center",
   };
 
-  // Pastel-only: the entire drop block is one white container (image + text + timer + buy)
-  const pastelWhiteWrap = {
+  // Pastel-only: everything for the drop sits inside a WHITE container (image + copy + timer + button).
+  const pastelDropContainer = {
     background: "#ffffff",
-    borderRadius: "22px",
-    padding: "14px 14px 16px",
-    boxShadow: `0 18px 48px ${theme.shadow}`,
-    border: `1px solid ${theme.border}`,
+    borderRadius: "26px",
+    padding: "14px 14px 18px",
+    boxShadow: `0 22px 60px ${theme.shadow}`,
+    border: "1px solid rgba(15,23,42,0.08)",
   };
 
+  // In Pastel, we avoid double shadows by keeping inner elements simpler.
   const heroFrame = {
-    borderRadius: "18px",
+    borderRadius: "22px",
     overflow: "hidden",
-    background: "#ffffff",
-    border: `1px solid ${theme.border}`,
+    background: isPastel ? "#ffffff" : theme.surface,
+    border: isPastel ? "1px solid rgba(15,23,42,0.08)" : `1px solid ${theme.border}`,
     boxShadow: isPastel ? "none" : `0 18px 48px ${theme.shadow}`,
   };
 
   const heroInner = {
-    borderRadius: "18px",
+    borderRadius: "22px",
     overflow: "hidden",
     width: "100%",
     lineHeight: 0,
@@ -468,10 +468,15 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     color: theme.textMuted,
     fontSize: "1rem",
-    background: "#ffffff",
+    background: isPastel ? "#ffffff" : theme.surface,
   };
 
-  const titleStyle = { fontSize: "1.35rem", fontWeight: 900, margin: "0.95rem 0 0.25rem", color: theme.text };
+  const titleStyle = {
+    fontSize: "1.35rem",
+    fontWeight: 900,
+    margin: isPastel ? "0.95rem 0 0.25rem" : "0.95rem 0 0.25rem",
+    color: theme.text,
+  };
 
   const priceStyle = {
     fontSize: "1.35rem",
@@ -502,7 +507,7 @@ function DropCard({ product: p, slug, theme }) {
     margin: "0 auto 1.05rem",
     maxWidth: "360px",
     border: `2px solid ${theme.accent}`,
-    background: isPastel ? "#ffffff" : theme.surface, // pastel-only: keep timer inside the white card
+    background: isPastel ? "#ffffff" : theme.surface,
     boxShadow: `0 10px 26px ${theme.shadow}`,
   };
 
@@ -520,7 +525,7 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     gap: "8px",
     marginBottom: "2px",
-    color: theme.accent, // digits are accent
+    color: theme.accent,
   };
 
   const timerValue = { fontSize: "1.35rem", fontWeight: 900 };
@@ -555,7 +560,7 @@ function DropCard({ product: p, slug, theme }) {
     opacity: 0.8,
   };
 
-  const DropInner = () => (
+  const dropBody = (
     <>
       <div style={heroFrame}>
         <div style={heroInner}>
@@ -618,13 +623,7 @@ function DropCard({ product: p, slug, theme }) {
 
   return (
     <article style={card}>
-      {isPastel ? (
-        <div style={pastelWhiteWrap}>
-          <DropInner />
-        </div>
-      ) : (
-        <DropInner />
-      )}
+      {isPastel ? <div style={pastelDropContainer}>{dropBody}</div> : dropBody}
     </article>
   );
 }

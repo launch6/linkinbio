@@ -186,24 +186,34 @@ const THEME_TOKENS = {
     footerLogoFilter: "none",
   },
 
-  pastel: {
-    key: "pastel",
-    label: "Pastel Dreams",
-    bg: "#ffffff",
-    surface: "#f0f0f0",
-    text: "#515862",
-    textMuted: "rgba(81,88,98,0.78)",
-    border: "rgba(81,88,98,0.18)",
-    shadow: "rgba(15,23,42,0.10)",
-    inputBg: "rgba(81,88,98,0.06)",
+ pastel: {
+  key: "pastel",
+  label: "Pastel Dreams",
 
-    accent: "#bfdfef",
-    buttonFill: "#f7d0d9",
-    buttonText: "#ffffff",
-    icon: "#515862",
+  // outside + inside
+  bg: "#ffffff",
+  surface: "#bfdff0", // requested inner container blue
 
-    footerLogoFilter: "invert(1)",
-  },
+  // typography (increase contrast hard)
+  text: "#354052",
+  textMuted: "rgba(53,64,82,0.78)",
+
+  // neutral chrome
+  border: "rgba(53,64,82,0.18)",
+  shadow: "rgba(15,23,42,0.10)",
+  inputBg: "rgba(255,255,255,0.55)",
+
+  // accents
+  accent: "#6aaecf",       // timer digits + small accents (stronger than the bg)
+  buttonFill: "#f7d0d9",   // buttons + link pills (pink)
+  buttonText: "#ffffff",
+  icon: "#354052",         // icon glyph color (dark)
+
+  // NEW: social ring color (pink outline)
+  socialRing: "#f7d0d9",
+
+  footerLogoFilter: "invert(1)",
+},
 };
 
 function getTheme(themeKeyRaw) {
@@ -217,8 +227,9 @@ function getTheme(themeKeyRaw) {
  * This is intentionally used only for the social icon buttons.
  */
 function socialRingStyle(theme) {
+  const ring = theme.socialRing || theme.accent;
   return {
-    border: `2px solid ${theme.accent}`,
+    border: `2px solid ${ring}`,
     background: "transparent",
   };
 }

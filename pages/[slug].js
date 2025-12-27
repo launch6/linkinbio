@@ -196,7 +196,7 @@ const THEME_TOKENS = {
     textMuted: "rgba(81,88,98,0.78)",
 
     border: "rgba(81,88,98,0.14)",
-    shadow: "rgba(15,23,42,0.12)",
+    shadow: "rgba(15,23,42,0.24)",
     inputBg: "rgba(255,255,255,0.52)",
     inputBorder: "rgba(81,88,98,0.14)",
 
@@ -208,7 +208,7 @@ const THEME_TOKENS = {
 
     // buttons + link pills stay pink
     buttonFill: "#f7d0d9",
-    buttonText: "#ffffff",
+    buttonText: "#243041",
 
     icon: "#515862",
 

@@ -125,53 +125,91 @@ function normalizeImageSrc(src) {
  * 3) Modern:  bg #FFFFFF, accent #2563EB, secondary #64748B, text #1E293B
  */
 const THEME_TOKENS = {
-  launch6: {
-    key: "launch6",
-    label: "Launch6",
-    bg: "#000000",
-    surface: "#1F1F1F",
-    accent: "#A855F7",
-    secondary: "#A855F7",
-    text: "#FFFFFF",
-    textMuted: "rgba(255,255,255,0.78)",
-    border: "rgba(255,255,255,0.14)",
-    shadow: "rgba(0,0,0,0.80)",
-    inputBg: "rgba(255,255,255,0.06)",
-    pillTintA: "rgba(168,85,247,0.16)",
-    pillTintB: "rgba(168,85,247,0.10)",
-    footerLogoFilter: "none",
-  },
-  pastel: {
-    key: "pastel",
-    label: "Pastel Dreams",
-    bg: "#F9FAFB",
-    surface: "#FFFFFF",
-    accent: "#B9E2F5",
-    secondary: "#FFD1DC",
-    text: "#4B5563",
-    textMuted: "rgba(75,85,99,0.78)",
-    border: "rgba(75,85,99,0.18)",
-    shadow: "rgba(15,23,42,0.10)",
-    inputBg: "rgba(75,85,99,0.06)",
-    pillTintA: "rgba(185,226,245,0.55)",
-    pillTintB: "rgba(255,209,220,0.45)",
-    // invert white logo so it stays visible on light backgrounds
-    footerLogoFilter: "invert(1)",
-  },
   modern: {
     key: "modern",
     label: "Modern Pro",
-    bg: "#FFFFFF",
-    surface: "#FFFFFF",
-    accent: "#2563EB",
-    secondary: "#64748B",
-    text: "#1E293B",
-    textMuted: "rgba(30,41,59,0.70)",
-    border: "rgba(30,41,59,0.18)",
+
+    // page + container
+    bg: "#F0EEEF", // outside background
+    surface: "#FAF6F7", // inside vertical container
+
+    // text
+    text: "#242C3F",
+    textMuted: "rgba(36,44,63,0.72)",
+
+    // accents
+    accent: "#4271CA", // social rings, timer accents, CTA accents
+    secondary: "#4271CA", // kept for compatibility; no gradients now
+
+    // borders/shadows/inputs
+    border: "rgba(36,44,63,0.18)",
     shadow: "rgba(15,23,42,0.10)",
-    inputBg: "rgba(30,41,59,0.06)",
-    pillTintA: "rgba(37,99,235,0.18)",
-    pillTintB: "rgba(100,116,139,0.14)",
+    inputBg: "rgba(36,44,63,0.06)",
+
+    // new explicit UI tokens (we’ll wire these in next steps)
+    timerAccent: "#4271CA",
+    socialRing: "#4271CA",
+    ctaBg: "#4271CA",
+    ctaText: "#FAF6F7",
+    linkBg: "#4271CA",
+    linkText: "#FAF6F7",
+
+    footerLogoFilter: "invert(1)",
+  },
+
+  launch6: {
+    key: "launch6",
+    label: "Launch6",
+
+    bg: "#000000",
+    surface: "#1F1F1F",
+
+    text: "#9E5AEF",
+    textMuted: "rgba(158,90,239,0.78)",
+
+    accent: "#9E5AEF",
+    secondary: "#9E5AEF",
+
+    border: "rgba(158,90,239,0.28)",
+    shadow: "rgba(0,0,0,0.80)",
+    inputBg: "rgba(255,255,255,0.06)",
+
+    timerAccent: "#9E5AEF",
+    socialRing: "#9E5AEF",
+    ctaBg: "#9E5AEF",
+    ctaText: "#FFFFFF",
+    linkBg: "#9E5AEF",
+    linkText: "#FFFFFF",
+
+    footerLogoFilter: "none",
+  },
+
+  pastel: {
+    key: "pastel",
+    label: "Pastel Dreams",
+
+    bg: "#FFFFFF",
+    surface: "#F0F0F0",
+
+    text: "#515862",
+    textMuted: "rgba(81,88,98,0.78)",
+
+    // rings + timer border accents
+    accent: "#BFDFEF",
+    secondary: "#BFDFEF", // kept for compatibility; no gradients now
+
+    border: "rgba(81,88,98,0.18)",
+    shadow: "rgba(15,23,42,0.10)",
+    inputBg: "rgba(81,88,98,0.06)",
+
+    // Pastel Option A (as you chose)
+    timerAccent: "#BFDFEF",
+    socialRing: "#BFDFEF",
+    ctaBg: "#F7D0D9",
+    ctaText: "#FFFFFF",
+    linkBg: "#F7D0D9",
+    linkText: "#FFFFFF",
+
     footerLogoFilter: "invert(1)",
   },
 };
@@ -183,10 +221,7 @@ function getTheme(themeKeyRaw) {
 }
 
 function ringStyle(theme) {
-  const ring =
-    theme.key === "launch6"
-      ? `linear-gradient(135deg, ${theme.accent}, ${theme.accent})`
-      : `linear-gradient(135deg, ${theme.accent}, ${theme.secondary})`;
+  const ring = `linear-gradient(135deg, ${theme.accent}, ${theme.accent})`;
 
   return {
     border: "1px solid transparent",

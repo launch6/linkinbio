@@ -117,97 +117,90 @@ function normalizeImageSrc(src) {
   return "";
 }
 
-
+/**
+ * Theme tokens (allowlist). Keys: launch6 | pastel | modern
+ *
+ * Modern Pro
+ * outside bg = #f0eeef
+ * inside container = #faf6f7
+ * text = #242c3f
+ * timer digits + social ring + buttons/links = #4271ca
+ * button text = #faf6f7
+ *
+ * Launch6
+ * outside bg = #000000
+ * inside container = #2f2f2f
+ * text = #ffffff
+ * timer digits + social ring + price + buttons/links = #9e5aef
+ * button text = #ffffff
+ *
+ * Pastel Dreams (Option A)
+ * outside bg = #ffffff
+ * inside container = #f0f0f0
+ * text = #515862
+ * timer digits + social ring = #bfdfef
+ * buttons/links = #f7d0d9
+ * button text = #ffffff
+ */
 const THEME_TOKENS = {
   modern: {
     key: "modern",
     label: "Modern Pro",
-
-    // page + container
-    bg: "#F0EEEF", // outside background
-    surface: "#FAF6F7", // inside vertical container
-
-    // text
-    text: "#242C3F",
+    bg: "#f0eeef",
+    surface: "#faf6f7",
+    text: "#242c3f",
     textMuted: "rgba(36,44,63,0.72)",
+    border: "rgba(36,44,63,0.14)",
+    shadow: "rgba(15,23,42,0.12)",
+    inputBg: "rgba(36,44,63,0.05)",
 
-    // accents
-    accent: "#4271CA", // social rings, timer accents, CTA accents
-    secondary: "#4271CA", // kept for compatibility; no gradients now
+    // rings + timer + price accent
+    accent: "#4271ca",
 
-    // borders/shadows/inputs
-    border: "rgba(36,44,63,0.18)",
-    shadow: "rgba(15,23,42,0.10)",
-    inputBg: "rgba(36,44,63,0.06)",
+    // CTA + link pills
+    buttonFill: "#4271ca",
+    buttonText: "#faf6f7",
 
-    // new explicit UI tokens (we’ll wire these in next steps)
-    timerAccent: "#4271CA",
-    socialRing: "#4271CA",
-    ctaBg: "#4271CA",
-    ctaText: "#FAF6F7",
-    linkBg: "#4271CA",
-    linkText: "#FAF6F7",
+    // social icon glyph color
+    icon: "#242c3f",
 
     footerLogoFilter: "invert(1)",
   },
 
-launch6: {
-  key: "launch6",
-  label: "Launch6",
+  launch6: {
+    key: "launch6",
+    label: "Launch6",
+    bg: "#000000",
+    surface: "#2f2f2f",
+    text: "#ffffff",
+    textMuted: "rgba(255,255,255,0.78)",
+    border: "rgba(255,255,255,0.14)",
+    shadow: "rgba(0,0,0,0.80)",
+    inputBg: "rgba(255,255,255,0.06)",
 
-  // page + container
-  bg: "#000000",
-  surface: "#1F1F1F",
+    accent: "#9e5aef",
+    buttonFill: "#9e5aef",
+    buttonText: "#ffffff",
+    icon: "#ffffff",
 
-  // text (FIX: make UI white)
-  text: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.78)",
-
-  // accents (keep purple for price/timer accents/buttons)
-  accent: "#9E5AEF",
-  secondary: "#9E5AEF",
-
-  // borders/shadows/inputs
-  border: "rgba(255,255,255,0.14)",
-  shadow: "rgba(0,0,0,0.80)",
-  inputBg: "rgba(255,255,255,0.06)",
-
-  // explicit UI tokens (we’ll wire more of these next)
-  timerAccent: "#9E5AEF",
-  socialRing: "#9E5AEF",
-  ctaBg: "#9E5AEF",
-  ctaText: "#FFFFFF",
-  linkBg: "#9E5AEF",
-  linkText: "#FFFFFF",
-
-  footerLogoFilter: "none",
-},
+    footerLogoFilter: "none",
+  },
 
   pastel: {
     key: "pastel",
     label: "Pastel Dreams",
-
-    bg: "#FFFFFF",
-    surface: "#F0F0F0",
-
+    bg: "#ffffff",
+    surface: "#f0f0f0",
     text: "#515862",
     textMuted: "rgba(81,88,98,0.78)",
-
-    // rings + timer border accents
-    accent: "#BFDFEF",
-    secondary: "#BFDFEF", // kept for compatibility; no gradients now
-
     border: "rgba(81,88,98,0.18)",
     shadow: "rgba(15,23,42,0.10)",
     inputBg: "rgba(81,88,98,0.06)",
 
-    // Pastel Option A (as you chose)
-    timerAccent: "#BFDFEF",
-    socialRing: "#BFDFEF",
-    ctaBg: "#F7D0D9",
-    ctaText: "#FFFFFF",
-    linkBg: "#F7D0D9",
-    linkText: "#FFFFFF",
+    accent: "#bfdfef",
+    buttonFill: "#f7d0d9",
+    buttonText: "#ffffff",
+    icon: "#515862",
 
     footerLogoFilter: "invert(1)",
   },
@@ -219,14 +212,14 @@ function getTheme(themeKeyRaw) {
   return THEME_TOKENS.launch6;
 }
 
-function ringStyle(theme) {
-  const ring = `linear-gradient(135deg, ${theme.accent}, ${theme.accent})`;
-
+/**
+ * SOCIAL RING ONLY (no other purple/blue outlines anywhere).
+ * This is intentionally used only for the social icon buttons.
+ */
+function socialRingStyle(theme) {
   return {
-    border: "1px solid transparent",
-    backgroundImage: `linear-gradient(${theme.surface}, ${theme.surface}), ${ring}`,
-    backgroundOrigin: "border-box",
-    backgroundClip: "padding-box, border-box",
+    border: `2px solid ${theme.accent}`,
+    background: "transparent",
   };
 }
 
@@ -305,32 +298,18 @@ function ThemedSocialButton({ href, label, iconType, theme }) {
     height: "4.1rem",
     width: "4.1rem",
     borderRadius: "999px",
-    padding: "2px",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: `0 10px 28px ${theme.shadow}`,
-    ...ringStyle(theme),
-  };
-
-  const inner = {
-    height: "100%",
-    width: "100%",
-    borderRadius: "999px",
-    border: `1px solid ${theme.border}`,
-    background: theme.surface,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: theme.text,
     textDecoration: "none",
+    boxShadow: `0 10px 28px ${theme.shadow}`,
+    color: theme.icon,
+    ...socialRingStyle(theme),
   };
 
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} style={outer}>
-      <span style={inner}>
-        <SocialIcon type={iconType} />
-      </span>
+      <SocialIcon type={iconType} />
     </a>
   );
 }
@@ -360,7 +339,6 @@ function DropCard({ product: p, slug, theme }) {
   }`;
 
   const left = p.unitsLeft === null || p.unitsLeft === undefined ? null : Number(p.unitsLeft);
-  const total = p.unitsTotal === null || p.unitsTotal === undefined ? null : Number(p.unitsTotal);
   const soldOut = left !== null && left <= 0;
 
   const startsAt = p.dropStartsAt ? new Date(p.dropStartsAt) : null;
@@ -419,8 +397,8 @@ function DropCard({ product: p, slug, theme }) {
   }
 
   let inventoryText = "";
-  if (p.showInventory && left !== null && total !== null) {
-    inventoryText = `${left}/${total} available`;
+  if (p.showInventory && left !== null) {
+    inventoryText = `Only ${left} left!`;
   }
 
   const outer = {
@@ -429,31 +407,24 @@ function DropCard({ product: p, slug, theme }) {
     margin: "0 auto 1.5rem",
     boxSizing: "border-box",
     borderRadius: "28px",
-    padding: "20px 18px 22px",
-    background: theme.surface,
-    border: `1px solid ${theme.border}`,
-    boxShadow: `0 20px 60px ${theme.shadow}`,
-    ...ringStyle(theme),
+    padding: "18px 18px 20px",
+    background: "rgba(0,0,0,0.00)",
   };
 
   const heroFrame = {
-    borderRadius: "24px",
-    padding: "3px",
-    backgroundImage:
-      theme.key === "launch6"
-        ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
-        : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
+    borderRadius: "22px",
+    overflow: "hidden",
+    border: `1px solid ${theme.border}`, // neutral border only
+    background: theme.surface,
     boxShadow: `0 14px 40px ${theme.shadow}`,
   };
 
   const heroInner = {
-    borderRadius: "20px",
-    background: theme.surface,
+    borderRadius: "22px",
     overflow: "hidden",
     width: "100%",
     position: "relative",
     lineHeight: 0,
-    border: `1px solid ${theme.border}`,
   };
 
   const heroImg = { width: "100%", height: "auto", display: "block" };
@@ -469,24 +440,24 @@ function DropCard({ product: p, slug, theme }) {
     background: theme.surface,
   };
 
-  const body = { padding: "18px 10px 0", textAlign: "center", color: theme.text };
+  const body = { padding: "16px 10px 0", textAlign: "center", color: theme.text };
 
-  const titleStyle = { fontSize: "1.4rem", fontWeight: 800, margin: "0 0 0.25rem" };
+  const titleStyle = { fontSize: "1.4rem", fontWeight: 900, margin: "0 0 0.2rem" };
 
+  // Price stays accent (purple/blue/pastel blue)
   const priceStyle = {
-    fontSize: "1.2rem",
+    fontSize: "1.4rem",
     fontWeight: 900,
     margin: "0 0 0.2rem",
-    backgroundImage:
-      theme.key === "launch6"
-        ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
-        : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    color: "transparent",
+    color: theme.accent,
   };
 
-  const inventoryStyle = { fontSize: "0.82rem", color: theme.textMuted, margin: "0 0 0.8rem" };
+  const inventoryStyle = {
+    fontSize: "0.95rem",
+    fontWeight: 800,
+    color: theme.accent,
+    margin: "0 0 0.8rem",
+  };
 
   const descStyle = {
     fontSize: "0.92rem",
@@ -496,13 +467,13 @@ function DropCard({ product: p, slug, theme }) {
     whiteSpace: "pre-line",
   };
 
+  // Neutral timer container (no colored outline)
   const timerCard = {
     borderRadius: "18px",
     padding: "10px 14px 12px",
     margin: "0 0 1.05rem",
     border: `1px solid ${theme.border}`,
-    background: theme.surface,
-    ...ringStyle(theme),
+    background: "rgba(0,0,0,0.00)",
   };
 
   const timerLabel = {
@@ -519,10 +490,10 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     gap: "8px",
     marginBottom: "2px",
-    color: theme.text,
+    color: theme.accent, // digits are accent
   };
 
-  const timerValue = { fontSize: "1.35rem", fontWeight: 800 };
+  const timerValue = { fontSize: "1.35rem", fontWeight: 900 };
 
   const timerSeparator = {
     fontSize: "1.25rem",
@@ -546,23 +517,15 @@ function DropCard({ product: p, slug, theme }) {
     justifyContent: "center",
     margin: "0.1rem auto 0",
     boxSizing: "border-box",
-    transition: "transform 0.08s ease, boxShadow 0.08s ease, opacity 0.12s",
-  };
-
-  const buttonActive = {
-    ...buttonBase,
-    backgroundImage:
-      theme.key === "launch6"
-        ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
-        : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
-    color: theme.key === "launch6" ? "#ffffff" : "#0b1020",
     boxShadow: `0 14px 36px ${theme.shadow}`,
+    background: theme.buttonFill,
+    color: theme.buttonText,
   };
 
   const buttonDisabled = {
     ...buttonBase,
-    backgroundImage: "linear-gradient(90deg, rgba(148,163,184,0.55), rgba(100,116,139,0.55))",
-    color: "rgba(30,41,59,0.65)",
+    background: "rgba(148,163,184,0.35)",
+    color: theme.key === "modern" ? "rgba(36,44,63,0.70)" : "rgba(255,255,255,0.75)",
     boxShadow: "none",
     cursor: "default",
     opacity: 0.75,
@@ -623,7 +586,7 @@ function DropCard({ product: p, slug, theme }) {
             Drop ended
           </button>
         ) : (
-          <a href={buyHref} style={buttonActive}>
+          <a href={buyHref} style={buttonBase}>
             {buttonText}
           </a>
         )}
@@ -778,60 +741,34 @@ export default function PublicSlugPage() {
   const avatarInitial = (title && title.trim().charAt(0).toUpperCase()) || "L";
   const avatarUrl = normalizeImageSrc(profile?.avatarUrl || profile?.imageUrl || profile?.avatar || "");
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: theme.bg, color: theme.text, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ opacity: 0.8 }}>Loading…</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ minHeight: "100vh", background: theme.bg, color: theme.text, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-        <div style={{ maxWidth: "720px", width: "100%", borderRadius: "16px", border: `1px solid ${theme.border}`, background: theme.surface, padding: "16px" }}>
-          <div style={{ fontWeight: 900, marginBottom: "6px" }}>Can’t load page</div>
-          <div style={{ fontSize: "14px", color: theme.textMuted }}>{error}</div>
-        </div>
-      </div>
-    );
-  }
-
+  // Responsive: mobile full-bleed, desktop floating card
   const mainStyle = {
-    maxWidth: "500px",
-    margin: "0 auto",
+    width: "100%",
     padding: "2.3rem 1.5rem 2.5rem",
     textAlign: "center",
     color: theme.text,
+    boxSizing: "border-box",
   };
 
   const fullWidthSection = { width: "100%" };
   const SECTION_GAP = "1.35rem";
   const HEADER_STACK_SPACING = "0.8rem";
 
-  const linkPillOuter = {
-    padding: "2px",
-    borderRadius: "999px",
-    boxShadow: `0 12px 30px ${theme.shadow}`,
-    backgroundImage:
-      theme.key === "launch6"
-        ? `linear-gradient(135deg, ${theme.accent}, ${theme.accent})`
-        : `linear-gradient(135deg, ${theme.accent}, ${theme.secondary})`,
-  };
-
-  const linkPillInner = {
+  // Solid link pill (no weird end shading)
+  const linkPill = {
+    width: "100%",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     padding: "0.95rem 1.2rem",
-    borderRadius: "999px",
-    background: `linear-gradient(135deg, ${theme.pillTintA}, ${theme.pillTintB}), ${theme.surface}`,
-    border: `1px solid ${theme.border}`,
+    borderRadius: "18px",
+    background: theme.buttonFill,
+    color: theme.buttonText,
     textDecoration: "none",
-    color: theme.text,
     fontSize: "0.98rem",
-    fontWeight: 800,
-    backdropFilter: "blur(6px)",
+    fontWeight: 900,
+    boxShadow: `0 12px 30px ${theme.shadow}`,
+    boxSizing: "border-box",
   };
 
   async function handleSubscribe(e) {
@@ -871,6 +808,88 @@ export default function PublicSlugPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="l6-page">
+        <main className="l6-card" style={mainStyle}>
+          <div style={{ opacity: 0.8, padding: "2rem" }}>Loading…</div>
+        </main>
+
+        <style jsx>{`
+          .l6-page {
+            min-height: 100vh;
+            background: ${theme.bg};
+            display: flex;
+            justify-content: center;
+          }
+          .l6-card {
+            width: 100%;
+            background: ${theme.surface};
+            color: ${theme.text};
+            border-radius: 0;
+          }
+          @media (min-width: 768px) {
+            .l6-card {
+              max-width: 450px;
+              margin: 28px 0;
+              border-radius: 32px;
+              border: 1px solid ${theme.border};
+              box-shadow: 0 20px 60px ${theme.shadow};
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="l6-page">
+        <main className="l6-card" style={mainStyle}>
+          <div
+            style={{
+              width: "100%",
+              borderRadius: "18px",
+              border: `1px solid ${theme.border}`,
+              background: "rgba(0,0,0,0.00)",
+              padding: "16px",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ fontWeight: 900, marginBottom: "6px" }}>Can’t load page</div>
+            <div style={{ fontSize: "14px", color: theme.textMuted }}>{error}</div>
+          </div>
+        </main>
+
+        <style jsx>{`
+          .l6-page {
+            min-height: 100vh;
+            background: ${theme.bg};
+            display: flex;
+            justify-content: center;
+          }
+          .l6-card {
+            width: 100%;
+            background: ${theme.surface};
+            color: ${theme.text};
+            border-radius: 0;
+          }
+          @media (min-width: 768px) {
+            .l6-card {
+              max-width: 450px;
+              margin: 28px 0;
+              border-radius: 32px;
+              border: 1px solid ${theme.border};
+              box-shadow: 0 20px 60px ${theme.shadow};
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  const footerText = theme.key === "launch6" ? theme.text : theme.textMuted;
+
   return (
     <>
       <Head>
@@ -891,8 +910,8 @@ export default function PublicSlugPage() {
         <link rel="canonical" href={pageUrl} />
       </Head>
 
-      <div style={{ minHeight: "100vh", background: theme.bg, color: theme.text }}>
-        <main style={mainStyle}>
+      <div className="l6-page">
+        <main className="l6-card" style={mainStyle}>
           {/* HEADER */}
           <header style={{ width: "100%", marginBottom: SECTION_GAP }}>
             <div
@@ -909,7 +928,16 @@ export default function PublicSlugPage() {
               {/* Avatar */}
               <div style={{ marginBottom: HEADER_STACK_SPACING }}>
                 {avatarUrl ? (
-                  <div style={{ padding: "2px", borderRadius: "999px", ...ringStyle(theme), display: "inline-block", boxShadow: `0 14px 34px ${theme.shadow}` }}>
+                  <div
+                    style={{
+                      padding: "2px",
+                      borderRadius: "999px",
+                      border: `1px solid ${theme.border}`,
+                      display: "inline-block",
+                      boxShadow: `0 14px 34px ${theme.shadow}`,
+                      background: "rgba(0,0,0,0.00)",
+                    }}
+                  >
                     <img
                       src={avatarUrl}
                       alt={title || "Avatar"}
@@ -930,7 +958,7 @@ export default function PublicSlugPage() {
                       height: "6.5rem",
                       width: "6.5rem",
                       borderRadius: "999px",
-                      backgroundColor: theme.surface,
+                      backgroundColor: "rgba(0,0,0,0.00)",
                       border: `1px solid ${theme.border}`,
                       display: "flex",
                       alignItems: "center",
@@ -938,7 +966,7 @@ export default function PublicSlugPage() {
                       fontWeight: 900,
                       fontSize: "2.2rem",
                       boxShadow: `0 14px 34px ${theme.shadow}`,
-                      ...ringStyle(theme),
+                      color: theme.text,
                     }}
                   >
                     {avatarInitial}
@@ -946,7 +974,14 @@ export default function PublicSlugPage() {
                 )}
               </div>
 
-              <h1 style={{ fontSize: "1.7rem", lineHeight: 1.2, fontWeight: 900, margin: `0 0 ${HEADER_STACK_SPACING}` }}>
+              <h1
+                style={{
+                  fontSize: "1.7rem",
+                  lineHeight: 1.2,
+                  fontWeight: 900,
+                  margin: `0 0 ${HEADER_STACK_SPACING}`,
+                }}
+              >
                 {title || "Artist"}
               </h1>
 
@@ -994,12 +1029,10 @@ export default function PublicSlugPage() {
                 width: "100%",
                 maxWidth: "420px",
                 margin: `0 auto ${SECTION_GAP}`,
-                padding: "20px 18px 22px",
-                borderRadius: "28px",
+                padding: "0",
+                borderRadius: "0",
                 textAlign: "center",
                 boxSizing: "border-box",
-                boxShadow: `0 20px 60px ${theme.shadow}`,
-                ...ringStyle(theme),
               }}
             >
               <h2 style={{ margin: "0 0 0.95rem", fontSize: "1.4rem", fontWeight: 900, lineHeight: 1.2 }}>
@@ -1007,7 +1040,15 @@ export default function PublicSlugPage() {
               </h2>
 
               {!subscribed ? (
-                <form onSubmit={handleSubscribe} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", position: "relative" }}>
+                <form
+                  onSubmit={handleSubscribe}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                    position: "relative",
+                  }}
+                >
                   {/* Honeypot */}
                   <input
                     type="text"
@@ -1037,7 +1078,7 @@ export default function PublicSlugPage() {
                         margin: "0 auto",
                         borderRadius: "9999px",
                         backgroundColor: theme.inputBg,
-                        border: `1px solid ${theme.border}`,
+                        border: `1px solid ${theme.border}`, // neutral only
                         padding: "0.9rem 1.1rem",
                         fontSize: "1.05rem",
                         color: theme.text,
@@ -1059,7 +1100,7 @@ export default function PublicSlugPage() {
                       alignItems: "stretch",
                       borderRadius: "9999px",
                       backgroundColor: theme.inputBg,
-                      border: `1px solid ${theme.border}`,
+                      border: `1px solid ${theme.border}`, // neutral only (no accent outline)
                       overflow: "hidden",
                       boxSizing: "border-box",
                     }}
@@ -1098,11 +1139,8 @@ export default function PublicSlugPage() {
                         fontWeight: 900,
                         cursor: submitting ? "default" : "pointer",
                         opacity: submitting ? 0.75 : 1,
-                        backgroundImage:
-                          theme.key === "launch6"
-                            ? `linear-gradient(90deg, ${theme.accent}, ${theme.accent})`
-                            : `linear-gradient(90deg, ${theme.accent}, ${theme.secondary})`,
-                        color: theme.key === "launch6" ? "#ffffff" : "#0b1020",
+                        background: theme.buttonFill, // solid (no gradient)
+                        color: theme.buttonText,
                       }}
                     >
                       {submitting ? "Joining…" : "Join"}
@@ -1110,13 +1148,29 @@ export default function PublicSlugPage() {
                   </div>
                 </form>
               ) : (
-                <div style={{ borderRadius: "12px", border: `1px solid ${theme.border}`, background: theme.surface, padding: "10px 12px", fontSize: "0.92rem", color: theme.text }}>
+                <div
+                  style={{
+                    borderRadius: "12px",
+                    border: `1px solid ${theme.border}`,
+                    background: "rgba(0,0,0,0.00)",
+                    padding: "10px 12px",
+                    fontSize: "0.92rem",
+                    color: theme.text,
+                  }}
+                >
                   You’re in! We’ll let you know about new drops.
                 </div>
               )}
 
               {emailErr ? (
-                <div id="email-error" style={{ marginTop: "0.55rem", fontSize: "0.85rem", color: "#ef4444" }}>
+                <div
+                  id="email-error"
+                  style={{
+                    marginTop: "0.55rem",
+                    fontSize: "0.85rem",
+                    color: "#ef4444",
+                  }}
+                >
                   {emailErr}
                 </div>
               ) : null}
@@ -1125,19 +1179,31 @@ export default function PublicSlugPage() {
 
           {/* LINKS */}
           {links.length > 0 && (
-            <section style={{ width: "100%", marginTop: products.length === 0 ? SECTION_GAP : 0, marginBottom: "2rem" }}>
+            <section
+              style={{
+                width: "100%",
+                marginTop: products.length === 0 ? SECTION_GAP : 0,
+                marginBottom: "2rem",
+              }}
+            >
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {links.map((l) => {
                   const safeHref = normalizeHref(l.url);
                   if (!safeHref) return null;
                   const label = l.label || l.url || "Link";
+
                   return (
-                    <div key={l.id || l.url} style={linkPillOuter}>
-                      <a href={safeHref} target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer" style={linkPillInner}>
-                        <span>{label}</span>
-                        <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>↗</span>
-                      </a>
-                    </div>
+                    <a
+                      key={l.id || l.url}
+                      href={safeHref}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      referrerPolicy="no-referrer"
+                      style={linkPill}
+                    >
+                      <span>{label}</span>
+                      <span style={{ fontSize: "0.8rem", opacity: 0.85 }}>↗</span>
+                    </a>
                   );
                 })}
               </div>
@@ -1145,7 +1211,15 @@ export default function PublicSlugPage() {
           )}
 
           {/* FOOTER */}
-          <footer style={{ fontSize: "0.9rem", color: theme.textMuted, paddingBottom: "2.25rem", width: "100%", textAlign: "center" }}>
+          <footer
+            style={{
+              fontSize: "0.9rem",
+              color: footerText,
+              paddingBottom: "2.25rem",
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.05rem" }}>
               <a
                 href="https://launch6.com"
@@ -1159,10 +1233,10 @@ export default function PublicSlugPage() {
                   padding: "0.28rem 0.55rem",
                   borderRadius: "999px",
                   textDecoration: "none",
-                  color: theme.textMuted,
+                  color: footerText,
                   fontSize: "0.85rem",
                   fontWeight: 800,
-                  background: theme.key === "launch6" ? "transparent" : "rgba(15,23,42,0.04)",
+                  background: "rgba(0,0,0,0.00)",
                   border: `1px solid ${theme.border}`,
                 }}
               >
@@ -1171,30 +1245,85 @@ export default function PublicSlugPage() {
                   src="/launch6_white.png"
                   alt="Launch6"
                   style={{
-                    height: "1.65rem", // ~25% larger than the previous 1.32rem
+                    height: "1.65rem",
                     width: "auto",
                     opacity: 0.95,
                     transform: "translateY(1px)",
                     filter: theme.footerLogoFilter,
                   }}
                 />
-                <span style={{ opacity: 0.55, fontSize: "0.78rem", marginLeft: "0.05rem" }}>↗</span>
+                <span style={{ opacity: 0.75, fontSize: "0.78rem", marginLeft: "0.05rem" }}>↗</span>
               </a>
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0.9rem" }}>
-              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer" }}>
+              <button
+                type="button"
+                style={{
+                  textDecoration: "underline",
+                  background: "transparent",
+                  border: "none",
+                  color: footerText,
+                  cursor: "pointer",
+                }}
+              >
                 Cookie preferences
               </button>
-              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer" }}>
+              <button
+                type="button"
+                style={{
+                  textDecoration: "underline",
+                  background: "transparent",
+                  border: "none",
+                  color: footerText,
+                  cursor: "pointer",
+                }}
+              >
                 Report page
               </button>
-              <button type="button" style={{ textDecoration: "underline", background: "transparent", border: "none", color: theme.textMuted, cursor: "pointer" }}>
+              <button
+                type="button"
+                style={{
+                  textDecoration: "underline",
+                  background: "transparent",
+                  border: "none",
+                  color: footerText,
+                  cursor: "pointer",
+                }}
+              >
                 Privacy
               </button>
             </div>
           </footer>
         </main>
+
+        <style jsx>{`
+          .l6-page {
+            min-height: 100vh;
+            background: ${theme.bg};
+            display: flex;
+            justify-content: center;
+          }
+
+          /* Mobile: full-bleed */
+          .l6-card {
+            width: 100%;
+            background: ${theme.surface};
+            color: ${theme.text};
+            border-radius: 0;
+          }
+
+          /* Desktop/Tablet: floating card */
+          @media (min-width: 768px) {
+            .l6-card {
+              max-width: 450px;
+              margin: 28px 0;
+              border-radius: 32px;
+              border: 1px solid ${theme.border};
+              box-shadow: 0 20px 60px ${theme.shadow};
+            }
+          }
+        `}</style>
       </div>
     </>
   );

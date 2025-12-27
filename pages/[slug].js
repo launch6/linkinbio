@@ -465,6 +465,9 @@ function DropCard({ product: p, slug, theme }) {
 
   const isPastel = theme.key === "pastel";
 
+  // Pastel-only: white product shell (houses image + all drop content)
+  const dropShellBg = isPastel ? "#fdf9f5" : theme.surface;
+
   const card = {
     width: "100%",
     maxWidth: "420px",
@@ -473,28 +476,26 @@ function DropCard({ product: p, slug, theme }) {
     textAlign: "center",
   };
 
-  // Pastel-only: wrap image + content in the “white” product container
-const pastelProductWrap = {
-  background: theme.productSurface || theme.surface,
-  border: `1px solid ${theme.productBorder || theme.border}`,
-  borderRadius: "26px",
-  padding: "14px",
-  boxShadow: `0 28px 70px rgba(15,23,42,0.14)`,
-};
-
-  const heroFrame = {
-    borderRadius: "22px",
-    overflow: "hidden",
-    background: isPastel ? (theme.productSurface || theme.surface) : theme.surface,
+  const dropShell = {
+    borderRadius: "24px",
+    background: dropShellBg,
     border: `1px solid ${theme.border}`,
-    boxShadow: isPastel ? "none" : `0 18px 48px ${theme.shadow}`,
+    boxShadow: `${ELEVATION.hero} ${theme.shadow}`,
+    overflow: "hidden",
   };
 
-  const heroInner = {
-    borderRadius: "22px",
+  const imageArea = {
+    padding: "14px 14px 0",
+    background: dropShellBg,
+    boxSizing: "border-box",
+  };
+
+  const heroFrame = {
+    borderRadius: "18px",
     overflow: "hidden",
-    width: "100%",
-    lineHeight: 0,
+    background: theme.surface,
+    border: `1px solid ${theme.border}`,
+    boxShadow: `${ELEVATION.soft} ${theme.shadow}`,
   };
 
   const heroImg = { width: "100%", height: "auto", display: "block" };
@@ -510,24 +511,24 @@ const pastelProductWrap = {
     background: theme.surface,
   };
 
-  const titleStyle = {
-    fontSize: "1.35rem",
-    fontWeight: 900,
-    margin: isPastel ? "0.95rem 0 0.25rem" : "0.95rem 0 0.25rem",
-    color: theme.text,
+  const body = {
+    padding: "14px 18px 18px",
+    boxSizing: "border-box",
   };
+
+  const titleStyle = { fontSize: "1.35rem", fontWeight: 900, margin: "0.35rem 0 0.25rem", color: theme.text };
 
   const priceStyle = {
     fontSize: "1.35rem",
     fontWeight: 900,
     margin: "0 0 0.1rem",
-    color: theme.accent, // teal in pastel
+    color: theme.accent,
   };
 
   const inventoryStyle = {
     fontSize: "0.95rem",
     fontWeight: 900,
-    color: theme.inventoryColor || theme.accent, // coral in pastel
+    color: theme.buttonFill, // “Only X left!” matches button color (Pastel coral, Launch6 purple, Modern blue)
     margin: "0 0 0.75rem",
   };
 
@@ -537,7 +538,7 @@ const pastelProductWrap = {
     color: theme.textMuted,
     margin: "0 0 1.05rem",
     whiteSpace: "pre-line",
-    padding: "0 0.5rem",
+    padding: "0 0.15rem",
   };
 
   const timerCard = {
@@ -545,9 +546,9 @@ const pastelProductWrap = {
     padding: "10px 14px 12px",
     margin: "0 auto 1.05rem",
     maxWidth: "360px",
-    border: `2px solid ${theme.accent}`, // teal in pastel
-    background: isPastel ? (theme.productSurface || theme.surface) : theme.surface,
-    boxShadow: `0 10px 26px ${theme.shadow}`,
+    border: `2px solid ${theme.accent}`,
+    background: dropShellBg,
+    boxShadow: `${ELEVATION.soft} ${theme.shadow}`,
   };
 
   const timerLabel = {
@@ -571,28 +572,24 @@ const pastelProductWrap = {
   const timerSeparator = { fontSize: "1.25rem", color: theme.accent, transform: "translateY(-1px)" };
   const timerUnits = { fontSize: "0.7rem", color: theme.textMuted, margin: 0 };
 
-const button = {
-  width: "100%",
-  borderRadius: "999px",
-  padding: "0.92rem 1.1rem",
-  fontSize: "0.98rem",
-  fontWeight: 900,
-  border: "none",
-  cursor: "pointer",
-  textDecoration: "none",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  margin: "0.2rem auto 0",
-  boxSizing: "border-box",
-  background: theme.key === "pastel"
-    ? `linear-gradient(180deg, rgba(255,255,255,0.18), rgba(0,0,0,0.00)), ${theme.buttonFill}`
-    : theme.buttonFill,
-  color: theme.buttonText,
-  boxShadow: theme.key === "pastel"
-    ? `0 18px 48px rgba(15,23,42,0.16)`
-    : `0 16px 44px ${theme.shadow}`,
-};
+  const button = {
+    width: "100%",
+    borderRadius: "999px",
+    padding: "0.92rem 1.1rem",
+    fontSize: "0.98rem",
+    fontWeight: 900,
+    border: "none",
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0.2rem auto 0",
+    boxSizing: "border-box",
+    background: theme.buttonFill,
+    color: theme.buttonText,
+    boxShadow: `${ELEVATION.card} ${theme.shadow}`,
+  };
 
   const buttonDisabled = {
     ...button,
@@ -603,70 +600,68 @@ const button = {
     opacity: 0.8,
   };
 
-  const contentBlock = (
-    <>
-      <div style={heroFrame}>
-        <div style={heroInner}>
-          {imageUrl ? (
-            <img src={imageUrl} alt={title} style={heroImg} loading="lazy" />
-          ) : (
-            <div style={heroPlaceholder}>
-              <span>Drop artwork</span>
+  return (
+    <article style={card}>
+      <div style={dropShell}>
+        <div style={imageArea}>
+          <div style={heroFrame}>
+            {imageUrl ? (
+              <img src={imageUrl} alt={title} style={heroImg} loading="lazy" />
+            ) : (
+              <div style={heroPlaceholder}>
+                <span>Drop artwork</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={body}>
+          <h2 style={titleStyle}>{title}</h2>
+
+          {priceDisplay && <p style={priceStyle}>{priceDisplay}</p>}
+
+          {inventoryText && <p style={inventoryStyle}>{inventoryText}</p>}
+
+          {description && <p style={descStyle}>{description}</p>}
+
+          {(timerTitle || showTimer) && (
+            <div style={timerCard}>
+              {timerTitle && <p style={timerLabel}>{timerTitle}</p>}
+
+              {showTimer ? (
+                <>
+                  <div style={timerValues}>
+                    {mode === "days" && (
+                      <>
+                        <span style={timerValue}>{d}</span>
+                        <span style={timerSeparator}>:</span>
+                      </>
+                    )}
+                    <span style={timerValue}>{h}</span>
+                    <span style={timerSeparator}>:</span>
+                    <span style={timerValue}>{m}</span>
+                    <span style={timerSeparator}>:</span>
+                    <span style={timerValue}>{s}</span>
+                  </div>
+                  <p style={timerUnits}>
+                    {mode === "days" ? "Days · Hours · Minutes · Seconds" : "Hours · Minutes · Seconds"}
+                  </p>
+                </>
+              ) : null}
             </div>
+          )}
+
+          {isEnded ? (
+            <button type="button" style={buttonDisabled} disabled>
+              Drop ended
+            </button>
+          ) : (
+            <a href={buyHref} style={button} className="l6-btn">
+              {buttonText}
+            </a>
           )}
         </div>
       </div>
-
-      <h2 style={titleStyle}>{title}</h2>
-
-      {priceDisplay && <p style={priceStyle}>{priceDisplay}</p>}
-
-      {inventoryText && <p style={inventoryStyle}>{inventoryText}</p>}
-
-      {description && <p style={descStyle}>{description}</p>}
-
-      {(timerTitle || showTimer) && (
-        <div style={timerCard}>
-          {timerTitle && <p style={timerLabel}>{timerTitle}</p>}
-
-          {showTimer ? (
-            <>
-              <div style={timerValues}>
-                {mode === "days" && (
-                  <>
-                    <span style={timerValue}>{d}</span>
-                    <span style={timerSeparator}>:</span>
-                  </>
-                )}
-                <span style={timerValue}>{h}</span>
-                <span style={timerSeparator}>:</span>
-                <span style={timerValue}>{m}</span>
-                <span style={timerSeparator}>:</span>
-                <span style={timerValue}>{s}</span>
-              </div>
-              <p style={timerUnits}>
-                {mode === "days" ? "Days · Hours · Minutes · Seconds" : "Hours · Minutes · Seconds"}
-              </p>
-            </>
-          ) : null}
-        </div>
-      )}
-
-      {isEnded ? (
-        <button type="button" style={buttonDisabled} disabled>
-          Drop ended
-        </button>
-      ) : (
-        <a href={buyHref} style={button} className="l6-btn">
-          {buttonText}
-        </a>
-      )}
-    </>
-  );
-
-  return (
-    <article style={card}>
-      {isPastel ? <div style={pastelProductWrap}>{contentBlock}</div> : contentBlock}
     </article>
   );
 }

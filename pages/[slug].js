@@ -117,13 +117,7 @@ function normalizeImageSrc(src) {
   return "";
 }
 
-/**
- * Theme tokens (allowlist). Keys align with /api/public allowlist: launch6 | pastel | modern
- * Palette match (your image):
- * 1) Launch6: bg #000000, accent #A855F7, surface #1F1F1F, text #FFFFFF
- * 2) Pastel:  bg #F9FAFB, accent #B9E2F5, secondary #FFD1DC, text #4B5563
- * 3) Modern:  bg #FFFFFF, accent #2563EB, secondary #64748B, text #1E293B
- */
+
 const THEME_TOKENS = {
   modern: {
     key: "modern",
@@ -157,32 +151,37 @@ const THEME_TOKENS = {
     footerLogoFilter: "invert(1)",
   },
 
-  launch6: {
-    key: "launch6",
-    label: "Launch6",
+launch6: {
+  key: "launch6",
+  label: "Launch6",
 
-    bg: "#000000",
-    surface: "#1F1F1F",
+  // page + container
+  bg: "#000000",
+  surface: "#1F1F1F",
 
-    text: "#9E5AEF",
-    textMuted: "rgba(158,90,239,0.78)",
+  // text (FIX: make UI white)
+  text: "#FFFFFF",
+  textMuted: "rgba(255,255,255,0.78)",
 
-    accent: "#9E5AEF",
-    secondary: "#9E5AEF",
+  // accents (keep purple for price/timer accents/buttons)
+  accent: "#9E5AEF",
+  secondary: "#9E5AEF",
 
-    border: "rgba(158,90,239,0.28)",
-    shadow: "rgba(0,0,0,0.80)",
-    inputBg: "rgba(255,255,255,0.06)",
+  // borders/shadows/inputs
+  border: "rgba(255,255,255,0.14)",
+  shadow: "rgba(0,0,0,0.80)",
+  inputBg: "rgba(255,255,255,0.06)",
 
-    timerAccent: "#9E5AEF",
-    socialRing: "#9E5AEF",
-    ctaBg: "#9E5AEF",
-    ctaText: "#FFFFFF",
-    linkBg: "#9E5AEF",
-    linkText: "#FFFFFF",
+  // explicit UI tokens (we’ll wire more of these next)
+  timerAccent: "#9E5AEF",
+  socialRing: "#9E5AEF",
+  ctaBg: "#9E5AEF",
+  ctaText: "#FFFFFF",
+  linkBg: "#9E5AEF",
+  linkText: "#FFFFFF",
 
-    footerLogoFilter: "none",
-  },
+  footerLogoFilter: "none",
+},
 
   pastel: {
     key: "pastel",

@@ -136,7 +136,7 @@ const THEME_TOKENS = {
 
     // subtle chrome
     border: "rgba(36,44,63,0.14)",
-    shadow: "rgba(15,23,42,0.14)",
+    shadow: "rgba(15,23,42,0.22)",
     inputBg: "rgba(36,44,63,0.06)",
     inputBorder: "rgba(36,44,63,0.14)",
 
@@ -176,7 +176,7 @@ const THEME_TOKENS = {
     textMuted: "rgba(255,255,255,0.78)",
 
     border: "rgba(255,255,255,0.14)",
-    shadow: "rgba(0,0,0,0.80)",
+    shadow: "rgba(0,0,0,0.55)",
     inputBg: "rgba(255,255,255,0.08)",
     inputBorder: "transparent",
 
@@ -216,7 +216,7 @@ const THEME_TOKENS = {
     textMuted: "rgba(59,63,69,0.76)",
 
     border: "rgba(59,63,69,0.14)",
-    shadow: "rgba(15,23,42,0.18)",
+    shadow: "rgba(15,23,42,0.20)",
 
     // inputs sit on the outside container
     inputBg: "rgba(253,249,245,0.75)",
@@ -333,6 +333,12 @@ function SocialIcon({ type }) {
 
   return null;
 }
+const ELEVATION = {
+  hero: "0 18px 48px",
+  card: "0 16px 44px",
+  soft: "0 10px 26px",
+  float: "0 26px 80px",
+};
 
 function ThemedSocialButton({ href, label, iconType, theme }) {
   if (!href) return null;
@@ -864,7 +870,7 @@ export default function PublicSlugPage() {
     textDecoration: "none",
     fontSize: "0.98rem",
     fontWeight: 900,
-    boxShadow: `0 16px 44px ${theme.shadow}`,
+    boxShadow: `${ELEVATION.card} ${theme.shadow}`,
     boxSizing: "border-box",
   };
 
@@ -916,7 +922,7 @@ export default function PublicSlugPage() {
     fontWeight: 800,
     background: "rgba(0,0,0,0)",
     border: `1px solid ${theme.border}`,
-    boxShadow: `0 10px 26px ${theme.shadow}`,
+    boxShadow: `${ELEVATION.soft} ${theme.shadow}`,
   };
 
   const footerLinkBtn = {
@@ -962,7 +968,7 @@ export default function PublicSlugPage() {
                   border: `1px solid ${theme.border}`,
                   background: theme.surface,
                   padding: "16px",
-                  boxShadow: `0 18px 48px ${theme.shadow}`,
+                  bboxShadow: `${ELEVATION.hero} ${theme.shadow}`,
                 }}
               >
                 <div style={{ fontWeight: 900, marginBottom: "6px", color: theme.text }}>Can’t load page</div>
@@ -1305,7 +1311,7 @@ export default function PublicSlugPage() {
               margin: 0 auto;
               border-radius: 40px;
               border: 1px solid ${theme.border};
-              box-shadow: 0 26px 80px ${theme.shadow};
+              box-shadow: ${ELEVATION.float} ${theme.shadow};
               overflow: hidden;
             }
             .l6-inner {

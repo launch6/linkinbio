@@ -55,13 +55,11 @@ export default async function handler(req, res) {
       },
       displayName: "New Creator",
       bio: "",
-      avatarUrl: "",
+avatarUrl: "",
 theme: "launch6",
 
 links: [],
 
-
-      links: [],                      // editor expects arrays present
       products: [],                   // MVP: manual fulfillment
       klaviyo: {
         enabled: false,

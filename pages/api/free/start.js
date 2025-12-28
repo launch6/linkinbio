@@ -56,10 +56,8 @@ export default async function handler(req, res) {
       displayName: "New Creator",
       bio: "",
       avatarUrl: "",
-      theme: {
-        preset: "dark",
-        accent: "#22c55e",
-      },
+            theme: "launch6",
+
       links: [],                      // editor expects arrays present
       products: [],                   // MVP: manual fulfillment
       klaviyo: {

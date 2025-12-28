@@ -124,8 +124,8 @@ const THEME_CONFIG = [
   {
     key: "pastel",
     label: "Pastel Dreams",
-    left: "#72b0ac",  // was #B9E2F5
-    right: "#f39b88", // was #FFD1DC
+    left: "#72b0ac", 
+    right: "#f39b88", 
   },
   {
     key: "modern",

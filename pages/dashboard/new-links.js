@@ -122,10 +122,10 @@ const THEME_CONFIG = [
     right: '#A855F7',
   },
   {
-    key: 'pastel',
-    label: 'Pastel Dreams',
-    left: '#B9E2F5',
-    right: '#FFD1DC',
+    key: "pastel",
+    label: "Pastel Dreams",
+    left: "#72b0ac",  // was #B9E2F5
+    right: "#f39b88", // was #FFD1DC
   },
   {
     key: 'modern',

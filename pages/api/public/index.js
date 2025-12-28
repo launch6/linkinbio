@@ -53,7 +53,6 @@ function normalizeThemeValue(theme) {
   return "launch6";
 }
 
-
 // --- minimal defang + url validation (preserves production data:image/ images) ---
 function defangText(v, maxLen = 5000) {
   let s = typeof v === "string" ? v : v == null ? "" : String(v);
@@ -125,6 +124,18 @@ function sanitizeHrefPrice(v) {
   const s = normalizeSchemelessToHttps(raw);
   if (isHttpUrl(s)) return s;
   return "";
+}
+
+function sanitizeSocialObject(socialRaw) {
+  const s = socialRaw && typeof socialRaw === "object" ? socialRaw : {};
+  return {
+    instagram: sanitizeHrefLink(s.instagram || ""),
+    facebook: sanitizeHrefLink(s.facebook || ""),
+    tiktok: sanitizeHrefLink(s.tiktok || ""),
+    youtube: sanitizeHrefLink(s.youtube || ""),
+    x: sanitizeHrefLink(s.x || ""),
+    website: sanitizeHrefLink(s.website || ""),
+  };
 }
 
 // GET /api/public?slug=<publicSlug or slug>
@@ -229,20 +240,7 @@ export default async function handler(req, res) {
       : [];
 
     const social = sanitizeSocialObject(profileDoc.social);
-    function sanitizeSocialObject(socialRaw) {
-  const s = socialRaw && typeof socialRaw === "object" ? socialRaw : {};
-  return {
-    instagram: sanitizeHrefLink(s.instagram || ""),
-    facebook: sanitizeHrefLink(s.facebook || ""),
-    tiktok: sanitizeHrefLink(s.tiktok || ""),
-    youtube: sanitizeHrefLink(s.youtube || ""),
-    x: sanitizeHrefLink(s.x || ""),
-    website: sanitizeHrefLink(s.website || ""),
-  };
-}
-
-
-      const safeTheme = normalizeThemeValue(profileDoc.theme);
+    const safeTheme = normalizeThemeValue(profileDoc.theme);
 
     return send(res, 200, {
       ok: true,

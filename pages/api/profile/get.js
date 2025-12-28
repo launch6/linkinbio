@@ -32,6 +32,32 @@ function send(res, status, body) {
   noStore(res);
   return res.status(status).json(body);
 }
+const ALLOWED_THEMES = new Set(["launch6", "pastel", "modern"]);
+
+function normalizeThemeValue(theme) {
+  // New format: "launch6" | "pastel" | "modern"
+  if (typeof theme === "string") {
+    const t = theme.trim().toLowerCase();
+    return ALLOWED_THEMES.has(t) ? t : "launch6";
+  }
+
+  // Legacy formats: { key }, { preset }, { theme }, etc.
+  if (theme && typeof theme === "object") {
+    const raw =
+      (typeof theme.key === "string" && theme.key) ||
+      (typeof theme.preset === "string" && theme.preset) ||
+      (typeof theme.theme === "string" && theme.theme) ||
+      "";
+
+    const t = String(raw).trim().toLowerCase();
+
+    // legacy mapping
+    if (t === "dark") return "launch6";
+    if (ALLOWED_THEMES.has(t)) return t;
+  }
+
+  return "launch6";
+}
 
 // GET /api/profile/get?editToken=...
 export default async function handler(req, res) {
@@ -94,12 +120,8 @@ export default async function handler(req, res) {
         publicSlug: doc.publicSlug || doc.slug || "",
         slug: doc.slug || "",
         status: doc.status || "active",
-        theme:
-  (typeof doc.theme === "string"
-    ? doc.theme
-    : doc.theme && typeof doc.theme === "object"
-      ? (doc.theme.key || doc.theme.preset)
-      : null) || "launch6",
+        theme: normalizeThemeValue(doc.theme),
+
 
         // prefer bio, fall back to legacy description
         bio: doc.bio || doc.description || "",

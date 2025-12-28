@@ -94,7 +94,12 @@ export default async function handler(req, res) {
         publicSlug: doc.publicSlug || doc.slug || "",
         slug: doc.slug || "",
         status: doc.status || "active",
-        theme: doc.theme || "launch6",
+        theme:
+  (typeof doc.theme === "string"
+    ? doc.theme
+    : doc.theme && typeof doc.theme === "object"
+      ? (doc.theme.key || doc.theme.preset)
+      : null) || "launch6",
 
         // prefer bio, fall back to legacy description
         bio: doc.bio || doc.description || "",

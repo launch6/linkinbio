@@ -26,6 +26,34 @@ function send(res, status, body) {
   return res.status(status).json(body);
 }
 
+const ALLOWED_THEMES = new Set(["launch6", "pastel", "modern"]);
+
+function normalizeThemeValue(theme) {
+  // New format: "launch6" | "pastel" | "modern"
+  if (typeof theme === "string") {
+    const t = theme.trim().toLowerCase();
+    return ALLOWED_THEMES.has(t) ? t : "launch6";
+  }
+
+  // Legacy formats: { key }, { preset }, { theme }, etc.
+  if (theme && typeof theme === "object") {
+    const raw =
+      (typeof theme.key === "string" && theme.key) ||
+      (typeof theme.preset === "string" && theme.preset) ||
+      (typeof theme.theme === "string" && theme.theme) ||
+      "";
+
+    const t = String(raw).trim().toLowerCase();
+
+    // legacy mapping
+    if (t === "dark") return "launch6";
+    if (ALLOWED_THEMES.has(t)) return t;
+  }
+
+  return "launch6";
+}
+
+
 // --- minimal defang + url validation (preserves production data:image/ images) ---
 function defangText(v, maxLen = 5000) {
   let s = typeof v === "string" ? v : v == null ? "" : String(v);
@@ -99,17 +127,33 @@ function sanitizeHrefPrice(v) {
   return "";
 }
 
-function sanitizeSocialObject(socialRaw) {
-  const s = socialRaw && typeof socialRaw === "object" ? socialRaw : {};
-  return {
-    instagram: sanitizeHrefLink(s.instagram || ""),
-    facebook: sanitizeHrefLink(s.facebook || ""),
-    tiktok: sanitizeHrefLink(s.tiktok || ""),
-    youtube: sanitizeHrefLink(s.youtube || ""),
-    x: sanitizeHrefLink(s.x || ""),
-    website: sanitizeHrefLink(s.website || ""),
-  };
+const ALLOWED_THEMES = new Set(["launch6", "pastel", "modern"]);
+
+function normalizeThemeValue(theme) {
+  // New format: "launch6" | "pastel" | "modern"
+  if (typeof theme === "string") {
+    const t = theme.trim().toLowerCase();
+    return ALLOWED_THEMES.has(t) ? t : "launch6";
+  }
+
+  // Legacy formats: { key }, { preset }, { theme }, etc.
+  if (theme && typeof theme === "object") {
+    const raw =
+      (typeof theme.key === "string" && theme.key) ||
+      (typeof theme.preset === "string" && theme.preset) ||
+      (typeof theme.theme === "string" && theme.theme) ||
+      "";
+
+    const t = String(raw).trim().toLowerCase();
+
+    // legacy mapping
+    if (t === "dark") return "launch6";
+    if (ALLOWED_THEMES.has(t)) return t;
+  }
+
+  return "launch6";
 }
+
 
 // GET /api/public?slug=<publicSlug or slug>
 export default async function handler(req, res) {

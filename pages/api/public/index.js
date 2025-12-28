@@ -214,9 +214,7 @@ export default async function handler(req, res) {
 
     const social = sanitizeSocialObject(profileDoc.social);
 
-    const allowedThemes = new Set(["launch6", "pastel", "modern"]);
-    const rawTheme = typeof profileDoc.theme === "string" ? profileDoc.theme.trim().toLowerCase() : "";
-    const safeTheme = allowedThemes.has(rawTheme) ? rawTheme : "launch6";
+      const safeTheme = normalizeThemeValue(profileDoc.theme);
 
     return send(res, 200, {
       ok: true,

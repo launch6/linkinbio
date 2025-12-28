@@ -116,10 +116,10 @@ const SOCIAL_CONFIG = [
 
 const THEME_CONFIG = [
   {
-    key: 'launch6',
-    label: 'Launch6',
-    left: '#000000',
-    right: '#A855F7',
+    key: "launch6",
+    label: "Launch6",
+    left: "#000000",
+    right: "#A855F7",
   },
   {
     key: "pastel",
@@ -128,10 +128,10 @@ const THEME_CONFIG = [
     right: "#f39b88", // was #FFD1DC
   },
   {
-    key: 'modern',
-    label: 'Modern Pro',
-    left: '#FFFFFF',
-    right: '#2563EB',
+    key: "modern",
+    label: "Modern Pro",
+    left: "#FFFFFF",
+    right: "#2563EB",
   },
 ];
 

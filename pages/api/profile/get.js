@@ -122,7 +122,6 @@ export default async function handler(req, res) {
         status: doc.status || "active",
         theme: normalizeThemeValue(doc.theme),
 
-
         // prefer bio, fall back to legacy description
         bio: doc.bio || doc.description || "",
         // ✅ FIX: include avatarUrl

@@ -109,7 +109,8 @@ async function updateFromSubscriptionCreated(sub) {
 
   const customerId = sub?.customer || null;
   const subscriptionId = sub?.id || null;
-  const priceId = sub?.items?.data?.[0]?.price?.id || null;
+    const priceId = sub?.items?.data?.[0]?.price?.id || null;
+  if (!isPlanPriceId(priceId)) return;
   const planInfo = envPriceToPlan(priceId);
 
   await db.collection("profiles").updateOne(

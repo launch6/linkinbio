@@ -243,13 +243,16 @@ export default async function handler(req, res) {
 
     switch (type) {
       case "checkout.session.completed": {
-        // Keep your plan/profile logic
-        try {
+      // Plan/profile updates: only for Launch6 plan purchases (never for coaching checkouts)
+      try {
+        const priceId = obj?.metadata?.priceId || null;
+        if (isPlanPriceId(priceId)) {
           await upsertFromCheckoutSession(obj);
-        } catch (e) {
-          console.error("checkout.session.completed profile update error", { message: e?.message });
-          // continue; profile plan update failing should not block stock decrement
         }
+      } catch (e) {
+        console.error("checkout.session.completed profile update error", { message: e?.message });
+        // continue; plan update failing should not block stock decrement
+      }
 
         // New: product stock decrement — requires client_reference_id set by /api/products/buy
         const productId = obj?.client_reference_id || null;

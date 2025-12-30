@@ -39,23 +39,32 @@ async function readRawBody(req) {
   });
 }
 
-// Map Stripe price IDs to plans (kept from your version)
+// Map Stripe plan price IDs (env) to Launch6 plans (no unsafe defaults)
+const PLAN_PRICE_MAP = [
+  { env: "STRIPE_PRICE_STARTER_MONTHLY", plan: "starter", cadence: "monthly" },
+  { env: "STRIPE_PRICE_STARTER_LIFETIME", plan: "starter", cadence: "lifetime" },
+  { env: "STRIPE_PRICE_PRO_MONTHLY", plan: "pro", cadence: "monthly" },
+  { env: "STRIPE_PRICE_PRO_LIFETIME", plan: "pro", cadence: "lifetime" },
+  { env: "STRIPE_PRICE_BUSINESS_MONTHLY", plan: "business", cadence: "monthly" },
+  { env: "STRIPE_PRICE_BUSINESS_LIFETIME", plan: "business", cadence: "lifetime" },
+];
+
+function isPlanPriceId(priceId) {
+  if (!priceId) return false;
+  for (const row of PLAN_PRICE_MAP) {
+    if (process.env[row.env] && process.env[row.env] === priceId) return true;
+  }
+  return false;
+}
+
 function envPriceToPlan(priceId) {
-  if (!priceId) return { plan: "free", cadence: null };
-  const map = [
-    { env: "STRIPE_PRICE_STARTER_MONTHLY", plan: "starter", cadence: "monthly" },
-    { env: "STRIPE_PRICE_STARTER_LIFETIME", plan: "starter", cadence: "lifetime" },
-    { env: "STRIPE_PRICE_PRO_MONTHLY", plan: "pro", cadence: "monthly" },
-    { env: "STRIPE_PRICE_PRO_LIFETIME", plan: "pro", cadence: "lifetime" },
-    { env: "STRIPE_PRICE_BUSINESS_MONTHLY", plan: "business", cadence: "monthly" },
-    { env: "STRIPE_PRICE_BUSINESS_LIFETIME", plan: "business", cadence: "lifetime" },
-  ];
-  for (const row of map) {
+  if (!priceId) return { plan: null, cadence: null };
+  for (const row of PLAN_PRICE_MAP) {
     if (process.env[row.env] && process.env[row.env] === priceId) {
       return { plan: row.plan, cadence: row.cadence };
     }
   }
-  return { plan: "starter", cadence: "monthly" };
+  return { plan: null, cadence: null };
 }
 
 // ---------- Plan/Profile updates (kept) ----------

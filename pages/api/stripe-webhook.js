@@ -133,6 +133,7 @@ async function markInvoicePaid(inv) {
 
   const customerId = inv?.customer || null;
   const priceId = inv?.lines?.data?.[0]?.price?.id || null;
+  if (!isPlanPriceId(priceId)) return;
   const planInfo = envPriceToPlan(priceId);
 
   await db.collection("profiles").updateOne(

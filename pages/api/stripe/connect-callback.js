@@ -1,9 +1,23 @@
 // pages/api/stripe/connect-callback.js
-import Stripe from 'stripe';
+import Stripe from "stripe";
+import { MongoClient } from "mongodb";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-06-20', // same as your other Stripe code
+  apiVersion: "2024-06-20",
 });
+
+const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB = process.env.MONGODB_DB || "linkinbio";
+
+let cachedClient = null;
+async function getClient() {
+  if (cachedClient) return cachedClient;
+  if (!MONGODB_URI) throw new Error("Missing MONGODB_URI");
+  const c = new MongoClient(MONGODB_URI);
+  await c.connect();
+  cachedClient = c;
+  return c;
+}
 
 export default async function handler(req, res) {
   const { code, state } = req.query || {};
@@ -32,10 +46,26 @@ export default async function handler(req, res) {
         .send('Stripe did not return a connected account.');
     }
 
-    // Later: store { onboardingToken: state, stripeAccountId: connectedAccountId } in Mongo
-    console.log('[connect-callback] Connected account linked', {
-      onboardingToken: state,
+        // Persist to the profile tied to this onboarding token (editToken)
+    const db = (await getClient()).db(MONGODB_DB);
+
+    const r = await db.collection("profiles").updateOne(
+      { editToken: String(state) },
+      {
+        $set: {
+          updatedAt: new Date(),
+          "stripe.accountId": connectedAccountId,
+          "stripe.connectedAt": new Date(),
+          "stripe.lastEvent": "connect.oauth.completed",
+        },
+      }
+    );
+
+    console.log("[connect-callback] Connected account linked", {
+      onboardingToken: String(state),
       stripeAccountId: connectedAccountId,
+      matched: r.matchedCount,
+      modified: r.modifiedCount,
     });
 
     // Build base URL from current host (works in preview + prod)

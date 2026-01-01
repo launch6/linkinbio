@@ -2,8 +2,7 @@
 
 export default async function handler(req, res) {
   // Read envs once at the top
-  const clientId =
-    process.env.STRIPE_CLIENT_ID || process.env.STRIPE_CONNECT_CLIENT_ID;
+  const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
   const redirectUrl = process.env.STRIPE_CONNECT_REDIRECT_URL;
 
   // 🔍 DEBUG MODE:

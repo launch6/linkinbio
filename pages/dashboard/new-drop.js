@@ -401,6 +401,7 @@ const productPayload = {
 
   priceCents:
     typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
+    priceUrl: selectedPriceUrl || '',
   priceDisplay: selectedPriceDisplay || '',
   priceText: selectedPriceDisplay || '',
   dropStartsAt: isTimerEnabled ? startsAt : '',

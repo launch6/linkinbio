@@ -11,6 +11,36 @@ const DRAFT_STORAGE_PREFIX = 'launch6_new_drop_draft';
 // Persist token across Stripe redirect (Stripe sometimes returns without it)
 const LAST_TOKEN_KEY = 'launch6_last_edit_token';
 
+// Placeholder products (until Stripe product list is wired)
+// IMPORTANT: Each option must have a priceUrl or you will hit ?reason=noprice
+const PLACEHOLDER_PRODUCTS = [
+  {
+    id: 'prod_1',
+    label: 'My Amazing Art Piece (Price: $150)',
+    priceCents: 15000,
+    priceDisplay: '$150.00',
+    // Replace with your real payment link when ready
+    priceUrl:
+      'https://buy.stripe.com/test_eVqbJ135y29D3JU0vz4Ni02?client_reference_id=prod_1&l6_slug=555',
+  },
+  {
+    id: 'prod_2',
+    label: 'Another Product ($50)',
+    priceCents: 5000,
+    priceDisplay: '$50.00',
+    // Replace with your real payment link when ready
+    priceUrl: '',
+  },
+];
+
+function isNonEmptyString(v) {
+  return typeof v === 'string' && v.trim().length > 0;
+}
+
+function safeTrim(v) {
+  return typeof v === 'string' ? v.trim() : '';
+}
+
 export default function NewDrop() {
   const router = useRouter();
   const { token, stripe_connected } = router.query;
@@ -30,11 +60,13 @@ export default function NewDrop() {
   // Stripe / product state
   const [stripeConnected, setStripeConnected] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
+
   const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedPriceCents, setSelectedPriceCents] = useState(null);
   const [selectedPriceDisplay, setSelectedPriceDisplay] = useState('');
-  const [saving, setSaving] = useState(false);
   const [selectedPriceUrl, setSelectedPriceUrl] = useState('');
+
+  const [saving, setSaving] = useState(false);
 
   // Drop image state
   const [imageFile, setImageFile] = useState(null);
@@ -50,15 +82,14 @@ export default function NewDrop() {
     if (!router.isReady) return;
     if (typeof window === 'undefined') return;
 
-    const qToken = typeof token === 'string' ? token.trim() : '';
+    const qToken = safeTrim(token);
     const persisted =
-      (window.sessionStorage.getItem(LAST_TOKEN_KEY) || '').trim() ||
-      (window.localStorage.getItem(LAST_TOKEN_KEY) || '').trim();
+      safeTrim(window.sessionStorage.getItem(LAST_TOKEN_KEY)) ||
+      safeTrim(window.localStorage.getItem(LAST_TOKEN_KEY));
 
     const next = qToken || persisted || '';
     setResolvedToken(next);
 
-    // Persist it for the Stripe round-trip
     if (next) {
       try {
         window.sessionStorage.setItem(LAST_TOKEN_KEY, next);
@@ -84,12 +115,8 @@ export default function NewDrop() {
   }, []);
 
   // --- Draft storage helpers ----------------------------------------------
-
   const getDraftKey = () => {
-    const t =
-      typeof resolvedToken === 'string' && resolvedToken.trim()
-        ? resolvedToken.trim()
-        : 'default';
+    const t = safeTrim(resolvedToken) ? safeTrim(resolvedToken) : 'default';
     return `${DRAFT_STORAGE_PREFIX}_${t}`;
   };
 
@@ -107,16 +134,20 @@ export default function NewDrop() {
       isTimerEnabled,
       startsAt,
       endsAt,
-      // keep in payload too (best effort); primary persistence is sessionStorage
-      imagePreview,
+
+      // Stripe selection
       selectedProductId,
       selectedPriceCents,
       selectedPriceDisplay,
+      selectedPriceUrl,
+
+      // keep in payload too (best effort); primary persistence is sessionStorage
+      imagePreview,
     };
 
-    // Always try to stash imagePreview in sessionStorage (usually more reliable here)
+    // Try to stash imagePreview in sessionStorage (often more reliable for base64)
     try {
-      if (typeof imagePreview === 'string' && imagePreview) {
+      if (isNonEmptyString(imagePreview)) {
         window.sessionStorage.setItem(getImagePreviewKey(), imagePreview);
       } else {
         window.sessionStorage.removeItem(getImagePreviewKey());
@@ -133,10 +164,7 @@ export default function NewDrop() {
       try {
         const safePayload = { ...payload, imagePreview: null };
         window.localStorage.setItem(getDraftKey(), JSON.stringify(safePayload));
-        console.error(
-          '[new-drop] Draft saved without imagePreview (storage full).',
-          err
-        );
+        console.error('[new-drop] Draft saved without imagePreview (storage full).', err);
       } catch (err2) {
         console.error('[new-drop] Failed to save draft', err2);
       }
@@ -147,7 +175,10 @@ export default function NewDrop() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!router.isReady) return;
-    if (!resolvedToken && typeof token === 'undefined') return; // wait until token resolution stabilizes
+
+    // Wait until token resolution stabilizes
+    const t = safeTrim(resolvedToken) || safeTrim(token);
+    if (!t && typeof token === 'undefined') return;
 
     try {
       const raw = window.localStorage.getItem(getDraftKey());
@@ -155,23 +186,17 @@ export default function NewDrop() {
         const d = JSON.parse(raw);
 
         if (typeof d.dropTitle === 'string') setDropTitle(d.dropTitle);
-        if (typeof d.dropDescription === 'string')
-          setDropDescription(d.dropDescription);
+        if (typeof d.dropDescription === 'string') setDropDescription(d.dropDescription);
         if (typeof d.quantity === 'string') setQuantity(d.quantity);
         if (typeof d.btnText === 'string') setBtnText(d.btnText);
-        if (typeof d.isTimerEnabled === 'boolean')
-          setIsTimerEnabled(d.isTimerEnabled);
+        if (typeof d.isTimerEnabled === 'boolean') setIsTimerEnabled(d.isTimerEnabled);
         if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
         if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
-        if (typeof d.selectedProductId === 'string')
-          setSelectedProductId(d.selectedProductId);
-        if (typeof d.selectedPriceDisplay === 'string')
-          setSelectedPriceDisplay(d.selectedPriceDisplay);
-        if (typeof d.selectedPriceCents === 'number')
-          setSelectedPriceCents(d.selectedPriceCents);
 
-        // Do NOT eagerly set imagePreview from localStorage yet.
-        // We prefer sessionStorage first.
+        if (typeof d.selectedProductId === 'string') setSelectedProductId(d.selectedProductId);
+        if (typeof d.selectedPriceDisplay === 'string') setSelectedPriceDisplay(d.selectedPriceDisplay);
+        if (typeof d.selectedPriceCents === 'number') setSelectedPriceCents(d.selectedPriceCents);
+        if (typeof d.selectedPriceUrl === 'string') setSelectedPriceUrl(d.selectedPriceUrl);
       }
     } catch (err) {
       console.error('[new-drop] Failed to load draft', err);
@@ -180,14 +205,13 @@ export default function NewDrop() {
     // Restore imagePreview (sessionStorage -> localStorage -> null)
     try {
       const sessionImg = window.sessionStorage.getItem(getImagePreviewKey());
-      if (typeof sessionImg === 'string' && sessionImg) {
+      if (isNonEmptyString(sessionImg)) {
         setImagePreview(sessionImg);
       } else {
-        // fallback to localStorage value if present
         const raw2 = window.localStorage.getItem(getDraftKey());
         if (raw2) {
           const d2 = JSON.parse(raw2);
-          if (typeof d2.imagePreview === 'string' && d2.imagePreview) {
+          if (isNonEmptyString(d2.imagePreview)) {
             setImagePreview(d2.imagePreview);
           }
         }
@@ -226,26 +250,25 @@ export default function NewDrop() {
     selectedProductId,
     selectedPriceCents,
     selectedPriceDisplay,
+    selectedPriceUrl,
   ]);
 
   // --- Navigation helper ---------------------------------------------------
-
   const goToStep2 = () => {
     const base = '/dashboard/new-links';
-    const t = resolvedToken || (typeof token === 'string' ? token : '');
+    const t = safeTrim(resolvedToken) || safeTrim(token);
     const target = t ? `${base}?token=${encodeURIComponent(t)}` : base;
     window.location.href = target;
   };
 
   const goToStep4 = () => {
     const base = '/dashboard/new-email';
-    const t = resolvedToken || (typeof token === 'string' ? token : '');
+    const t = safeTrim(resolvedToken) || safeTrim(token);
     const target = t ? `${base}?token=${encodeURIComponent(t)}` : base;
     window.location.href = target;
   };
 
   // --- Image handling ------------------------------------------------------
-
   const handleImageSelect = (file) => {
     if (!file) return;
 
@@ -293,27 +316,25 @@ export default function NewDrop() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    // Clear stored preview
+
     if (typeof window !== 'undefined') {
       try {
         window.sessionStorage.removeItem(getImagePreviewKey());
       } catch {}
-      // keep text draft intact
       saveDraftToStorage();
     }
   };
 
   // --- Stripe connect handler ---------------------------------------------
-
   const handleConnectStripe = async () => {
     if (connectingStripe) return;
 
-    // save current work so returning from Stripe restores everything
+    // Save current work so returning from Stripe restores everything
     saveDraftToStorage();
 
     setConnectingStripe(true);
     try {
-      const t = resolvedToken || (typeof token === 'string' ? token : '');
+      const t = safeTrim(resolvedToken) || safeTrim(token);
 
       const res = await fetch('/api/stripe/connect-link', {
         method: 'POST',
@@ -341,12 +362,40 @@ export default function NewDrop() {
     }
   };
 
-  // --- Form submit ---------------------------------------------------------
+  // --- Product selection handler ------------------------------------------
+  const handleProductChange = (e) => {
+    const value = e.target.value;
+    setSelectedProductId(value);
 
+    // If placeholder option selected, clear everything
+    if (!value) {
+      setSelectedPriceCents(null);
+      setSelectedPriceDisplay('');
+      setSelectedPriceUrl('');
+      return;
+    }
+
+    const idx = e.target.selectedIndex;
+    const opt = e.target.options[idx];
+
+    const centsAttr = opt?.getAttribute('data-pricecents');
+    const displayAttr = opt?.getAttribute('data-pricedisplay');
+    const urlAttr = opt?.getAttribute('data-priceurl');
+
+    setSelectedPriceCents(
+      centsAttr != null && centsAttr !== '' && Number.isFinite(Number(centsAttr))
+        ? Number(centsAttr)
+        : null
+    );
+    setSelectedPriceDisplay(displayAttr || '');
+    setSelectedPriceUrl(urlAttr || '');
+  };
+
+  // --- Form submit ---------------------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!dropTitle.trim()) {
+    if (!safeTrim(dropTitle)) {
       alert('Add a title for this drop before continuing.');
       return;
     }
@@ -356,12 +405,19 @@ export default function NewDrop() {
       return;
     }
 
-    if (!selectedProductId) {
-      alert('Choose which Stripe product you want to sell.');
+    if (!safeTrim(selectedProductId)) {
+      alert('Choose which product you want to sell.');
       return;
     }
 
-    if (quantity.trim()) {
+    if (!safeTrim(selectedPriceUrl)) {
+      alert(
+        'This product is missing a payment link (priceUrl). Add data-priceurl for the selected product option.'
+      );
+      return;
+    }
+
+    if (safeTrim(quantity)) {
       const n = Number(quantity);
       if (!Number.isInteger(n) || n <= 0) {
         alert('Quantity must be a whole number (leave blank for open edition).');
@@ -376,9 +432,7 @@ export default function NewDrop() {
 
     if (saving) return;
 
-    const editToken =
-      (resolvedToken || (typeof token === 'string' ? token : '')).trim();
-
+    const editToken = safeTrim(resolvedToken) || safeTrim(token);
     if (!editToken) {
       alert('Missing edit token. Restart onboarding from Step 1.');
       return;
@@ -387,33 +441,36 @@ export default function NewDrop() {
     saveDraftToStorage();
     setSaving(true);
 
-    const qty = quantity.trim() ? Number(quantity) : null;
+    const qty = safeTrim(quantity) ? Number(quantity) : null;
 
-const productPayload = {
-  id: selectedProductId || `p_${Date.now()}`,
-  title: dropTitle.trim(),
-  description: dropDescription.trim(),
+    const productPayload = {
+      id: selectedProductId || `p_${Date.now()}`,
+      title: safeTrim(dropTitle),
+      description: safeTrim(dropDescription),
 
-  // store in multiple fields so old + new readers can find it
-  heroImageUrl: imagePreview || '',
-  imageUrl: imagePreview || '',
-  image: imagePreview || '',
+      // store in multiple fields so old + new readers can find it
+      heroImageUrl: imagePreview || '',
+      imageUrl: imagePreview || '',
+      image: imagePreview || '',
 
-  priceCents:
-    typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
-    priceUrl: selectedPriceUrl || '',
-  priceDisplay: selectedPriceDisplay || '',
-  priceText: selectedPriceDisplay || '',
-  dropStartsAt: isTimerEnabled ? startsAt : '',
-  dropEndsAt: isTimerEnabled ? endsAt : '',
-  showTimer: !!isTimerEnabled,
-  showInventory: qty !== null,
-  unitsTotal: qty,
-  unitsLeft: qty,
-  buttonText: btnText.trim() || 'Buy Now',
-  published: true,
-};
+      // critical for /api/products/buy guard
+      priceUrl: safeTrim(selectedPriceUrl),
 
+      priceCents: typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
+      priceDisplay: selectedPriceDisplay || '',
+      priceText: selectedPriceDisplay || '',
+
+      dropStartsAt: isTimerEnabled ? startsAt : '',
+      dropEndsAt: isTimerEnabled ? endsAt : '',
+      showTimer: !!isTimerEnabled,
+
+      showInventory: qty !== null,
+      unitsTotal: qty,
+      unitsLeft: qty,
+
+      buttonText: safeTrim(btnText) || 'Buy Now',
+      published: true,
+    };
 
     try {
       const resp = await fetch('/api/products', {
@@ -425,29 +482,29 @@ const productPayload = {
         }),
       });
 
-const raw = await resp.text().catch(() => "");
-let json = {};
-try {
-  json = raw ? JSON.parse(raw) : {};
-} catch {}
+      const raw = await resp.text().catch(() => '');
+      let json = {};
+      try {
+        json = raw ? JSON.parse(raw) : {};
+      } catch {}
 
-if (!resp.ok || !json?.ok) {
-  console.error("SAVE DROP FAILED", {
-    status: resp.status,
-    statusText: resp.statusText,
-    raw,
-    json,
-  });
+      if (!resp.ok || !json?.ok) {
+        console.error('SAVE DROP FAILED', {
+          status: resp.status,
+          statusText: resp.statusText,
+          raw,
+          json,
+        });
 
-  const msg =
-    json?.error ||
-    (raw && raw.slice(0, 180)) ||
-    `Save failed (${resp.status}). Open DevTools → Console.`;
+        const msg =
+          json?.error ||
+          (raw && raw.slice(0, 180)) ||
+          `Save failed (${resp.status}). Open DevTools → Console.`;
 
-  alert(msg);
-  setSaving(false);
-  return;
-}
+        alert(msg);
+        setSaving(false);
+        return;
+      }
 
       goToStep4();
     } catch (err) {
@@ -458,7 +515,6 @@ if (!resp.ok || !json?.ok) {
   };
 
   // --- Render --------------------------------------------------------------
-
   return (
     <main className="onboarding-root">
       <div className="logo-row">
@@ -474,9 +530,7 @@ if (!resp.ok || !json?.ok) {
           <p className="step-label">STEP 3 OF 4</p>
           <h1 className="title">Setup product drop</h1>
 
-          <p className="subtitle">
-            Define your drop details and connect your payment processor.
-          </p>
+          <p className="subtitle">Define your drop details and connect your payment processor.</p>
 
           <form onSubmit={handleSubmit} className="stack-form">
             <section className="input-group">
@@ -499,18 +553,10 @@ if (!resp.ok || !json?.ok) {
 
                 {imagePreview ? (
                   <>
-                    <img
-                      src={imagePreview}
-                      alt="Drop art preview"
-                      className="drop-image-preview"
-                    />
+                    <img src={imagePreview} alt="Drop art preview" className="drop-image-preview" />
                     <div className="image-overlay">
                       <span className="image-overlay-text">Tap to change</span>
-                      <button
-                        type="button"
-                        className="image-clear-btn"
-                        onClick={handleClearImage}
-                      >
+                      <button type="button" className="image-clear-btn" onClick={handleClearImage}>
                         Remove
                       </button>
                     </div>
@@ -554,9 +600,7 @@ if (!resp.ok || !json?.ok) {
                 onChange={(e) => setDropTitle(e.target.value)}
                 placeholder="e.g. Papa Sparrow – Limited Edition Print"
               />
-              <p className="helper-text">
-                This title appears on your public drop card.
-              </p>
+              <p className="helper-text">This title appears on your public drop card.</p>
             </section>
 
             <section className="input-group">
@@ -575,9 +619,7 @@ if (!resp.ok || !json?.ok) {
             <section className="connection-section">
               <div className="connection-info">
                 <h3 className="connection-title">Connect Stripe (required)</h3>
-                <p className="connection-desc">
-                  This defines your product price and enables sales.
-                </p>
+                <p className="connection-desc">This defines your product price and enables sales.</p>
               </div>
 
               {stripeConnected && (
@@ -585,62 +627,47 @@ if (!resp.ok || !json?.ok) {
                   <select
                     className="input-field connection-product-select"
                     value={selectedProductId}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setSelectedProductId(value);
-
-                      const idx = e.target.selectedIndex;
-                      const opt = e.target.options[idx];
-                      const centsAttr = opt?.getAttribute('data-pricecents');
-                      const displayAttr = opt?.getAttribute('data-pricedisplay');
-
-                      setSelectedPriceCents(
-                        centsAttr != null && centsAttr !== ''
-                          ? Number(centsAttr)
-                          : null
-                      );
-                      setSelectedPriceDisplay(displayAttr || '');
-                      const urlAttr = opt?.getAttribute('data-priceurl');
-setSelectedPriceUrl(urlAttr || '');
-                    }}
+                    onChange={handleProductChange}
                   >
                     <option value="">Choose a product…</option>
-                    {/* Placeholder options — later populated from Stripe */}
-                    <option
-  value="prod_1"
-  data-pricecents="15000"
-  data-pricedisplay="$150.00"
-  data-priceurl="https://buy.stripe.com/test_eVqbJ135y29D3JU0vz4Ni02?client_reference_id=prod_1&l6_slug=555"
->
-  My Amazing Art Piece (Price: $150)
-</option>
-                    <option
-                      value="prod_2"
-                      data-pricecents="5000"
-                      data-pricedisplay="$50.00"
-                    >
-                      Another Product ($50)
-                    </option>
+
+                    {PLACEHOLDER_PRODUCTS.map((p) => (
+                      <option
+                        key={p.id}
+                        value={p.id}
+                        data-pricecents={String(p.priceCents ?? '')}
+                        data-pricedisplay={p.priceDisplay ?? ''}
+                        data-priceurl={p.priceUrl ?? ''}
+                      >
+                        {p.label}
+                      </option>
+                    ))}
                   </select>
+
                   <p className="helper-text connection-helper">
                     Product name and price are managed in your Stripe Dashboard.
                   </p>
+
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#8b8fa5' }}>
+                    <div>
+                      <strong style={{ color: '#d0d2ff' }}>Selected price:</strong>{' '}
+                      {selectedPriceDisplay || '—'}
+                    </div>
+                    <div style={{ wordBreak: 'break-all' }}>
+                      <strong style={{ color: '#d0d2ff' }}>Payment link:</strong>{' '}
+                      {selectedPriceUrl ? selectedPriceUrl : '—'}
+                    </div>
+                  </div>
                 </div>
               )}
 
               <button
                 type="button"
-                className={`connect-btn ${
-                  stripeConnected ? 'stripe-connected' : 'stripe-connect'
-                }`}
+                className={`connect-btn ${stripeConnected ? 'stripe-connected' : 'stripe-connect'}`}
                 onClick={handleConnectStripe}
                 disabled={connectingStripe}
               >
-                {stripeConnected
-                  ? '✓ Stripe connected'
-                  : connectingStripe
-                  ? 'Redirecting…'
-                  : 'Connect Stripe'}
+                {stripeConnected ? '✓ Stripe connected' : connectingStripe ? 'Redirecting…' : 'Connect Stripe'}
               </button>
             </section>
 
@@ -656,9 +683,7 @@ setSelectedPriceUrl(urlAttr || '');
                 onChange={(e) => setQuantity(e.target.value)}
                 placeholder="Leave blank for open edition"
               />
-              <p className="helper-text">
-                Set a limit for this drop. Leave blank for open edition.
-              </p>
+              <p className="helper-text">Set a limit for this drop. Leave blank for open edition.</p>
             </section>
 
             <div className="divider" />
@@ -712,25 +737,19 @@ setSelectedPriceUrl(urlAttr || '');
               )}
             </section>
 
-               <div className="actions-row">
-  <button
-    type="button"
-    className="btn btn-secondary btn-flex"
-    onClick={goToStep2}
-    disabled={saving}
-  >
-    ← Back
-  </button>
+            <div className="actions-row">
+              <button type="button" className="btn btn-secondary btn-flex" onClick={goToStep2} disabled={saving}>
+                ← Back
+              </button>
 
-  <button
-    type="submit"
-    className="btn btn-primary btn-flex"
-    disabled={saving || !stripeConnected}
-  >
-    {saving ? 'Saving…' : 'Next: Email setup & Complete →'}
-  </button>
-</div>
-
+              <button
+                type="submit"
+                className="btn btn-primary btn-flex"
+                disabled={saving || !stripeConnected}
+              >
+                {saving ? 'Saving…' : 'Next: Email setup & Complete →'}
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -904,11 +923,7 @@ setSelectedPriceUrl(urlAttr || '');
         .image-overlay {
           position: absolute;
           inset: 0;
-          background: linear-gradient(
-            to top,
-            rgba(0, 0, 0, 0.45),
-            rgba(0, 0, 0, 0.05)
-          );
+          background: linear-gradient(to top, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.05));
           opacity: 0;
           display: flex;
           align-items: flex-end;
@@ -1126,10 +1141,11 @@ setSelectedPriceUrl(urlAttr || '');
           margin-bottom: 4px;
         }
 
-                .actions-row {
+        .actions-row {
           margin-top: 12px;
           display: flex;
           gap: 12px;
+          width: 100%;
         }
 
         .btn-flex {
@@ -1166,8 +1182,7 @@ setSelectedPriceUrl(urlAttr || '');
           font-weight: 500;
           padding: 14px 16px;
           cursor: pointer;
-          transition: transform 0.08s ease, box-shadow 0.08s ease,
-            background 0.12s ease;
+          transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
         }
 
         .btn-primary {
@@ -1186,10 +1201,6 @@ setSelectedPriceUrl(urlAttr || '');
         .btn-primary:not(:disabled):active {
           transform: translateY(1px);
           box-shadow: 0 4px 14px rgba(88, 92, 255, 0.4);
-        }
-
-        .btn-full-width {
-          width: 100%;
         }
       `}</style>
     </main>

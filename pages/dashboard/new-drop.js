@@ -34,6 +34,7 @@ export default function NewDrop() {
   const [selectedPriceCents, setSelectedPriceCents] = useState(null);
   const [selectedPriceDisplay, setSelectedPriceDisplay] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedPriceUrl, setSelectedPriceUrl] = useState('');
 
   // Drop image state
   const [imageFile, setImageFile] = useState(null);
@@ -598,17 +599,20 @@ if (!resp.ok || !json?.ok) {
                           : null
                       );
                       setSelectedPriceDisplay(displayAttr || '');
+                      const urlAttr = opt?.getAttribute('data-priceurl');
+setSelectedPriceUrl(urlAttr || '');
                     }}
                   >
                     <option value="">Choose a product…</option>
                     {/* Placeholder options — later populated from Stripe */}
                     <option
-                      value="prod_1"
-                      data-pricecents="15000"
-                      data-pricedisplay="$150.00"
-                    >
-                      My Amazing Art Piece (Price: $150)
-                    </option>
+  value="prod_1"
+  data-pricecents="15000"
+  data-pricedisplay="$150.00"
+  data-priceurl="https://buy.stripe.com/test_eVqbJ135y29D3JU0vz4Ni02?client_reference_id=prod_1&l6_slug=555"
+>
+  My Amazing Art Piece (Price: $150)
+</option>
                     <option
                       value="prod_2"
                       data-pricecents="5000"

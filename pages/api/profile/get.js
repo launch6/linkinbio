@@ -97,6 +97,7 @@ export default async function handler(req, res) {
           klaviyoListId: 1,
           links: 1,
           social: 1,
+          stripe: 1,
           theme: 1,
         },
       }
@@ -128,8 +129,13 @@ export default async function handler(req, res) {
         avatarUrl: doc.avatarUrl || "",
         collectEmail: !!doc.collectEmail,
         klaviyoListId: doc.klaviyoListId || "",
-        links,
+                links,
         social: doc.social || {},
+        stripe: {
+          accountId: (doc.stripe?.accountId || doc.stripe?.connectedAccountId || "").trim(),
+          connectedAt: doc.stripe?.connectedAt || null,
+          lastEvent: doc.stripe?.lastEvent || "",
+        },
       },
     });
   } catch (err) {

@@ -1,5 +1,10 @@
 // pages/api/products/buy.js
 import { MongoClient } from "mongodb";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2025-10-29.clover",
+});
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || "linkinbio";
@@ -125,12 +130,13 @@ async function findProductBound({ db, id, editToken, slug }) {
       };
 
   const doc = await db.collection("profiles").findOne(baseQuery, {
-    projection: {
+        projection: {
       _id: 0,
       editToken: 1,
       slug: 1,
       publicSlug: 1,
       status: 1,
+      stripe: 1,
       products: { $elemMatch: { id } },
     },
   });
@@ -233,7 +239,66 @@ const debug = debugRequested && process.env.NODE_ENV !== "production";
 
     const p = found.product;
 
+    // Prefer modern Checkout Session flow (stripePriceId) over legacy priceUrl
+    const stripePriceId = cleanId(p.stripePriceId || "", 200);
+    const connectedAcct =
+      cleanId(found.profile?.stripe?.accountId || found.profile?.stripe?.connectedAccountId || "", 200) || "";
+
+    // If we have a Stripe priceId and a connected account, create a Checkout Session on that connected account.
+    if (stripePriceId && connectedAcct) {
+      const host = req.headers.host;
+      const protocol = host && host.startsWith("localhost") ? "http" : "https";
+      const baseUrl = `${protocol}://${host}`;
+
+      const slugForRedirect =
+        (typeof found.profile?.publicSlug === "string" && found.profile.publicSlug.trim()) ||
+        (typeof found.profile?.slug === "string" && found.profile.slug.trim()) ||
+        slug ||
+        "";
+
+      const successUrl = slugForRedirect
+        ? `${baseUrl}/${encodeURIComponent(slugForRedirect)}?success=1`
+        : `${baseUrl}/?success=1`;
+
+      const cancelUrl = slugForRedirect
+        ? `${baseUrl}/${encodeURIComponent(slugForRedirect)}?canceled=1`
+        : `${baseUrl}/?canceled=1`;
+
+      try {
+        const session = await stripe.checkout.sessions.create(
+          {
+            mode: "payment",
+            line_items: [{ price: stripePriceId, quantity: 1 }],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            client_reference_id: id,
+            metadata: {
+              l6_slug: slugForRedirect || "",
+              l6_product_id: id,
+            },
+          },
+          { stripeAccount: connectedAcct }
+        );
+
+        if (session?.url) {
+          // Begin-checkout analytics (non-blocking)
+          logBeginCheckout({ db, productId: id, slug: slugForRedirect || slug, req });
+
+          res.writeHead(302, { Location: session.url });
+          return res.end();
+        }
+
+        // If Stripe did not return a URL, fall through to legacy flow.
+        console.error("[products/buy] checkout session missing url", { stripePriceId, connectedAcct });
+      } catch (e) {
+        console.error("[products/buy] failed to create checkout session", e?.message || e);
+        return redirectToReason(res, { editToken, reason: "checkout_failed", slug: slugForRedirect || slug });
+      }
+    }
+
+    // Legacy Payment Link flow (priceUrl)
     const priceUrlStr = toHttpUrl((p.priceUrl || "").trim());
+
     let priceUrlObj = null;
     if (priceUrlStr) {
       try {

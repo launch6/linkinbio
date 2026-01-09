@@ -649,17 +649,6 @@ export default function NewDrop() {
                   <p className="helper-text connection-helper">
                     Product name and price are managed in your Stripe Dashboard.
                   </p>
-
-                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#8b8fa5' }}>
-                    <div>
-                      <strong style={{ color: '#d0d2ff' }}>Selected price:</strong>{' '}
-                      {selectedPriceDisplay || '—'}
-                    </div>
-                    <div style={{ wordBreak: 'break-all' }}>
-                      <strong style={{ color: '#d0d2ff' }}>Payment link:</strong>{' '}
-                      {selectedPriceUrl ? selectedPriceUrl : '—'}
-                    </div>
-                  </div>
                 </div>
               )}
 

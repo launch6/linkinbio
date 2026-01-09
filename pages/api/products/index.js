@@ -97,7 +97,19 @@ export default async function handler(req, res) {
         description: (p.description || "").trim(),
         imageUrl: (p.imageUrl || "").trim(),
 
-                // Backward-compatible: dashboard may send the Stripe link under other keys or as an object
+        // Preferred: server-side Checkout Session path
+        stripePriceId: (
+          (typeof p.stripePriceId === "string" && p.stripePriceId) ||
+          (typeof p.priceId === "string" && p.priceId) ||
+          ""
+        ).trim(),
+        stripeProductId: (
+          (typeof p.stripeProductId === "string" && p.stripeProductId) ||
+          (typeof p.productId === "string" && p.productId) ||
+          ""
+        ).trim(),
+
+        // Legacy: Payment Link path (kept for backwards compatibility)
         priceUrl: (
           (typeof p.priceUrl === "string" && p.priceUrl) ||
           (p.priceUrl && typeof p.priceUrl.url === "string" && p.priceUrl.url) ||

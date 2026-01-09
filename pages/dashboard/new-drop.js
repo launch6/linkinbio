@@ -457,6 +457,8 @@ export default function NewDrop() {
       priceUrl: safeTrim(selectedPriceUrl),
 
       priceCents: typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
+            // new Checkout Session flow (preferred)
+      stripePriceId: safeTrim(selectedProductId),
       priceDisplay: selectedPriceDisplay || '',
       priceText: selectedPriceDisplay || '',
 

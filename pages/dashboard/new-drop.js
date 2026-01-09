@@ -11,27 +11,9 @@ const DRAFT_STORAGE_PREFIX = 'launch6_new_drop_draft';
 // Persist token across Stripe redirect (Stripe sometimes returns without it)
 const LAST_TOKEN_KEY = 'launch6_last_edit_token';
 
-// Placeholder products (until Stripe product list is wired)
-// IMPORTANT: Each option must have a priceUrl or you will hit ?reason=noprice
-const PLACEHOLDER_PRODUCTS = [
-  {
-    id: 'prod_1',
-    label: 'My Amazing Art Piece (Price: $150)',
-    priceCents: 15000,
-    priceDisplay: '$150.00',
-    // Replace with your real payment link when ready
-    priceUrl:
-      'https://buy.stripe.com/test_eVqbJ135y29D3JU0vz4Ni02?client_reference_id=prod_1&l6_slug=555',
-  },
-  {
-    id: 'prod_2',
-    label: 'Another Product ($50)',
-    priceCents: 5000,
-    priceDisplay: '$50.00',
-    // Replace with your real payment link when ready
-    priceUrl: '',
-  },
-];
+// Stripe products pulled from the connected account
+// Returned shape from /api/stripe/products:
+// { stripeProductId, stripePriceId, name, priceCents, priceDisplay, currency }
 
 function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0;
@@ -61,10 +43,15 @@ export default function NewDrop() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
 
+  // NOTE: selectedProductId now holds Stripe *price id* (e.g. price_...)
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedStripeProductId, setSelectedStripeProductId] = useState('');
   const [selectedPriceCents, setSelectedPriceCents] = useState(null);
   const [selectedPriceDisplay, setSelectedPriceDisplay] = useState('');
-  const [selectedPriceUrl, setSelectedPriceUrl] = useState('');
+
+  const [stripeProducts, setStripeProducts] = useState([]);
+  const [stripeProductsLoading, setStripeProductsLoading] = useState(false);
+  const [stripeProductsError, setStripeProductsError] = useState('');
 
   const [saving, setSaving] = useState(false);
 
@@ -106,6 +93,47 @@ export default function NewDrop() {
       setStripeConnected(true);
     }
   }, [stripe_connected]);
+  // After Stripe is connected, pull products/prices from the connected account
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (!stripeConnected) return;
+
+    const t = safeTrim(resolvedToken) || safeTrim(token);
+    if (!t) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setStripeProductsError('');
+        setStripeProductsLoading(true);
+
+        const r = await fetch(`/api/stripe/products?token=${encodeURIComponent(t)}`);
+        const j = await r.json();
+
+        if (cancelled) return;
+
+        if (!r.ok || !j?.ok) {
+          setStripeProducts([]);
+          setStripeProductsError(j?.error || 'Unable to load Stripe products.');
+          return;
+        }
+
+        setStripeProducts(Array.isArray(j.products) ? j.products : []);
+      } catch (e) {
+        if (cancelled) return;
+        setStripeProducts([]);
+        setStripeProductsError('Unable to load Stripe products.');
+      } finally {
+        if (cancelled) return;
+        setStripeProductsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, stripeConnected, resolvedToken, token]);
 
   // Clean up preview if component unmounts
   useEffect(() => {
@@ -137,9 +165,10 @@ export default function NewDrop() {
 
       // Stripe selection
       selectedProductId,
+      selectedStripeProductId,
       selectedPriceCents,
       selectedPriceDisplay,
-      selectedPriceUrl,
+
 
       // keep in payload too (best effort); primary persistence is sessionStorage
       imagePreview,
@@ -194,9 +223,10 @@ export default function NewDrop() {
         if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
 
         if (typeof d.selectedProductId === 'string') setSelectedProductId(d.selectedProductId);
+        if (typeof d.selectedStripeProductId === 'string') setSelectedStripeProductId(d.selectedStripeProductId);
         if (typeof d.selectedPriceDisplay === 'string') setSelectedPriceDisplay(d.selectedPriceDisplay);
         if (typeof d.selectedPriceCents === 'number') setSelectedPriceCents(d.selectedPriceCents);
-        if (typeof d.selectedPriceUrl === 'string') setSelectedPriceUrl(d.selectedPriceUrl);
+
       }
     } catch (err) {
       console.error('[new-drop] Failed to load draft', err);
@@ -369,9 +399,9 @@ export default function NewDrop() {
 
     // If placeholder option selected, clear everything
     if (!value) {
+      setSelectedStripeProductId('');
       setSelectedPriceCents(null);
       setSelectedPriceDisplay('');
-      setSelectedPriceUrl('');
       return;
     }
 
@@ -380,15 +410,15 @@ export default function NewDrop() {
 
     const centsAttr = opt?.getAttribute('data-pricecents');
     const displayAttr = opt?.getAttribute('data-pricedisplay');
-    const urlAttr = opt?.getAttribute('data-priceurl');
+    const stripeProdAttr = opt?.getAttribute('data-stripeproductid');
 
+    setSelectedStripeProductId(stripeProdAttr || '');
     setSelectedPriceCents(
       centsAttr != null && centsAttr !== '' && Number.isFinite(Number(centsAttr))
         ? Number(centsAttr)
         : null
     );
     setSelectedPriceDisplay(displayAttr || '');
-    setSelectedPriceUrl(urlAttr || '');
   };
 
   // --- Form submit ---------------------------------------------------------
@@ -406,14 +436,7 @@ export default function NewDrop() {
     }
 
     if (!safeTrim(selectedProductId)) {
-      alert('Choose which product you want to sell.');
-      return;
-    }
-
-    if (!safeTrim(selectedPriceUrl)) {
-      alert(
-        'This product is missing a payment link (priceUrl). Add data-priceurl for the selected product option.'
-      );
+      alert('Choose a Stripe product/price before continuing.');
       return;
     }
 
@@ -444,7 +467,8 @@ export default function NewDrop() {
     const qty = safeTrim(quantity) ? Number(quantity) : null;
 
     const productPayload = {
-      id: selectedProductId || `p_${Date.now()}`,
+      // internal Launch6 product id (not Stripe ids)
+      id: `prod_${Date.now()}`,
       title: safeTrim(dropTitle),
       description: safeTrim(dropDescription),
 
@@ -453,8 +477,12 @@ export default function NewDrop() {
       imageUrl: imagePreview || '',
       image: imagePreview || '',
 
-      // critical for /api/products/buy guard
-      priceUrl: safeTrim(selectedPriceUrl),
+      // Preferred: server-side Checkout Session via Stripe Price ID
+      stripePriceId: safeTrim(selectedProductId),
+      stripeProductId: safeTrim(selectedStripeProductId),
+
+      // Legacy field retained (empty); buy endpoint uses stripePriceId first
+      priceUrl: '',
 
       priceCents: typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
             // new Checkout Session flow (preferred)
@@ -633,17 +661,31 @@ export default function NewDrop() {
                   >
                     <option value="">Choose a product…</option>
 
-                    {PLACEHOLDER_PRODUCTS.map((p) => (
-                      <option
-                        key={p.id}
-                        value={p.id}
-                        data-pricecents={String(p.priceCents ?? '')}
-                        data-pricedisplay={p.priceDisplay ?? ''}
-                        data-priceurl={p.priceUrl ?? ''}
-                      >
-                        {p.label}
+                    {stripeProductsLoading ? (
+                      <option value="" disabled>
+                        Loading Stripe products…
                       </option>
-                    ))}
+                    ) : stripeProductsError ? (
+                      <option value="" disabled>
+                        {stripeProductsError}
+                      </option>
+                    ) : stripeProducts.length === 0 ? (
+                      <option value="" disabled>
+                        No Stripe products found for this connected account.
+                      </option>
+                    ) : (
+                      stripeProducts.map((p) => (
+                        <option
+                          key={p.stripePriceId}
+                          value={p.stripePriceId}
+                          data-stripeproductid={p.stripeProductId}
+                          data-pricecents={String(p.priceCents ?? '')}
+                          data-pricedisplay={p.priceDisplay ?? ''}
+                        >
+                          {p.name} ({p.priceDisplay})
+                        </option>
+                      ))
+                    )}
                   </select>
 
                   <p className="helper-text connection-helper">

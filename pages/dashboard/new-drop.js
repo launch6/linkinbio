@@ -280,7 +280,6 @@ export default function NewDrop() {
     selectedProductId,
     selectedPriceCents,
     selectedPriceDisplay,
-    selectedPriceUrl,
   ]);
 
   // --- Navigation helper ---------------------------------------------------

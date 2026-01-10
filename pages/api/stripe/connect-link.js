@@ -3,7 +3,12 @@
 export default async function handler(req, res) {
   // Read envs once at the top
   const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
-  const redirectUrl = process.env.STRIPE_CONNECT_REDIRECT_URL;
+
+  // Always derive redirect_uri from the current request host so Preview uses Preview
+  const host = req.headers.host;
+  const protocol = host && host.startsWith('localhost') ? 'http' : 'https';
+  const redirectUrl = `${protocol}://${host}/api/stripe/connect-callback`;
+
 
   // 🔍 DEBUG MODE:
   // Hitting this route with GET in the browser will show what the server

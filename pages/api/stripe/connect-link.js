@@ -4,9 +4,14 @@ export default async function handler(req, res) {
   // Read envs once at the top
   const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
 
-  // Always derive redirect_uri from the current request host so Preview uses Preview
-  const host = req.headers.host;
-  const protocol = host && host.startsWith('localhost') ? 'http' : 'https';
+  // Always derive redirect_uri from the current request host so Preview uses Preview.
+  // On Vercel, x-forwarded-host / x-forwarded-proto are the correct values.
+  const forwardedHost = (req.headers['x-forwarded-host'] || '').toString().split(',')[0].trim();
+  const host = (forwardedHost || req.headers.host || '').toString().split(',')[0].trim();
+
+  const forwardedProto = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0].trim();
+  const protocol = forwardedProto || (host.startsWith('localhost') ? 'http' : 'https');
+
   const redirectUrl = `${protocol}://${host}/api/stripe/connect-callback`;
 
 

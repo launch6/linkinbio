@@ -99,6 +99,8 @@ export default async function handler(req, res) {
           social: 1,
           stripe: 1,
           theme: 1,
+          stripe: 1,
+
         },
       }
     );
@@ -122,6 +124,7 @@ export default async function handler(req, res) {
         slug: doc.slug || "",
         status: doc.status || "active",
         theme: normalizeThemeValue(doc.theme),
+        stripe: doc.stripe || {},
 
         // prefer bio, fall back to legacy description
         bio: doc.bio || doc.description || "",

@@ -154,25 +154,27 @@ export default function NewDrop() {
   const saveDraftToStorage = () => {
     if (typeof window === 'undefined') return;
 
-    const payload = {
-      dropTitle,
-      dropDescription,
-      quantity,
-      btnText,
-      isTimerEnabled,
-      startsAt,
-      endsAt,
+const payload = {
+  dropTitle,
+  dropDescription,
+  quantity,
+  btnText,
+  isTimerEnabled,
+  startsAt,
+  endsAt,
 
-      // Stripe selection
-      selectedProductId,
-      selectedStripeProductId,
-      selectedPriceCents,
-      selectedPriceDisplay,
+  // Stripe connection state (so Step 4 -> Back doesn't force reconnect)
+  stripeConnected,
 
+  // Stripe selection
+  selectedProductId,
+  selectedStripeProductId,
+  selectedPriceCents,
+  selectedPriceDisplay,
 
-      // keep in payload too (best effort); primary persistence is sessionStorage
-      imagePreview,
-    };
+  // keep in payload too (best effort); primary persistence is sessionStorage
+  imagePreview,
+};
 
     // Try to stash imagePreview in sessionStorage (often more reliable for base64)
     try {
@@ -221,7 +223,7 @@ export default function NewDrop() {
         if (typeof d.isTimerEnabled === 'boolean') setIsTimerEnabled(d.isTimerEnabled);
         if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
         if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
-
+        if (typeof d.stripeConnected === 'boolean') setStripeConnected(d.stripeConnected);
         if (typeof d.selectedProductId === 'string') setSelectedProductId(d.selectedProductId);
         if (typeof d.selectedStripeProductId === 'string') setSelectedStripeProductId(d.selectedStripeProductId);
         if (typeof d.selectedPriceDisplay === 'string') setSelectedPriceDisplay(d.selectedPriceDisplay);
@@ -277,10 +279,13 @@ export default function NewDrop() {
     startsAt,
     endsAt,
     imagePreview,
+    stripeConnected,
     selectedProductId,
+    selectedStripeProductId,
     selectedPriceCents,
     selectedPriceDisplay,
-  ]);
+    ]);
+
 
   // --- Navigation helper ---------------------------------------------------
   const goToStep2 = () => {

@@ -22,7 +22,43 @@ function isNonEmptyString(v) {
 function safeTrim(v) {
   return typeof v === 'string' ? v.trim() : '';
 }
+async function fetchExistingProduct(editToken) {
+  try {
+    const r = await fetch(`/api/public?editToken=${encodeURIComponent(editToken)}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j?.ok) return null;
 
+    // Your /api/public response currently returns a "profile" object and also seems
+    // to include product fields at top-level in some cases. We support both shapes.
+    const profile = j.profile || j?.profile?.profile || j?.profile || null;
+    const p = j?.products?.[0] || j?.profile?.products?.[0] || null;
+
+    // If products array exists, use it. Otherwise fall back to top-level fields.
+    const product = p || {
+      title: profile?.title,
+      description: profile?.description || profile?.bio,
+      priceUrl: profile?.priceUrl,
+      priceCents: profile?.priceCents,
+      priceDisplay: profile?.priceDisplay || profile?.priceText,
+      dropStartsAt: profile?.dropStartsAt,
+      dropEndsAt: profile?.dropEndsAt,
+      showTimer: profile?.showTimer,
+      unitsTotal: profile?.unitsTotal,
+      unitsLeft: profile?.unitsLeft,
+      buttonText: profile?.buttonText,
+      published: profile?.published,
+      imageUrl: profile?.imageUrl || profile?.avatarUrl,
+    };
+
+    return { profile: j.profile || null, product };
+  } catch (e) {
+    console.error('[new-drop] fetchExistingProduct failed', e);
+    return null;
+  }
+}
 export default function NewDrop() {
   const router = useRouter();
   const { token, stripe_connected } = router.query;

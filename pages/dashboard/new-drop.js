@@ -11,7 +11,6 @@ const DRAFT_STORAGE_PREFIX = 'launch6_new_drop_draft';
 // Persist token across Stripe redirect (Stripe sometimes returns without it)
 const LAST_TOKEN_KEY = 'launch6_last_edit_token';
 
-// Stripe products pulled from the connected account
 // Returned shape from /api/stripe/products:
 // { stripeProductId, stripePriceId, name, priceCents, priceDisplay, currency }
 
@@ -22,43 +21,7 @@ function isNonEmptyString(v) {
 function safeTrim(v) {
   return typeof v === 'string' ? v.trim() : '';
 }
-async function fetchExistingProduct(editToken) {
-  try {
-    const r = await fetch(`/api/public?editToken=${encodeURIComponent(editToken)}`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-    });
-    const j = await r.json().catch(() => null);
-    if (!r.ok || !j?.ok) return null;
 
-    // Your /api/public response currently returns a "profile" object and also seems
-    // to include product fields at top-level in some cases. We support both shapes.
-    const profile = j.profile || j?.profile?.profile || j?.profile || null;
-    const p = j?.products?.[0] || j?.profile?.products?.[0] || null;
-
-    // If products array exists, use it. Otherwise fall back to top-level fields.
-    const product = p || {
-      title: profile?.title,
-      description: profile?.description || profile?.bio,
-      priceUrl: profile?.priceUrl,
-      priceCents: profile?.priceCents,
-      priceDisplay: profile?.priceDisplay || profile?.priceText,
-      dropStartsAt: profile?.dropStartsAt,
-      dropEndsAt: profile?.dropEndsAt,
-      showTimer: profile?.showTimer,
-      unitsTotal: profile?.unitsTotal,
-      unitsLeft: profile?.unitsLeft,
-      buttonText: profile?.buttonText,
-      published: profile?.published,
-      imageUrl: profile?.imageUrl || profile?.avatarUrl,
-    };
-
-    return { profile: j.profile || null, product };
-  } catch (e) {
-    console.error('[new-drop] fetchExistingProduct failed', e);
-    return null;
-  }
-}
 export default function NewDrop() {
   const router = useRouter();
   const { token, stripe_connected } = router.query;
@@ -69,7 +32,7 @@ export default function NewDrop() {
   // Core drop fields
   const [dropTitle, setDropTitle] = useState('');
   const [dropDescription, setDropDescription] = useState('');
-  const [quantity, setQuantity] = useState('1'); // blank = open edition
+  const [quantity, setQuantity] = useState('1'); // '' = open edition
   const [btnText, setBtnText] = useState('Buy Now');
   const [isTimerEnabled, setIsTimerEnabled] = useState(false);
   const [startsAt, setStartsAt] = useState('');
@@ -79,7 +42,7 @@ export default function NewDrop() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [connectingStripe, setConnectingStripe] = useState(false);
 
-  // NOTE: selectedProductId now holds Stripe *price id* (e.g. price_...)
+  // NOTE: selectedProductId holds Stripe *price id* (e.g. price_...)
   const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedStripeProductId, setSelectedStripeProductId] = useState('');
   const [selectedPriceCents, setSelectedPriceCents] = useState(null);
@@ -123,60 +86,12 @@ export default function NewDrop() {
     }
   }, [router.isReady, token]);
 
-  // When returning from Stripe with ?stripe_connected=1, mark as connected
+  // If Stripe returns with ?stripe_connected=1, mark connected
   useEffect(() => {
     if (stripe_connected === '1') {
       setStripeConnected(true);
     }
   }, [stripe_connected]);
-  // After Stripe is connected, pull products/prices from the connected account
-  useEffect(() => {
-    if (!router.isReady) return;
-    if (!stripeConnected) return;
-
-    const t = safeTrim(resolvedToken) || safeTrim(token);
-    if (!t) return;
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        setStripeProductsError('');
-        setStripeProductsLoading(true);
-
-        const r = await fetch(`/api/stripe/products?token=${encodeURIComponent(t)}`);
-        const j = await r.json();
-
-        if (cancelled) return;
-
-        if (!r.ok || !j?.ok) {
-          setStripeProducts([]);
-          setStripeProductsError(j?.error || 'Unable to load Stripe products.');
-          return;
-        }
-
-        setStripeProducts(Array.isArray(j.products) ? j.products : []);
-      } catch (e) {
-        if (cancelled) return;
-        setStripeProducts([]);
-        setStripeProductsError('Unable to load Stripe products.');
-      } finally {
-        if (cancelled) return;
-        setStripeProductsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router.isReady, stripeConnected, resolvedToken, token]);
-
-  // Clean up preview if component unmounts
-  useEffect(() => {
-    return () => {
-      setImagePreview(null);
-    };
-  }, []);
 
   // --- Draft storage helpers ----------------------------------------------
   const getDraftKey = () => {
@@ -190,29 +105,29 @@ export default function NewDrop() {
   const saveDraftToStorage = () => {
     if (typeof window === 'undefined') return;
 
-const payload = {
-  dropTitle,
-  dropDescription,
-  quantity,
-  btnText,
-  isTimerEnabled,
-  startsAt,
-  endsAt,
+    const payload = {
+      dropTitle,
+      dropDescription,
+      quantity,
+      btnText,
+      isTimerEnabled,
+      startsAt,
+      endsAt,
 
-  // Stripe connection state (so Step 4 -> Back doesn't force reconnect)
-  stripeConnected,
+      // Keep Stripe state so Step 4 -> Back doesn't force reconnect
+      stripeConnected,
 
-  // Stripe selection
-  selectedProductId,
-  selectedStripeProductId,
-  selectedPriceCents,
-  selectedPriceDisplay,
+      // Stripe selection
+      selectedProductId,
+      selectedStripeProductId,
+      selectedPriceCents,
+      selectedPriceDisplay,
 
-  // keep in payload too (best effort); primary persistence is sessionStorage
-  imagePreview,
-};
+      // best effort; primary persistence is sessionStorage
+      imagePreview,
+    };
 
-    // Try to stash imagePreview in sessionStorage (often more reliable for base64)
+    // sessionStorage image
     try {
       if (isNonEmptyString(imagePreview)) {
         window.sessionStorage.setItem(getImagePreviewKey(), imagePreview);
@@ -223,11 +138,11 @@ const payload = {
       console.error('[new-drop] Failed to save imagePreview to sessionStorage', err);
     }
 
-    // Save full payload to localStorage (best effort)
+    // localStorage payload
     try {
       window.localStorage.setItem(getDraftKey(), JSON.stringify(payload));
     } catch (err) {
-      // If localStorage is full (common when saving base64), still save text-only
+      // If localStorage is full (common with base64), save text-only
       try {
         const safePayload = { ...payload, imagePreview: null };
         window.localStorage.setItem(getDraftKey(), JSON.stringify(safePayload));
@@ -238,12 +153,11 @@ const payload = {
     }
   };
 
-  // Load draft when token/route is ready (use sessionStorage for imagePreview first)
+  // Load draft when token/route is ready
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!router.isReady) return;
 
-    // Wait until token resolution stabilizes
     const t = safeTrim(resolvedToken) || safeTrim(token);
     if (!t && typeof token === 'undefined') return;
 
@@ -259,12 +173,13 @@ const payload = {
         if (typeof d.isTimerEnabled === 'boolean') setIsTimerEnabled(d.isTimerEnabled);
         if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
         if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
+
         if (typeof d.stripeConnected === 'boolean') setStripeConnected(d.stripeConnected);
+
         if (typeof d.selectedProductId === 'string') setSelectedProductId(d.selectedProductId);
         if (typeof d.selectedStripeProductId === 'string') setSelectedStripeProductId(d.selectedStripeProductId);
         if (typeof d.selectedPriceDisplay === 'string') setSelectedPriceDisplay(d.selectedPriceDisplay);
         if (typeof d.selectedPriceCents === 'number') setSelectedPriceCents(d.selectedPriceCents);
-
       }
     } catch (err) {
       console.error('[new-drop] Failed to load draft', err);
@@ -292,7 +207,7 @@ const payload = {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, resolvedToken]);
 
-  // Autosave (keeps fields consistent across full redirects)
+  // Autosave
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!router.isReady) return;
@@ -320,8 +235,50 @@ const payload = {
     selectedStripeProductId,
     selectedPriceCents,
     selectedPriceDisplay,
-    ]);
+  ]);
 
+  // After Stripe is connected, pull products/prices from the connected account
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (!stripeConnected) return;
+
+    const t = safeTrim(resolvedToken) || safeTrim(token);
+    if (!t) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setStripeProductsError('');
+        setStripeProductsLoading(true);
+
+        const r = await fetch(`/api/stripe/products?token=${encodeURIComponent(t)}`);
+        const j = await r.json().catch(() => null);
+
+        if (cancelled) return;
+
+        if (!r.ok || !j?.ok) {
+          setStripeProducts([]);
+          setStripeProductsError(j?.error || 'Unable to load Stripe products.');
+          return;
+        }
+
+        const list = Array.isArray(j.products) ? j.products : [];
+        setStripeProducts(list);
+      } catch (e) {
+        if (cancelled) return;
+        setStripeProducts([]);
+        setStripeProductsError('Unable to load Stripe products.');
+      } finally {
+        if (cancelled) return;
+        setStripeProductsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, stripeConnected, resolvedToken, token]);
 
   // --- Navigation helper ---------------------------------------------------
   const goToStep2 = () => {
@@ -344,7 +301,7 @@ const payload = {
 
     setImageError('');
 
-    if (!file.type.startsWith('image/')) {
+    if (!file.type || !file.type.startsWith('image/')) {
       setImageError('Please upload an image file (JPG, PNG, GIF).');
       return;
     }
@@ -416,7 +373,7 @@ const payload = {
       try {
         data = await res.json();
       } catch (parseErr) {
-        console.error('connect-link JSON parse error:', parseErr);
+        console.error('[new-drop] connect-link JSON parse error:', parseErr);
         throw new Error('Unexpected response from server. Try again.');
       }
 
@@ -427,7 +384,7 @@ const payload = {
       window.location.href = data.url;
     } catch (err) {
       console.error(err);
-      alert(err.message || 'There was a problem connecting to Stripe.');
+      alert(err?.message || 'There was a problem connecting to Stripe.');
       setConnectingStripe(false);
     }
   };
@@ -437,7 +394,6 @@ const payload = {
     const value = e.target.value;
     setSelectedProductId(value);
 
-    // If placeholder option selected, clear everything
     if (!value) {
       setSelectedStripeProductId('');
       setSelectedPriceCents(null);
@@ -507,26 +463,22 @@ const payload = {
     const qty = safeTrim(quantity) ? Number(quantity) : null;
 
     const productPayload = {
-      // internal Launch6 product id (not Stripe ids)
       id: `prod_${Date.now()}`,
       title: safeTrim(dropTitle),
       description: safeTrim(dropDescription),
 
-      // store in multiple fields so old + new readers can find it
+      // image fields for backward compatibility
       heroImageUrl: imagePreview || '',
       imageUrl: imagePreview || '',
       image: imagePreview || '',
 
-      // Preferred: server-side Checkout Session via Stripe Price ID
+      // Preferred Checkout Session flow
       stripePriceId: safeTrim(selectedProductId),
       stripeProductId: safeTrim(selectedStripeProductId),
 
-      // Legacy field retained (empty); buy endpoint uses stripePriceId first
+      // legacy
       priceUrl: '',
-
       priceCents: typeof selectedPriceCents === 'number' ? selectedPriceCents : null,
-            // new Checkout Session flow (preferred)
-      stripePriceId: safeTrim(selectedProductId),
       priceDisplay: selectedPriceDisplay || '',
       priceText: selectedPriceDisplay || '',
 
@@ -559,7 +511,7 @@ const payload = {
       } catch {}
 
       if (!resp.ok || !json?.ok) {
-        console.error('SAVE DROP FAILED', {
+        console.error('[new-drop] SAVE DROP FAILED', {
           status: resp.status,
           statusText: resp.statusText,
           raw,
@@ -578,7 +530,7 @@ const payload = {
 
       goToStep4();
     } catch (err) {
-      console.error('Error saving product', err);
+      console.error('[new-drop] Error saving product', err);
       alert('There was a problem saving your drop. Try again.');
       setSaving(false);
     }
@@ -815,11 +767,7 @@ const payload = {
                 ← Back
               </button>
 
-              <button
-                type="submit"
-                className="btn btn-primary btn-flex"
-                disabled={saving || !stripeConnected}
-              >
+              <button type="submit" className="btn btn-primary btn-flex" disabled={saving || !stripeConnected}>
                 {saving ? 'Saving…' : 'Next: Email setup & Complete →'}
               </button>
             </div>

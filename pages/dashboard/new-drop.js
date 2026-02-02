@@ -680,9 +680,10 @@ export default function NewDrop() {
                     )}
                   </select>
 
-                  <p className="helper-text connection-helper">
-                    Product name and price are managed in your Stripe Dashboard.
-                  </p>
+              <p className="helper-text connection-helper">
+                Prices are pulled from Stripe when you load this page. If you change prices in Stripe, reload this page to refresh.
+                </p>
+
                 </div>
               )}
 

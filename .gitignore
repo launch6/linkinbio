@@ -1,4 +1,11 @@
-.env.local
-.env*.local
+# env files (never commit)
+.env
+.env.*
+!.env.example
+
+# local backups
+*.bak
+
+# build + deps
 .next
 node_modules

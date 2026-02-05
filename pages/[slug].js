@@ -743,6 +743,18 @@ export default function PublicSlugPage() {
         if (alive) setLoading(false);
       }
     })();
+    // If we return from checkout with ?success=1, force an immediate refresh
+    // and then clean the URL so it doesn't retrigger.
+    try {
+      if (typeof window !== "undefined") {
+        const u = new URL(window.location.href);
+        if (u.searchParams.get("success") === "1") {
+          fetchAll(slug, { trackView: false }).catch(() => {});
+          u.searchParams.delete("success");
+          window.history.replaceState({}, "", u.toString());
+        }
+      }
+    } catch {}
 
     refreshIntervalRef.current = setInterval(() => {
       fetchAll(slug, { trackView: false }).catch(() => {});

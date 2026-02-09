@@ -386,7 +386,15 @@ function DropCard({ product: p, slug, theme }) {
 
   const imageUrl = normalizeImageSrc(p.imageUrl || "") || null;
   const title = p.title || "Untitled drop";
-  const description = p.description || "";
+
+  // Backward-compatible description keys
+  const description =
+    p.description ||
+    p.dropDescription ||
+    p.details ||
+    p.body ||
+    p.desc ||
+    "";
 
   let priceDisplay =
     p.priceDisplay ||

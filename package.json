@@ -5,9 +5,10 @@
   "engines": {
     "node": "20.x"
   },
-  "scripts": {
+    "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "guard:debug": "git grep -nE \"(^|/)api/(debug|_debug|env-check|check-env|_env)(\\\\.js)?$|SECURITY: this endpoint must not exist in production\" pages || exit 0",
+    "build": "npm run guard:debug && next build",
     "start": "next start",
     "lint": "next lint"
   },

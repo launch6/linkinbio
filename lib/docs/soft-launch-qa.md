@@ -45,3 +45,8 @@ Notes:
 . STRIPE_WEBHOOK_SECRET updated on both Production + Preview; webhook deliveries now return 200.
 . Test purchase decremented inventory on slug 555 (4 → 3 → 2 left confirmed).
 . Timer renders and updates on page.
+
+### Run log — 2026-02-09
+Test slug: 555
+- Webhook: 200 OK on https://www.l6.io/api/stripe-webhook (Preview + Production secrets match)
+- Inventory decrement confirmed in test: 4 → 3 → 2

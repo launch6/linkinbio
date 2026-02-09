@@ -1,5 +1,5 @@
 // pages/api/subscription-by-sub.js
-import { getDb } from "../../lib/mongo";
+import { getDb } from "../../lib/db";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {

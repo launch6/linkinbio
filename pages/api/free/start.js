@@ -22,6 +22,10 @@ function makeSlug() {
 }
 
 export default async function handler(req, res) {
+    // SECURITY: free endpoints must not exist in production
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).end("Not Found");
+  }
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).end("Method Not Allowed");

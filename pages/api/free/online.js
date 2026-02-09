@@ -26,6 +26,10 @@ async function getDb() {
  * - publishedAt: now (if missing)
  */
 export default async function handler(req, res) {
+    // SECURITY: free endpoints must not exist in production
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).end("Not Found");
+  }
   try {
     const editToken = String(req.query.editToken || "");
     if (!editToken) return res.status(400).json({ ok: false, error: "Missing editToken" });

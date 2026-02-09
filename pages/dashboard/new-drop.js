@@ -376,7 +376,16 @@ export default function NewDrop() {
         console.error('[new-drop] connect-link JSON parse error:', parseErr);
         throw new Error('Unexpected response from server. Try again.');
       }
-
+// Persist image across the Stripe redirect (session survives full-page nav)
+if (typeof window !== 'undefined') {
+  try {
+    if (imagePreview) {
+      window.sessionStorage.setItem(getImagePreviewKey(), imagePreview);
+    } else {
+      window.sessionStorage.removeItem(getImagePreviewKey());
+    }
+  } catch {}
+}
       if (!res.ok || !data?.url) {
         throw new Error(data?.error || 'Unable to start Stripe connection.');
       }

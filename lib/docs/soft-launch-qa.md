@@ -39,4 +39,9 @@
 Test slug: 555
 
 Notes:
-- (fill in anything that failed or looked off)
+. Deployed successfully on Vercel (Production).
+. Domain uses https://www.l6.io
+. Stripe Workbench webhook endpoint set to https://www.l6.io/api/stripe-webhook
+. STRIPE_WEBHOOK_SECRET updated on both Production + Preview; webhook deliveries now return 200.
+. Test purchase decremented inventory on slug 555 (4 → 3 → 2 left confirmed).
+. Timer renders and updates on page.

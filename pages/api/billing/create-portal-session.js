@@ -1,6 +1,6 @@
 // pages/api/billing/create-portal-session.js
 import Stripe from "stripe";
-import { getDb } from "@/lib/mongo";
+import { getDb } from "@/lib/db";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",

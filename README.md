@@ -45,8 +45,8 @@ npm run dev
 
 ## Deploy
 - Push to GitHub → import to Vercel → set env vars → add domains `launch6.com` & `l6.io`
-- Set `BASE_URL=https://l6.io`
+- Set `BASE_URL=https://www.l6.io`
 
 ---
 
-© 2025 Launch6
+© 2026 Launch6

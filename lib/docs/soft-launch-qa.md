@@ -1,8 +1,8 @@
 # Launch6 — Soft Launch QA (Non-Stripe Go-Live)
 
 ## 1) Domains + Routing
-- [ ] Canonical domain: https://l6.io (www redirects to apex)
-- [ ] Public page works: https://l6.io/<slug>
+- [ ] Canonical domain: https://www.l6.io (apex redirects to www)
+- [ ] Public page works: https://www.l6.io/<slug>
 - [ ] No redirect loops
 - [ ] HTTPS + cert valid
 

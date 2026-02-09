@@ -809,7 +809,7 @@ export default function PublicSlugPage() {
 
   const firstImage = normalizeImageSrc(products?.[0]?.imageUrl || "");
 
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://l6.io";
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://www.l6.io";
   const pageUrl = slug ? `${site.replace(/\/$/, "")}/${encodeURIComponent(slug)}` : site;
 
   const seoTitle = title ? `${title} — Drops` : "Drops";

@@ -92,7 +92,7 @@ export default function DashboardHome() {
     'Your Launch6 page';
 
   const slug = profile?.slug?.trim() || '';
-  const publicUrl = slug ? `https://l6.io/${slug}` : '';
+const publicUrl = slug ? `https://www.l6.io/${slug}` : '';
 
   // --- Render ----------------------------------------------------------------
 

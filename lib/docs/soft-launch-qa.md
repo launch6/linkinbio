@@ -31,3 +31,12 @@
 ## 5) Logs / Monitoring
 - [ ] Vercel function logs show no repeated 500s on public traffic
 - [ ] Mongo connection errors handled gracefully in non-prod
+
+---
+
+## Results (run log)
+
+Test slug: 555
+
+Notes:
+- (fill in anything that failed or looked off)

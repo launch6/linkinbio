@@ -12,7 +12,8 @@ export default async function handler(req, res) {
   const forwardedProto = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0].trim();
   const protocol = forwardedProto || (host.startsWith('localhost') ? 'http' : 'https');
 
-const redirectUrl = `https://www.l6.io/api/stripe/connect-callback`;
+const baseUrl = (process.env.BASE_URL || "https://www.l6.io").replace(/\/$/, "");
+const redirectUrl = `${baseUrl}/api/stripe/connect-callback`;
 
   // 🔍 DEBUG MODE:
   // Hitting this route with GET in the browser will show what the server

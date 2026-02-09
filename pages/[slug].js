@@ -490,15 +490,28 @@ function DropCard({ product: p, slug, theme }) {
     boxSizing: "border-box",
   };
 
-  const heroFrame = {
-    borderRadius: "18px",
-    overflow: "hidden",
-    background: theme.surface,
-    border: `1px solid ${theme.border}`,
-    boxShadow: `${ELEVATION.soft} ${theme.shadow}`,
-  };
+ const heroFrame = {
+  borderRadius: "18px",
+  overflow: "hidden",
+  background: theme.surface,
+  border: `1px solid ${theme.border}`,
+  boxShadow: `${ELEVATION.soft} ${theme.shadow}`,
 
-  const heroImg = { width: "100%", height: "auto", display: "block" };
+  // Make the frame adapt to the image (no forced square)
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const heroImg = {
+  width: "100%",
+  height: "auto",
+  display: "block",
+
+  // Prevent super-tall images from taking over the whole page
+  maxHeight: "520px",
+  objectFit: "contain",
+};
 
   const heroPlaceholder = {
     width: "100%",

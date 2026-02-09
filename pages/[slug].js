@@ -631,7 +631,9 @@ const heroImg = {
         <div style={body}>
           <h2 style={titleStyle}>{title}</h2>
 
-          {priceDisplay && <p style={priceStyle}>{priceDisplay}</p>}
+{(priceDisplay || p?.priceDisplay || p?.priceText) && (
+  <p style={priceStyle}>{priceDisplay || p?.priceDisplay || p?.priceText}</p>
+)}
 
           {inventoryText && <p style={inventoryStyle}>{inventoryText}</p>}
 

@@ -477,10 +477,10 @@ if (isEnded) {
   timerTitle = "";
 }
 
-  let inventoryText = "";
-  if (p.showInventory && left !== null) {
-    inventoryText = `Only ${left} left!`;
-  }
+let inventoryText = "";
+if (p.showInventory && left !== null) {
+  inventoryText = left <= 0 ? "SOLD OUT" : `Only ${left} left!`;
+}
 
   const isPastel = theme.key === "pastel";
 

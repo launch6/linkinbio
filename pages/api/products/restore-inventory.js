@@ -1,5 +1,5 @@
 // pages/api/products/restore-inventory.js
-import { getDb } from "../../../lib/mongo";
+import { getDb } from "../../../lib/db";
 
 function safeTrim(v) {
   return typeof v === "string" ? v.trim() : "";

@@ -418,21 +418,21 @@ function DropCard({ product: p, slug, theme }) {
   if (startsAt && now < startsAt) phase = "upcoming";
   else if (endsAt && now >= endsAt) phase = "ended";
 
-  const isEnded = soldOut || phase === "ended";
+const isEnded = soldOut || phase === "ended";
 
-    // If we're sold out / ended, do not keep showing a live countdown.
-  if (isEnded) {
-    showTimer = false;
-    timerTitle = "";
-  }
+let showTimer = false;
+let timerTitle = "";
+let mode = "hours";
+let d = "0";
+let h = "00";
+let m = "00";
+let s = "00";
 
-  let showTimer = false;
-  let timerTitle = "";
-  let mode = "hours";
-  let d = "0";
-  let h = "00";
-  let m = "00";
-  let s = "00";
+// If we're sold out / ended, do not keep showing a live countdown.
+if (isEnded) {
+  showTimer = false;
+  timerTitle = "";
+}
 
   if (p.showTimer && (startsAt || endsAt)) {
     let target = null;

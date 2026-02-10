@@ -471,6 +471,11 @@ if (isEnded) {
       }
     }
   }
+// If sold out / ended, never show a live countdown (even if the end date is in the future).
+if (isEnded) {
+  showTimer = false;
+  timerTitle = "";
+}
 
   let inventoryText = "";
   if (p.showInventory && left !== null) {

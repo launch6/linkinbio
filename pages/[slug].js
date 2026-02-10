@@ -420,6 +420,12 @@ function DropCard({ product: p, slug, theme }) {
 
   const isEnded = soldOut || phase === "ended";
 
+    // If we're sold out / ended, do not keep showing a live countdown.
+  if (isEnded) {
+    showTimer = false;
+    timerTitle = "";
+  }
+
   let showTimer = false;
   let timerTitle = "";
   let mode = "hours";

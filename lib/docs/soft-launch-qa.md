@@ -45,6 +45,9 @@ Notes:
 . STRIPE_WEBHOOK_SECRET updated on both Production + Preview; webhook deliveries now return 200.
 . Test purchase decremented inventory on slug 555 (4 → 3 → 2 left confirmed).
 . Timer renders and updates on page.
+. inventory decrements by 1 on purchase
+. resending the event does not double-decrement
+. sold out shows SOLD OUT, hides timer, disables buy button
 
 ### Run log — 2026-02-09
 Test slug: 555

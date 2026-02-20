@@ -434,7 +434,7 @@ if (isEnded) {
   timerTitle = "";
 }
 
-  if (p.showTimer && (startsAt || endsAt)) {
+if (!isEnded && p.showTimer && (startsAt || endsAt)) {
     let target = null;
 
     if (phase === "upcoming" && startsAt) {

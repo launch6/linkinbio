@@ -130,8 +130,8 @@ const THEME_CONFIG = [
   {
     key: "modern",
     label: "Modern Pro",
-    left: "#FFFFFF",
-    right: "#2563EB",
+    left: "#CBDDE9",  // Cloudy Sky
+    right: "#2872A1", // Ocean Blue
   },
 ];
 

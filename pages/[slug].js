@@ -126,42 +126,36 @@ const THEME_TOKENS = {
     key: "modern",
     label: "Modern Pro",
 
-    // page background + card background
-    bg: "#f0eeef",
-    surface: "#faf6f7",
+    // Palette: #90C2E7 #FEF7F8 #CDD4DD #22819A
+    bg: "#22819A",       // teal page background
+    surface: "#FEF7F8",  // light card background
 
-    // text
-    text: "#242c3f",
-    textMuted: "rgba(36,44,63,0.72)",
+    text: "#171123",     // deep ink for readability
+    textMuted: "rgba(23,17,35,0.72)",
 
-    // subtle chrome
-    border: "rgba(36,44,63,0.14)",
+    border: "rgba(23,17,35,0.14)",
     shadow: "rgba(15,23,42,0.22)",
-    inputBg: "rgba(36,44,63,0.06)",
-    inputBorder: "rgba(36,44,63,0.14)",
 
-    // accents
-    accent: "#4271ca", // timer digits, price, timer border
-    socialRing: "#4271ca", // social ring
-    avatarRing: "#4271ca", // avatar ring
+    inputBg: "rgba(205,212,221,0.55)",     // #CDD4DD tint
+    inputBorder: "rgba(34,129,154,0.30)",  // #22819A tint
 
-    // buttons
-    buttonFill: "#4271ca",
-    buttonText: "#faf6f7",
+    accent: "#22819A",      // timer digits, price, timer border
+    socialRing: "#90C2E7",  // light blue ring
+    avatarRing: "#90C2E7",
 
-    // links
-    linkFill: "#4271ca",
-    linkText: "#faf6f7",
-    linkBorder: "#4271ca",
+    buttonFill: "#22819A",
+    buttonText: "#FEF7F8",
 
-    // inventory
+    linkFill: "#22819A",
+    linkText: "#FEF7F8",
+    linkBorder: "#22819A",
+
     inventoryColor: undefined, // falls back to accent
 
-    // pastel-only product container (unused here)
     productSurface: undefined,
     productBorder: undefined,
 
-    icon: "#242c3f",
+    icon: "#171123",
     footerLogoFilter: "invert(1)",
   },
 
@@ -169,34 +163,36 @@ const THEME_TOKENS = {
     key: "launch6",
     label: "Launch6",
 
-    bg: "#000000",
-    surface: "#2f2f2f",
+    // Palette: #6F2DBD #A663CC #171123 #FBFBFB
+    bg: "#6F2DBD",       // rich purple page background
+    surface: "#171123",  // deep card background
 
-    text: "#ffffff",
-    textMuted: "rgba(255,255,255,0.78)",
+    text: "#FBFBFB",
+    textMuted: "rgba(251,251,251,0.78)",
 
-    border: "rgba(255,255,255,0.14)",
+    border: "rgba(251,251,251,0.16)",
     shadow: "rgba(0,0,0,0.55)",
-    inputBg: "rgba(255,255,255,0.08)",
+
+    inputBg: "rgba(251,251,251,0.08)",
     inputBorder: "transparent",
 
-    accent: "#9e5aef",
-    socialRing: "#9e5aef",
-    avatarRing: "#9e5aef",
+    accent: "#A663CC",
+    socialRing: "#A663CC",
+    avatarRing: "#A663CC",
 
-    buttonFill: "#9e5aef",
-    buttonText: "#ffffff",
+    buttonFill: "#A663CC",
+    buttonText: "#FBFBFB",
 
-    linkFill: "#9e5aef",
-    linkText: "#ffffff",
-    linkBorder: "#9e5aef",
+    linkFill: "#A663CC",
+    linkText: "#FBFBFB",
+    linkBorder: "#A663CC",
 
     inventoryColor: undefined, // falls back to accent
 
     productSurface: undefined,
     productBorder: undefined,
 
-    icon: "#ffffff",
+    icon: "#FBFBFB",
     footerLogoFilter: "none",
   },
 

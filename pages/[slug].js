@@ -126,8 +126,8 @@ const THEME_TOKENS = {
     key: "modern",
     label: "Modern Pro",
 
-    // Palette: #90C2E7 #FEF7F8 #CDD4DD #22819A
-    bg: "#22819A",       // teal page background
+    // Palette: #90C2E7 #FEF7F8 #CDD4DD #CDD4DD
+    bg: "#CDD4DD",       // teal page background
     surface: "#FEF7F8",  // light card background
 
     text: "#171123",     // deep ink for readability
@@ -137,18 +137,18 @@ const THEME_TOKENS = {
     shadow: "rgba(15,23,42,0.22)",
 
     inputBg: "rgba(205,212,221,0.55)",     // #CDD4DD tint
-    inputBorder: "rgba(34,129,154,0.30)",  // #22819A tint
+    inputBorder: "rgba(34,129,154,0.30)",  // #CDD4DD tint
 
-    accent: "#22819A",      // timer digits, price, timer border
+    accent: "#CDD4DD",      // timer digits, price, timer border
     socialRing: "#90C2E7",  // light blue ring
     avatarRing: "#90C2E7",
 
-    buttonFill: "#22819A",
+    buttonFill: "#CDD4DD",
     buttonText: "#FEF7F8",
 
-    linkFill: "#22819A",
+    linkFill: "#CDD4DD",
     linkText: "#FEF7F8",
-    linkBorder: "#22819A",
+    linkBorder: "#CDD4DD",
 
     inventoryColor: undefined, // falls back to accent
 

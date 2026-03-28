@@ -255,7 +255,7 @@ useEffect(() => {
 
         const nextLinks =
           rawLinks.length > 0
-            ? rawLinks.slice(0, 6).map((l, idx) => ({
+? rawLinks.slice(0, getMaxLinksForPlan(prof.plan)).map((l, idx) => ({
                 id: typeof l?.id === 'number' ? l.id : idx + 1,
                 label: String(l?.label || '').slice(0, 80),
                 url: String(l?.url || '').slice(0, 2000),
@@ -633,8 +633,15 @@ body: JSON.stringify({
                 ))}
               </div>
 
-              <button type="button" className="add-link-button" onClick={handleAddRow}>
-                + Add another link
+                            <button
+                type="button"
+                className="add-link-button"
+                onClick={handleAddRow}
+                disabled={links.length >= getMaxLinksForPlan(plan)}
+              >
+                {links.length >= getMaxLinksForPlan(plan)
+                  ? `Link limit reached`
+                  : `+ Add another link`}
               </button>
 
               {linkError && <p className="field-error">{linkError}</p>}

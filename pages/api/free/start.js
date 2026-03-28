@@ -1,6 +1,7 @@
 // pages/api/free/start.js
 import { MongoClient } from "mongodb";
 import { randomUUID, randomInt } from "crypto";
+import { PLANS, DEFAULT_PLAN } from "../../../lib/plans";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || "linkinbio";
@@ -22,10 +23,6 @@ function makeSlug() {
 }
 
 export default async function handler(req, res) {
-    // SECURITY: free endpoints must not exist in production
-  if (process.env.NODE_ENV === "production") {
-    return res.status(404).end("Not Found");
-  }
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).end("Method Not Allowed");
@@ -51,11 +48,11 @@ export default async function handler(req, res) {
       editToken,
       createdAt: now,
       status: "active",               // avoid “offline/being updated” banners
-      plan: "free",
+            plan: DEFAULT_PLAN,
       planCaps: {
-        products: 3,
-        imagesPerProduct: 3,
-        links: 15,
+        products: PLANS[DEFAULT_PLAN].MAX_PRODUCTS,
+        imagesPerProduct: PLANS[DEFAULT_PLAN].MAX_IMAGES,
+        links: PLANS[DEFAULT_PLAN].MAX_LINKS,
       },
       displayName: "New Creator",
       bio: "",
@@ -103,10 +100,10 @@ links: [],
       { upsert: true }
     );
 
-    return res.status(200).json({
+        return res.status(200).json({
       ok: true,
       editToken,
-      redirect: `/editor?editToken=${encodeURIComponent(editToken)}`,
+      redirect: `/dashboard/new?token=${encodeURIComponent(editToken)}`,
     });
   } catch (err) {
     console.error("free:start ERROR", { message: err?.message, stack: err?.stack });

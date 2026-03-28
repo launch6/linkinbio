@@ -194,6 +194,7 @@ export default function NewLinks() {
 
   const [activeSocialKey, setActiveSocialKey] = useState('instagram');
   const [themeKey, setThemeKey] = useState('launch6');
+  const [plan, setPlan] = useState('free');
   const [saving, setSaving] = useState(false);
   const [linkError, setLinkError] = useState('');
   const draggingIdRef = useRef(null);
@@ -237,7 +238,9 @@ useEffect(() => {
         if (!r.ok || !j?.ok || !j?.profile) return;
 
         const prof = j.profile;
-
+        if (typeof prof.plan === 'string' && prof.plan.trim()) {
+          setPlan(prof.plan.trim().toLowerCase());
+        }
         const rawLinks = Array.isArray(prof.links)
           ? prof.links
           : Array.isArray(prof.linkButtons)

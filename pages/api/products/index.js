@@ -8,6 +8,7 @@ export const config = {
 };
 
 import { MongoClient } from "mongodb";
+import { PLANS } from "../../../lib/plans";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB || "linkinbio";
@@ -59,7 +60,19 @@ export default async function handler(req, res) {
 
     const client = await getClient();
     const db = client.db(MONGODB_DB);
-    const Profiles = db.collection("profiles");
+        const Profiles = db.collection("profiles");
+
+    const existingProfile = await Profiles.findOne(
+      { editToken },
+      { projection: { _id: 0, plan: 1 } }
+    );
+
+    const planKey =
+      typeof existingProfile?.plan === "string" && existingProfile.plan.trim()
+        ? existingProfile.plan.trim().toLowerCase()
+        : "free";
+
+    const maxProducts = PLANS[planKey]?.MAX_PRODUCTS ?? PLANS.free.MAX_PRODUCTS;
 
     const nowIso = new Date().toISOString();
 
@@ -138,7 +151,14 @@ export default async function handler(req, res) {
         updatedAt: nowIso,
       };
     });
-
+    if (safeProducts.length > maxProducts) {
+      return res.status(403).json({
+        ok: false,
+        error: "plan_limit_products",
+        plan: planKey,
+        maxProducts,
+      });
+    }
     await Profiles.updateOne(
       { editToken },
       {

@@ -631,12 +631,15 @@ export default function NewEmailStep() {
           min-width: 0;
         }
 
-        .toggle-label {
+                .toggle-label {
+          display: block;
           font-size: 13px;
           font-weight: 500;
+          margin-bottom: 2px;
         }
 
         .toggle-subtext {
+          display: block;
           font-size: 11px;
           color: #9ca3c0;
           margin-top: 2px;

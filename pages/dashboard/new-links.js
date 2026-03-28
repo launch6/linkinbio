@@ -1,6 +1,7 @@
 // pages/dashboard/new-links.js
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
+import { PLANS } from '../../lib/plans';
 
 const fontStack =
   "system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif";
@@ -159,7 +160,10 @@ const isSocialComplete = (key, urls) => {
   const val = urls[key];
   return !!val && val.length > base.length;
 };
-
+const getMaxLinksForPlan = (planKey) => {
+  const key = typeof planKey === 'string' ? planKey.trim().toLowerCase() : 'free';
+  return PLANS[key]?.MAX_LINKS ?? PLANS.free.MAX_LINKS;
+};
 const normalizeLinkUrl = (value) => {
   let url = (value || '').trim();
   if (!url) return '';
@@ -297,7 +301,7 @@ useEffect(() => {
 
   const handleAddRow = () => {
     setLinks((prev) => {
-      if (prev.length >= 6) return prev;
+      if (prev.length >= getMaxLinksForPlan(plan)) return prev;
       const numericIds = prev
         .map((l) => (typeof l.id === 'number' ? l.id : parseInt(String(l.id), 10)))
         .filter((n) => Number.isFinite(n));

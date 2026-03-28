@@ -20,6 +20,7 @@ export default function NewEmailStep() {
   );
 
   // Basic state for this step
+  const [plan, setPlan] = useState('free');
   const [klaviyoConnected, setKlaviyoConnected] = useState(false);
   const [enableForm, setEnableForm] = useState(false); // OFF by default
   const [collectName, setCollectName] = useState(true);
@@ -30,6 +31,31 @@ export default function NewEmailStep() {
   const [lists, setLists] = useState([]);
   const [listsLoading, setListsLoading] = useState(false);
   const [listsError, setListsError] = useState('');
+
+    // Hydrate current plan from profile
+  useEffect(() => {
+    if (!token) return;
+
+    (async () => {
+      try {
+        const r = await fetch(`/api/profile/get?editToken=${encodeURIComponent(token)}`, {
+          cache: 'no-store',
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j?.ok || !j?.profile) return;
+
+        const nextPlan =
+          typeof j.profile.plan === 'string' && j.profile.plan.trim()
+            ? j.profile.plan.trim().toLowerCase()
+            : 'free';
+
+        setPlan(nextPlan);
+      } catch {
+        // fail closed
+        setPlan('free');
+      }
+    })();
+  }, [token]);
 
   // Load lists from our API
   const fetchLists = async () => {
@@ -179,11 +205,11 @@ export default function NewEmailStep() {
                 <span className="panel-title">Email Marketing</span>
               </div>
 
-              <button
+                            <button
                 type="button"
                 className={`klaviyo-connect ${klaviyoConnected ? 'connected' : ''}`}
                 onClick={handleConnectKlaviyo}
-                disabled={launching}
+                disabled={launching || plan === 'free'}
               >
                 <div className="klaviyo-left">
                   <span className="klaviyo-icon">K</span>
@@ -199,7 +225,11 @@ export default function NewEmailStep() {
                   {klaviyoConnected ? '✓' : '→'}
                 </span>
               </button>
-
+              {plan === 'free' && (
+                <p className="helper-text" style={{ marginTop: '10px' }}>
+                  Email capture is available on Starter and above.
+                </p>
+              )}
               {/* List dropdown lives directly under the Klaviyo button */}
               {klaviyoConnected && (
                 <div className="list-select">
@@ -249,11 +279,11 @@ export default function NewEmailStep() {
                     Show a simple form on your drop page so fans can join your list.
                   </span>
                 </div>
-                <button
+                               <button
                   type="button"
                   className={`toggle-switch ${enableForm ? 'on' : 'off'}`}
                   onClick={() => setEnableForm((v) => !v)}
-                  disabled={!klaviyoConnected}
+                  disabled={!klaviyoConnected || plan === 'free'}
                 >
                   <div className="toggle-thumb" />
                 </button>

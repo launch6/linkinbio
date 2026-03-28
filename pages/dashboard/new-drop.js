@@ -553,14 +553,30 @@ if (typeof window !== 'undefined') {
           json,
         });
 
-        const msg =
-          json?.error ||
-          (raw && raw.slice(0, 180)) ||
-          `Save failed (${resp.status}). Open DevTools → Console.`;
+        if (json?.error === 'plan_limit_products') {
+  const maxProducts = Number(json?.maxProducts || 1);
+  const planName = (plan || 'free').toUpperCase();
 
-        alert(msg);
-        setSaving(false);
-        return;
+  const wantsUpgrade = window.confirm(
+    `${planName} allows up to ${maxProducts} product${maxProducts === 1 ? '' : 's'}. Upgrade now to unlock more.`
+  );
+
+  if (wantsUpgrade) {
+    router.push('/pricing');
+  }
+
+  setSaving(false);
+  return;
+}
+
+const msg =
+  json?.error ||
+  (raw && raw.slice(0, 180)) ||
+  `Save failed (${resp.status}). Open DevTools → Console.`;
+
+alert(msg);
+setSaving(false);
+return;
       }
 
       goToStep4();

@@ -226,9 +226,20 @@ export default function NewEmailStep() {
                 </span>
               </button>
               {plan === 'free' && (
-                <p className="helper-text" style={{ marginTop: '10px' }}>
-                  Email capture is available on Starter and above.
-                </p>
+                <div style={{ marginTop: '10px' }}>
+                  <p className="helper-text" style={{ marginTop: 0, marginBottom: '10px' }}>
+                    Email capture is available on Starter and above.
+                  </p>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => router.push('/pricing')}
+                    style={{ width: '100%' }}
+                  >
+                    Upgrade to unlock email capture
+                  </button>
+                </div>
               )}
               {/* List dropdown lives directly under the Klaviyo button */}
               {klaviyoConnected && (

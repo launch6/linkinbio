@@ -28,6 +28,7 @@ export default function NewDrop() {
 
   // Resolved token (query token OR persisted token)
   const [resolvedToken, setResolvedToken] = useState('');
+  const [plan, setPlan] = useState('free');
 
   // Core drop fields
   const [dropTitle, setDropTitle] = useState('');
@@ -236,7 +237,32 @@ export default function NewDrop() {
     selectedPriceCents,
     selectedPriceDisplay,
   ]);
+  // Hydrate current plan from profile
+  useEffect(() => {
+    if (!router.isReady) return;
 
+    const t = safeTrim(resolvedToken) || safeTrim(token);
+    if (!t) return;
+
+    (async () => {
+      try {
+        const r = await fetch(`/api/profile/get?editToken=${encodeURIComponent(t)}`, {
+          cache: 'no-store',
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j?.ok || !j?.profile) return;
+
+        const nextPlan =
+          typeof j.profile.plan === 'string' && j.profile.plan.trim()
+            ? j.profile.plan.trim().toLowerCase()
+            : 'free';
+
+        setPlan(nextPlan);
+      } catch {
+        setPlan('free');
+      }
+    })();
+  }, [router.isReady, resolvedToken, token]);
   // After Stripe is connected, pull products/prices from the connected account
   useEffect(() => {
     if (!router.isReady) return;

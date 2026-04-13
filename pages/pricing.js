@@ -74,13 +74,40 @@ export default function PricingPage() {
     setBusy(true);
     setError("");
     try {
+      let ensuredEditToken = editToken;
+
+      // Paid checkout also needs a profile bootstrap so success can hand off to onboarding.
+      if (!ensuredEditToken) {
+        if (!isValidEmail(email)) {
+          throw new Error("Enter a valid email to continue.");
+        }
+
+        const boot = await fetch("/api/free/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+
+        const bootJson = await boot.json().catch(() => ({}));
+        if (!boot.ok || !bootJson?.ok || !bootJson?.editToken) {
+          throw new Error(bootJson?.error || "Could not start your account.");
+        }
+
+        ensuredEditToken = bootJson.editToken;
+        setEditToken(ensuredEditToken);
+
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("editToken", ensuredEditToken);
+        }
+      }
+
       const r = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           priceKey,
-          editToken,
-          email: email || undefined, // still optional for paid tiers
+          editToken: ensuredEditToken,
+          email: email ? email.trim() : undefined,
           refCode, // triggers referral logic server-side
           applyStarter6mo: isStarterPlus, // 6M path
           applyReferral3m: !!refCode && !isStarterPlus, // 3M path

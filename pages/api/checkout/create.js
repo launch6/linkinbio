@@ -24,10 +24,13 @@ export default async function handler(req, res) {
       process.env.BASE_URL ||
       `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
 
+    const safeEditToken = encodeURIComponent(editToken || "");
+    const safeRefCode = encodeURIComponent(refCode || "");
+
     const params = {
       mode: isSubscription ? "subscription" : "payment",
-      success_url: `${baseUrl}/pricing?success=1`,
-      cancel_url: `${baseUrl}/pricing?canceled=1`,
+      success_url: `${baseUrl}/dashboard/new?token=${safeEditToken}&checkout=success`,
+      cancel_url: `${baseUrl}/pricing?canceled=1&editToken=${safeEditToken}&refCode=${safeRefCode}`,
       customer_email: email || undefined,
       line_items: [{ price: priceId, quantity: 1 }],
       metadata: {

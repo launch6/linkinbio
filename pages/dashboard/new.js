@@ -49,13 +49,22 @@ export default function NewProfile() {
 
         const prof = j.profile || {};
 
-        const name = prof.displayName ?? prof.name ?? "";
-        const slug = prof.publicSlug ?? prof.slug ?? "";
+        const rawName = String(prof.displayName ?? prof.name ?? "");
+        const rawSlug = String(prof.publicSlug ?? prof.slug ?? "");
         const desc = prof.bio ?? prof.description ?? "";
         const avatar = prof.avatarUrl ?? "";
 
-        setDisplayName(String(name || ""));
-        setUsername(String(slug || ""));
+        const nameLooksBootstrap =
+          rawName.trim().toLowerCase() === "new creator";
+
+        const slugLooksBootstrap =
+          /^new-creator(?:-\d+)?$/i.test(rawSlug.trim());
+
+        const safeName = nameLooksBootstrap ? "" : rawName;
+        const safeSlug = slugLooksBootstrap ? "" : rawSlug;
+
+        setDisplayName(safeName);
+        setUsername(safeSlug);
         setBio(String(desc || ""));
         setAvatarDataUrl(String(avatar || ""));
       } catch (err) {

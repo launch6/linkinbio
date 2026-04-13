@@ -175,7 +175,11 @@ export default function NewDrop() {
         if (typeof d.startsAt === 'string') setStartsAt(d.startsAt);
         if (typeof d.endsAt === 'string') setEndsAt(d.endsAt);
 
-        if (typeof d.stripeConnected === 'boolean') setStripeConnected(d.stripeConnected);
+        if (stripe_connected === '1') {
+          setStripeConnected(true);
+        } else if (typeof d.stripeConnected === 'boolean') {
+          setStripeConnected(d.stripeConnected);
+        }
 
         if (typeof d.selectedProductId === 'string') setSelectedProductId(d.selectedProductId);
         if (typeof d.selectedStripeProductId === 'string') setSelectedStripeProductId(d.selectedStripeProductId);

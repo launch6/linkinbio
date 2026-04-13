@@ -562,7 +562,12 @@ if (typeof window !== 'undefined') {
   );
 
   if (wantsUpgrade) {
-    router.push('/pricing');
+    const t = safeTrim(resolvedToken) || safeTrim(token);
+    const target = t
+      ? `/pricing?editToken=${encodeURIComponent(t)}`
+      : '/pricing';
+
+    router.push(target);
   }
 
   setSaving(false);

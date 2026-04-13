@@ -64,7 +64,7 @@ export default async function handler(req, res) {
 
     const existingProfile = await Profiles.findOne(
       { editToken },
-      { projection: { _id: 0, plan: 1 } }
+      { projection: { _id: 0, plan: 1, products: 1 } }
     );
 
     const planKey =
@@ -151,7 +151,25 @@ export default async function handler(req, res) {
         updatedAt: nowIso,
       };
     });
-    if (safeProducts.length > maxProducts) {
+    const existingProducts = Array.isArray(existingProfile?.products)
+      ? existingProfile.products
+      : [];
+
+    const mergedProducts = [...existingProducts];
+
+    for (const incoming of safeProducts) {
+      const i = mergedProducts.findIndex((p) => p?.id === incoming.id);
+      if (i >= 0) {
+        mergedProducts[i] = {
+          ...mergedProducts[i],
+          ...incoming,
+        };
+      } else {
+        mergedProducts.push(incoming);
+      }
+    }
+
+    if (mergedProducts.length > maxProducts) {
       return res.status(403).json({
         ok: false,
         error: "plan_limit_products",
@@ -159,19 +177,20 @@ export default async function handler(req, res) {
         maxProducts,
       });
     }
+
     await Profiles.updateOne(
       { editToken },
       {
         $set: {
-          editToken, // keep it on the doc
-          products: safeProducts,
+          editToken,
+          products: mergedProducts,
           updatedAt: nowIso,
         },
       },
       { upsert: true }
     );
 
-    return res.status(200).json({ ok: true, products: safeProducts });
+    return res.status(200).json({ ok: true, products: mergedProducts });
   } catch (err) {
     console.error("/api/products error:", err?.message || err);
     return res.status(500).json({ ok: false, error: "server_error" });
